@@ -50,13 +50,13 @@ export default function App() {
         }
       />
       <Route
-  path="/history"
-  element={
-    <ProtectedRoute>
-      <PromptHistory />
-    </ProtectedRoute>
-  }
-/>
+        path="/history"
+        element={
+          <ProtectedRoute>
+            <PromptHistory />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />

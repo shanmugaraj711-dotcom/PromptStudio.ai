@@ -9,6 +9,8 @@ function Button({
   className = '',
   disabled = false,
   to,
+  loading = false,
+  ariaLabel,
 }) {
   const baseStyles =
     'inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
@@ -42,10 +44,12 @@ function Button({
     <button
       type={type}
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || loading}
+      aria-disabled={disabled || loading}
+      aria-label={ariaLabel}
       className={classes}
     >
-      {children}
+      {loading ? 'Loading...' : children}
     </button>
   );
 }
