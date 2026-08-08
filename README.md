@@ -23,6 +23,21 @@ npm run dev
 
 Then open the local URL printed in your terminal (usually http://localhost:5173).
 
+## Environment & Firebase
+
+This project uses Firebase for authentication and Firestore for prompt history. The
+repository intentionally does not include secrets. To run locally:
+
+1. Create a Firebase project and enable Email/Password and Google sign-in in the
+  Firebase Console.
+2. Copy `.env.example` to `.env` and fill in the `VITE_FIREBASE_*` values.
+3. Do NOT commit the `.env` file. The project already includes `.gitignore` to
+  ignore `.env`.
+
+If your Firebase keys were accidentally committed, rotate them in the Firebase
+Console immediately and remove the leaked file from the repository history.
+
+
 ## Build
 
 ```bash
