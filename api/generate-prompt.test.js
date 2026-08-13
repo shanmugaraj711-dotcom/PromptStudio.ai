@@ -19,6 +19,7 @@ vi.mock("@google/genai", () => ({
       models: { generateContent: mocks.generateContent },
     };
   }),
+  Type: { OBJECT: 'OBJECT', BOOLEAN: 'BOOLEAN', STRING: 'STRING' }
 }));
 
 vi.mock("firebase-admin/app", () => ({
@@ -87,8 +88,6 @@ const makeRequest = (requestId = "request-001") => ({
   headers: { authorization: "Bearer valid-token" },
   body: {
     idea: "Create a useful product launch message",
-    aiModel: "chatgpt",
-    category: "marketing",
     requestId,
   },
 });
@@ -147,7 +146,7 @@ describe("POST /api/generate-prompt", () => {
       },
     });
     mocks.getFirestore.mockReturnValue(db);
-    mocks.generateContent.mockResolvedValue({ text: "A durable server prompt" });
+    mocks.generateContent.mockResolvedValue({ text: JSON.stringify({ isQuestion: false, content: "A durable server prompt", aiModel: "chatgpt", category: "marketing" }) });
 
     const firstResponse = makeResponse();
     await handler(makeRequest("request-002"), firstResponse);

@@ -1,17 +1,9 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { createQuotaState, getUtcDateKey } from "../src/constants/quota.js";
 
-const ALLOWED_MODELS = new Set(["chatgpt", "claude", "gemini", "grok"]);
-const ALLOWED_CATEGORIES = new Set([
-  "writing",
-  "coding",
-  "image",
-  "marketing",
-  "business",
-]);
 const REQUEST_ID_PATTERN = /^[a-zA-Z0-9_-]{8,128}$/;
 
 class ApiError extends Error {
@@ -91,7 +83,7 @@ const getGeminiClient = () => {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 };
 
-const validateInput = ({ idea, aiModel, category, requestId }) => {
+const validateInput = ({ idea, requestId }) => {
   const normalizedIdea = typeof idea === "string" ? idea.trim() : "";
 
   if (normalizedIdea.length < 3 || normalizedIdea.length > 6000) {
@@ -99,14 +91,6 @@ const validateInput = ({ idea, aiModel, category, requestId }) => {
       400,
       "invalid_idea",
       "Please provide an idea between 3 and 6,000 characters."
-    );
-  }
-
-  if (!ALLOWED_MODELS.has(aiModel) || !ALLOWED_CATEGORIES.has(category)) {
-    throw new ApiError(
-      400,
-      "invalid_options",
-      "Choose a supported AI model and category."
     );
   }
 
@@ -286,24 +270,44 @@ const saveSuccessfulGeneration = async ({
   });
 };
 
-const createOptimizedPrompt = async ({ client, idea, aiModel, category }) => {
+const createOptimizedPrompt = async ({ client, idea }) => {
   const response = await client.models.generateContent({
     model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
-    contents: `Create a polished, ready-to-paste prompt for ${aiModel}.\n\nCategory: ${category}\nUser idea: ${idea}`,
+    contents: `User request/idea: ${idea}`,
     config: {
       systemInstruction:
-        "You are PromptStudio AI. Return only the final, detailed prompt. Structure it with clear sections such as role, objective, context, requirements, output format, and quality checks. Do not add commentary or markdown code fences.",
+        "You are PromptStudio AI, an expert AI prompt optimization assistant. Your goal is to transform simple user requests into high-quality, structured, AI-ready prompts.\n" +
+        "1. Understand the user's intent (e.g., coding, writing, images, business, research).\n" +
+        "2. Do not ask unnecessary questions. Infer missing details whenever reasonable.\n" +
+        "3. Only set isQuestion to true and provide a question in 'content' if it is genuinely necessary to produce a useful result (e.g. the user asks for 'a picture' without ANY context).\n" +
+        "4. Otherwise, set isQuestion to false and provide the final, detailed, ready-to-paste prompt in 'content'. Structure it with clear sections (e.g., role, objective, context, requirements, output format).\n" +
+        "5. Also infer the best AI model (e.g., 'ChatGPT', 'Claude', 'Midjourney', 'Gemini') and a category (e.g., 'coding', 'writing', 'image', 'business').",
       temperature: 0.35,
       maxOutputTokens: 1200,
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          isQuestion: { type: Type.BOOLEAN },
+          content: { type: Type.STRING },
+          aiModel: { type: Type.STRING },
+          category: { type: Type.STRING },
+        },
+        required: ["isQuestion", "content", "aiModel", "category"],
+      },
     },
   });
 
-  const prompt = response.text?.trim();
-  if (!prompt) {
+  const text = typeof response.text === 'function' ? response.text() : response.text?.trim ? response.text.trim() : response.text;
+  if (!text) {
     throw new Error("Gemini returned an empty response.");
   }
 
-  return prompt;
+  try {
+    return typeof text === 'string' ? JSON.parse(text) : text;
+  } catch (e) {
+    throw new Error("Gemini returned invalid JSON.");
+  }
 };
 
 export default async function handler(request, response) {
@@ -341,13 +345,11 @@ export default async function handler(request, response) {
       return sendJson(response, 200, reservation);
     }
 
-    let prompt;
+    let optimized;
     try {
-      prompt = await createOptimizedPrompt({
+      optimized = await createOptimizedPrompt({
         client,
         idea,
-        aiModel: body.aiModel,
-        category: body.category,
       });
     } catch (error) {
       const quota = await rollbackReservation({
@@ -366,16 +368,38 @@ export default async function handler(request, response) {
       );
     }
 
+    if (optimized.isQuestion) {
+      // If it's a question, we don't save it to history, but we still return it successfully
+      // The user will reply and a new request ID will be used.
+      // We should rollback the reservation so they don't lose a quota for a question.
+      const restoredQuota = await rollbackReservation({
+        db: services.db,
+        uid: decodedToken.uid,
+        requestId: body.requestId,
+        now: new Date(),
+        failureCode: "was_question",
+      });
+
+      return sendJson(response, 200, {
+        isQuestion: true,
+        content: optimized.content,
+        quota: restoredQuota,
+      });
+    }
+
     try {
       const result = await saveSuccessfulGeneration({
         db: services.db,
         uid: decodedToken.uid,
         requestId: body.requestId,
-        prompt,
-        aiModel: body.aiModel,
-        category: body.category,
+        prompt: optimized.content,
+        aiModel: optimized.aiModel,
+        category: optimized.category,
       });
-      return sendJson(response, 200, result);
+      return sendJson(response, 200, {
+        ...result,
+        isQuestion: false
+      });
     } catch (error) {
       const quota = await rollbackReservation({
         db: services.db,
