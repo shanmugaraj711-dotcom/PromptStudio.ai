@@ -17,6 +17,9 @@ export function usePromptBuilder() {
   const [aiModel, setAiModel] = useState("chatgpt");
   const [category, setCategory] = useState("writing");
   const [generatedPrompt, setGeneratedPrompt] = useState("");
+  const [isQuestion, setIsQuestion] = useState(false);
+  const [inferredAiModel, setInferredAiModel] = useState("");
+  const [inferredCategory, setInferredCategory] = useState("");
   const [error, setError] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const requestInFlightRef = useRef(false);
@@ -50,7 +53,10 @@ export function usePromptBuilder() {
         requestId: createRequestId(),
       });
 
-      setGeneratedPrompt(result.prompt);
+      setGeneratedPrompt(result.prompt || result.content);
+      setIsQuestion(result.isQuestion || false);
+      setInferredAiModel(result.aiModel || "");
+      setInferredCategory(result.category || "");
       updateQuotaState(result.quota);
     } catch (err) {
       console.error("Failed to generate prompt:", err);
@@ -67,6 +73,9 @@ export function usePromptBuilder() {
   const reset = useCallback(() => {
     setIdea("");
     setGeneratedPrompt("");
+    setIsQuestion(false);
+    setInferredAiModel("");
+    setInferredCategory("");
     setError("");
   }, []);
 
@@ -78,6 +87,9 @@ export function usePromptBuilder() {
     category,
     setCategory,
     generatedPrompt,
+    isQuestion,
+    inferredAiModel,
+    inferredCategory,
     error,
     isGenerating,
     generate,

@@ -48,7 +48,7 @@ export async function generatePrompt({
     );
   }
 
-  if (!payload.prompt || !payload.quota) {
+  if ((!payload.prompt && !payload.content) || !payload.quota) {
     throw new PromptGenerationError("The generation service returned an invalid response.", {
       code: "invalid_response",
     });

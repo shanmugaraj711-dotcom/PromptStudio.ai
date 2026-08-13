@@ -52,7 +52,7 @@ describe("PromptBuilder", () => {
     await user.type(screen.getByLabelText("Your idea"), "Plan a friendly onboarding email");
     await user.click(screen.getByRole("button", { name: "Generate Better Prompt" }));
 
-    expect(await screen.findByText("Generated Prompt")).toBeInTheDocument();
+    expect(await screen.findByText("Final Optimized Prompt")).toBeInTheDocument();
     expect(screen.getByDisplayValue("A polished prompt returned by the API")).toBeInTheDocument();
     expect(window.location.pathname).toBe("/builder");
     expect(screen.getByText("3 / 3 prompts remaining today")).toBeInTheDocument();
