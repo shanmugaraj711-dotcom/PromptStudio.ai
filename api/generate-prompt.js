@@ -14,6 +14,11 @@ const ALLOWED_CATEGORIES = new Set([
 ]);
 const REQUEST_ID_PATTERN = /^[a-zA-Z0-9_-]{8,128}$/;
 
+const PRIMARY_GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+const FALLBACK_GEMINI_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.6-flash";
+const PRIMARY_GEMINI_TIMEOUT_MS = 8000;
+const FALLBACK_GEMINI_TIMEOUT_MS = 7000;
+
 class ApiError extends Error {
   constructor(status, code, message, quota) {
     super(message);
@@ -286,24 +291,81 @@ const saveSuccessfulGeneration = async ({
   });
 };
 
-const createOptimizedPrompt = async ({ client, idea, aiModel, category }) => {
-  const response = await client.models.generateContent({
-    model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
-    contents: `Create a polished, ready-to-paste prompt for ${aiModel}.\n\nCategory: ${category}\nUser idea: ${idea}`,
-    config: {
-      systemInstruction:
-        "You are PromptStudio AI. Return only the final, detailed prompt. Structure it with clear sections such as role, objective, context, requirements, output format, and quality checks. Do not add commentary or markdown code fences.",
-      temperature: 0.35,
-      maxOutputTokens: 1200,
-    },
-  });
+const isTransientGeminiError = (error) => {
+  const status = Number(error?.status || error?.code || 0);
+  return (
+    status === 429 ||
+    status === 500 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504 ||
+    /high demand|unavailable|temporar|overload|timeout/i.test(error?.message || "")
+  );
+};
 
-  const prompt = response.text?.trim();
-  if (!prompt) {
-    throw new Error("Gemini returned an empty response.");
+const generateWithTimeout = async ({ client, model, contents, config, timeoutMs }) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await client.models.generateContent({
+      model,
+      contents,
+      config: {
+        ...config,
+        abortSignal: controller.signal,
+      },
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+const createOptimizedPrompt = async ({ client, idea, aiModel, category }) => {
+  const contents = `Create a polished, ready-to-paste prompt for ${aiModel}.\n\nCategory: ${category}\nUser idea: ${idea}`;
+  const config = {
+    systemInstruction:
+      "You are PromptStudio AI. Return only the final, detailed prompt. Structure it with clear sections such as role, objective, context, requirements, output format, and quality checks. Do not add commentary or markdown code fences.",
+    maxOutputTokens: 1200,
+  };
+
+  try {
+    const response = await generateWithTimeout({
+      client,
+      model: PRIMARY_GEMINI_MODEL,
+      contents,
+      config,
+      timeoutMs: PRIMARY_GEMINI_TIMEOUT_MS,
+    });
+    const prompt = response.text?.trim();
+    if (prompt) return prompt;
+  } catch (error) {
+    if (!isTransientGeminiError(error)) throw error;
+    console.warn("Primary Gemini generation unavailable; trying fallback model", {
+      model: PRIMARY_GEMINI_MODEL,
+      code: error?.code || error?.status || "unknown",
+    });
   }
 
-  return prompt;
+  try {
+    const response = await generateWithTimeout({
+      client,
+      model: FALLBACK_GEMINI_MODEL,
+      contents,
+      config,
+      timeoutMs: FALLBACK_GEMINI_TIMEOUT_MS,
+    });
+    const prompt = response.text?.trim();
+    if (prompt) return prompt;
+  } catch (error) {
+    console.warn("Fallback Gemini generation unavailable", {
+      model: FALLBACK_GEMINI_MODEL,
+      code: error?.code || error?.status || "unknown",
+    });
+    throw error;
+  }
+
+  throw new Error("Gemini returned an empty response.");
 };
 
 export default async function handler(request, response) {
