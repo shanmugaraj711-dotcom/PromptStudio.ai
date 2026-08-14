@@ -3,34 +3,28 @@ import { generatePrompt } from "../services/promptGenerator";
 import { useAuth } from "../context/AuthContext";
 
 const createRequestId = () => {
-  if (globalThis.crypto?.randomUUID) {
-    return globalThis.crypto.randomUUID();
-  }
-
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
   return `prompt-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 };
 
 export function usePromptBuilder() {
   const { user, updateQuotaState } = useAuth();
-
   const [idea, setIdea] = useState("");
   const [aiModel, setAiModel] = useState("chatgpt");
   const [category, setCategory] = useState("writing");
   const [generatedPrompt, setGeneratedPrompt] = useState("");
+  const [perspectives, setPerspectives] = useState([]);
+  const [intelligence, setIntelligence] = useState(null);
   const [error, setError] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const requestInFlightRef = useRef(false);
 
   const generate = useCallback(async () => {
-    if (requestInFlightRef.current) {
-      return;
-    }
-
+    if (requestInFlightRef.current) return;
     if (!idea.trim()) {
       setError("Please describe what you want AI to create.");
       return;
     }
-
     if (!user) {
       setError("You must be logged in to generate and save prompts.");
       return;
@@ -39,7 +33,6 @@ export function usePromptBuilder() {
     setError("");
     requestInFlightRef.current = true;
     setIsGenerating(true);
-
     try {
       const idToken = await user.getIdToken();
       const result = await generatePrompt({
@@ -49,14 +42,13 @@ export function usePromptBuilder() {
         idToken,
         requestId: createRequestId(),
       });
-
       setGeneratedPrompt(result.prompt);
+      setPerspectives(result.perspectives || []);
+      setIntelligence(result.intelligence || null);
       updateQuotaState(result.quota);
     } catch (err) {
       console.error("Failed to generate prompt:", err);
-      if (err.quota) {
-        updateQuotaState(err.quota);
-      }
+      if (err.quota) updateQuotaState(err.quota);
       setError(err.message || "Unable to generate a prompt. Please try again.");
     } finally {
       requestInFlightRef.current = false;
@@ -67,6 +59,8 @@ export function usePromptBuilder() {
   const reset = useCallback(() => {
     setIdea("");
     setGeneratedPrompt("");
+    setPerspectives([]);
+    setIntelligence(null);
     setError("");
   }, []);
 
@@ -78,6 +72,8 @@ export function usePromptBuilder() {
     category,
     setCategory,
     generatedPrompt,
+    perspectives,
+    intelligence,
     error,
     isGenerating,
     generate,
