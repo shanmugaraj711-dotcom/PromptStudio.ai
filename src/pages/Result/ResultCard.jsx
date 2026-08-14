@@ -1,13 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import TextArea from '../../components/ui/TextArea';
 import Button from '../../components/ui/Button';
 import { copyToClipboard } from '../../utils/copyToClipboard';
 
-function ResultCard({ prompt }) {
+function ResultCard({ prompt, perspectives = [], intelligence = null }) {
   const [copyStatus, setCopyStatus] = useState('');
+  const [selectedId, setSelectedId] = useState('main');
+
+  useEffect(() => {
+    setSelectedId('main');
+  }, [prompt, perspectives]);
+
+  const selectedPrompt = useMemo(() => {
+    if (selectedId === 'main') return prompt;
+    return perspectives.find((item) => item.id === selectedId)?.prompt || prompt;
+  }, [prompt, perspectives, selectedId]);
 
   const handleCopy = async () => {
-    const success = await copyToClipboard(prompt);
+    const success = await copyToClipboard(selectedPrompt);
     if (success) {
       setCopyStatus('Copied to clipboard');
       setTimeout(() => setCopyStatus(''), 2000);
@@ -19,29 +29,73 @@ function ResultCard({ prompt }) {
   return (
     <div className="rounded-3xl border border-blue-100 bg-white p-8 shadow-md sm:p-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h3 className="text-lg font-bold text-gray-900">Generated Prompt</h3>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-blue-600">PromptStudio Intelligence</p>
+          <h3 className="mt-1 text-lg font-bold text-gray-900">Your optimized prompt</h3>
+        </div>
         <Button variant="secondary" size="sm" onClick={handleCopy}>
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8z" />
           </svg>
           {copyStatus === 'Copied to clipboard' ? 'Copied!' : 'Copy Prompt'}
         </Button>
       </div>
 
-      {copyStatus && (
-        <p className="mt-3 text-sm text-gray-600" role="status">
-          {copyStatus}
-        </p>
+      {intelligence?.intent && (
+        <div className="mt-5 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Understood goal</p>
+          <p className="mt-1 text-sm font-medium text-gray-800">{intelligence.intent}</p>
+          {intelligence.missing?.length > 0 && (
+            <p className="mt-2 text-xs text-gray-500">
+              Optional details that could improve it: {intelligence.missing.join(' · ')}
+            </p>
+          )}
+        </div>
       )}
 
+      {perspectives.length > 0 && (
+        <div className="mt-6">
+          <p className="mb-2 text-sm font-semibold text-gray-800">Choose an approach</p>
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Prompt perspectives">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedId === 'main'}
+              onClick={() => setSelectedId('main')}
+              className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium hover:border-blue-400"
+            >
+              Best fit
+            </button>
+            {perspectives.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={selectedId === item.id}
+                onClick={() => setSelectedId(item.id)}
+                className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium hover:border-blue-400"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {copyStatus && <p className="mt-3 text-sm text-gray-600" role="status">{copyStatus}</p>}
+
       <div className="mt-6">
-        <TextArea id="generatedPrompt" value={prompt} readOnly rows={12} />
+        <TextArea id="generatedPrompt" value={selectedPrompt} readOnly rows={14} />
       </div>
+
+      {intelligence?.recommendations?.length > 0 && (
+        <div className="mt-5 rounded-2xl border border-gray-100 p-4">
+          <p className="text-sm font-semibold text-gray-800">PromptStudio suggestions</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-600">
+            {intelligence.recommendations.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
