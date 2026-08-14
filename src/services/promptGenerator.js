@@ -22,7 +22,6 @@ export async function generatePrompt({
   }
 
   let response;
-
   try {
     response = await fetchImpl("/api/generate-prompt", {
       method: "POST",
@@ -40,7 +39,6 @@ export async function generatePrompt({
   }
 
   const payload = await response.json().catch(() => ({}));
-
   if (!response.ok) {
     throw new PromptGenerationError(
       payload.message || "Unable to generate a prompt right now. Please try again.",
@@ -48,9 +46,10 @@ export async function generatePrompt({
     );
   }
 
-  if (!payload.prompt || !payload.quota) {
-    throw new PromptGenerationError("The generation service returned an invalid response.", {
+  if (!payload.prompt || !Array.isArray(payload.perspectives) || payload.perspectives.length < 3 || !payload.quota) {
+    throw new PromptGenerationError("The generation service returned an incomplete intelligence response.", {
       code: "invalid_response",
+      quota: payload.quota,
     });
   }
 
