@@ -7,57 +7,37 @@ export const PLAN_DAILY_PROMPT_LIMITS = Object.freeze({
 });
 
 export const PLAN_MONTHLY_IMAGE_LIMITS = Object.freeze({
-  free: 0,
+  free: 3,
   pro: 100,
 });
 
 export const normalizePlan = (plan) =>
   Object.hasOwn(PLAN_DAILY_PROMPT_LIMITS, plan) ? plan : DEFAULT_PLAN;
 
-export const getDailyPromptLimit = (plan) =>
-  PLAN_DAILY_PROMPT_LIMITS[normalizePlan(plan)];
-
-export const getMonthlyImageLimit = (plan) =>
-  PLAN_MONTHLY_IMAGE_LIMITS[normalizePlan(plan)];
-
-export const getUtcDateKey = (date = new Date()) =>
-  date.toISOString().slice(0, 10);
-
-export const getUtcMonthKey = (date = new Date()) =>
-  date.toISOString().slice(0, 7);
+export const getDailyPromptLimit = (plan) => PLAN_DAILY_PROMPT_LIMITS[normalizePlan(plan)];
+export const getMonthlyImageLimit = (plan) => PLAN_MONTHLY_IMAGE_LIMITS[normalizePlan(plan)];
+export const getUtcDateKey = (date = new Date()) => date.toISOString().slice(0, 10);
+export const getUtcMonthKey = (date = new Date()) => date.toISOString().slice(0, 7);
 
 const toNonNegativeInteger = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
 };
 
-export function createQuotaState(
-  {
-    plan,
-    promptsToday,
-    lastPromptDate,
-    imageAnalysesThisMonth,
-    lastImageAnalysisMonth,
-    quotaVersion,
-  } = {},
-  date = new Date()
-) {
+export function createQuotaState({ plan, promptsToday, lastPromptDate, imageAnalysesThisMonth, lastImageAnalysisMonth, quotaVersion } = {}, date = new Date()) {
   const normalizedPlan = normalizePlan(plan);
   const dateKey = getUtcDateKey(date);
   const monthKey = getUtcMonthKey(date);
   const usedToday = lastPromptDate === dateKey ? toNonNegativeInteger(promptsToday) : 0;
-  const usedImagesThisMonth =
-    lastImageAnalysisMonth === monthKey ? toNonNegativeInteger(imageAnalysesThisMonth) : 0;
+  const usedImagesThisMonth = lastImageAnalysisMonth === monthKey ? toNonNegativeInteger(imageAnalysesThisMonth) : 0;
   const dailyLimit = getDailyPromptLimit(normalizedPlan);
   const monthlyImageLimit = getMonthlyImageLimit(normalizedPlan);
-
   return {
     plan: normalizedPlan,
     promptsToday: usedToday,
     lastPromptDate: typeof lastPromptDate === "string" ? lastPromptDate : null,
     imageAnalysesThisMonth: usedImagesThisMonth,
-    lastImageAnalysisMonth:
-      typeof lastImageAnalysisMonth === "string" ? lastImageAnalysisMonth : null,
+    lastImageAnalysisMonth: typeof lastImageAnalysisMonth === "string" ? lastImageAnalysisMonth : null,
     quotaVersion: toNonNegativeInteger(quotaVersion),
     dailyLimit,
     monthlyImageLimit,
