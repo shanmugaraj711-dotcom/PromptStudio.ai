@@ -15,7 +15,7 @@ export const FEATURE_REGISTRY = Object.freeze({
   imageUploadAnalysis: { id: 'imageUploadAnalysis', name: 'Image Upload & Analysis', phase: 'core', enabled: true, plans: ['free', 'pro'] },
   referenceAwarePrompt: { id: 'referenceAwarePrompt', name: 'Reference-Aware Prompt Generation', phase: 'core', enabled: true, plans: ['free', 'pro'] },
 
-  dynamicVariableFillers: { id: 'dynamicVariableFillers', name: 'Dynamic Variable Fillers', phase: 'upcoming', enabled: false, plans: ['free', 'pro'] },
+  dynamicVariableFillers: { id: 'dynamicVariableFillers', name: 'Dynamic Variables & Reusable Prompts', phase: 'monetization', enabled: true, plans: ['pro'] },
   oneClickLaunchButtons: { id: 'oneClickLaunchButtons', name: 'One-Click AI Launch', phase: 'monetization', enabled: true, plans: ['pro'] },
   promptBookmarking: { id: 'promptBookmarking', name: 'Prompt Bookmarks / Favorites', phase: 'monetization', enabled: true, plans: ['pro'] },
   shareablePromptLinks: { id: 'shareablePromptLinks', name: 'Shareable Prompt Links', phase: 'monetization', enabled: true, plans: ['pro'] },
