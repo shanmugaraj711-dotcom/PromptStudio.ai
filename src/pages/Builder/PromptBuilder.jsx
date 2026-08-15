@@ -26,6 +26,7 @@ function PromptBuilder() {
   const fileInputRef = useRef(null);
   const [searchParams] = useSearchParams();
   const workflowId = searchParams.get('workflow');
+  const requestedModel = searchParams.get('model');
   const workflow = getWorkflowById(workflowId);
   const {
     idea,
@@ -45,12 +46,18 @@ function PromptBuilder() {
     isPreparingImage,
     generate,
   } = usePromptBuilder();
-  const { plan, promptsToday, lastPromptDate } = useAuth();
+  const { user, plan, promptsToday, lastPromptDate } = useAuth();
   const workflowAccess = evaluateFeatureAccess('promptWorkflows', plan);
   const workflowActive = Boolean(workflow && workflowAccess.allowed);
   const imageMode = category === 'image';
   const quota = createQuotaState({ plan, promptsToday, lastPromptDate });
   const quotaExhausted = quota.remaining === 0;
+
+  useEffect(() => {
+    if (requestedModel && AI_MODELS.some((model) => model.id === requestedModel)) {
+      setAiModel(requestedModel);
+    }
+  }, [requestedModel, setAiModel]);
 
   useEffect(() => {
     if (workflowActive && workflow.category) setCategory(workflow.category);
@@ -87,6 +94,21 @@ function PromptBuilder() {
           subtitle="Describe your idea, or show PromptStudio a reference image. It will understand the intent and build a reference-aware prompt."
         />
 
+        {!user && (
+          <div className="mt-8 rounded-3xl border border-blue-100 bg-gradient-to-r from-blue-50 via-white to-indigo-50 p-6 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-bold text-slate-900">Create a free account to generate</p>
+                <p className="mt-1 text-sm text-slate-600">You can explore the builder here, then sign in to generate, save history, and use your daily quota.</p>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <Link to="/login" className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">Log in</Link>
+                <Link to="/signup" className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">Sign up free</Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {workflowActive && (
           <div className="mt-8 rounded-3xl border border-indigo-200/80 bg-white/90 p-5 shadow-sm backdrop-blur">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -107,7 +129,7 @@ function PromptBuilder() {
           </div>
         )}
 
-        <form className="mt-8 rounded-[2rem] border border-slate-200/80 bg-white/95 p-8 shadow-[0_24px_70px_-35px_rgba(37,99,235,0.35)] backdrop-blur sm:p-10" onSubmit={handleSubmit} aria-busy={isGenerating || isPreparingImage}>
+        <form className="mt-8 rounded-[2rem] border border-slate-200/80 bg-white/95 p-8 shadow-[0_24px_70px_-35px_rgba(37,99,235,0.35)] backdrop-blur" onSubmit={handleSubmit} aria-busy={isGenerating || isPreparingImage}>
           <TextArea
             id="idea"
             label="Your idea"
@@ -173,7 +195,7 @@ function PromptBuilder() {
           </div>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <Button variant="primary" size="lg" type="submit" disabled={isGenerating || isPreparingImage || quotaExhausted} className="w-full sm:w-auto">
+            <Button variant="primary" size="lg" type="submit" disabled={isGenerating || isPreparingImage || quotaExhausted || !user} className="w-full sm:w-auto">
               {isGenerating ? 'Analyzing & building…' : workflow ? `Run ${workflow.name}` : imageMode ? 'Create Image Prompt' : 'Generate Better Prompt'}
             </Button>
             <p className={`text-sm font-semibold ${quotaExhausted ? 'text-red-600' : 'text-slate-600'}`} aria-live="polite">
