@@ -1,10 +1,14 @@
 export const DEFAULT_PLAN = "free";
 
-// This is the existing free-plan allowance advertised on the pricing page.
-// A null limit represents an unlimited plan.
+// Monetization policy. Keep user-facing limits here so the UI and API share one source of truth.
 export const PLAN_DAILY_PROMPT_LIMITS = Object.freeze({
   free: 3,
-  pro: null,
+  pro: 100,
+});
+
+export const PLAN_MONTHLY_IMAGE_LIMITS = Object.freeze({
+  free: 0,
+  pro: 100,
 });
 
 export const normalizePlan = (plan) =>
@@ -13,8 +17,14 @@ export const normalizePlan = (plan) =>
 export const getDailyPromptLimit = (plan) =>
   PLAN_DAILY_PROMPT_LIMITS[normalizePlan(plan)];
 
+export const getMonthlyImageLimit = (plan) =>
+  PLAN_MONTHLY_IMAGE_LIMITS[normalizePlan(plan)];
+
 export const getUtcDateKey = (date = new Date()) =>
   date.toISOString().slice(0, 10);
+
+export const getUtcMonthKey = (date = new Date()) =>
+  date.toISOString().slice(0, 7);
 
 const toNonNegativeInteger = (value) => {
   const parsed = Number(value);
@@ -22,22 +32,36 @@ const toNonNegativeInteger = (value) => {
 };
 
 export function createQuotaState(
-  { plan, promptsToday, lastPromptDate, quotaVersion } = {},
+  {
+    plan,
+    promptsToday,
+    lastPromptDate,
+    imageAnalysesThisMonth,
+    lastImageAnalysisMonth,
+    quotaVersion,
+  } = {},
   date = new Date()
 ) {
   const normalizedPlan = normalizePlan(plan);
   const dateKey = getUtcDateKey(date);
-  const isCurrentDay = lastPromptDate === dateKey;
-  const usedToday = isCurrentDay ? toNonNegativeInteger(promptsToday) : 0;
+  const monthKey = getUtcMonthKey(date);
+  const usedToday = lastPromptDate === dateKey ? toNonNegativeInteger(promptsToday) : 0;
+  const usedImagesThisMonth =
+    lastImageAnalysisMonth === monthKey ? toNonNegativeInteger(imageAnalysesThisMonth) : 0;
   const dailyLimit = getDailyPromptLimit(normalizedPlan);
+  const monthlyImageLimit = getMonthlyImageLimit(normalizedPlan);
 
   return {
     plan: normalizedPlan,
     promptsToday: usedToday,
     lastPromptDate: typeof lastPromptDate === "string" ? lastPromptDate : null,
+    imageAnalysesThisMonth: usedImagesThisMonth,
+    lastImageAnalysisMonth:
+      typeof lastImageAnalysisMonth === "string" ? lastImageAnalysisMonth : null,
     quotaVersion: toNonNegativeInteger(quotaVersion),
     dailyLimit,
-    remaining:
-      dailyLimit === null ? null : Math.max(dailyLimit - usedToday, 0),
+    monthlyImageLimit,
+    remaining: Math.max(dailyLimit - usedToday, 0),
+    imageRemaining: Math.max(monthlyImageLimit - usedImagesThisMonth, 0),
   };
 }
