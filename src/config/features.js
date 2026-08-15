@@ -20,6 +20,9 @@ export const FEATURE_REGISTRY = Object.freeze({
   promptBookmarking: { id: 'promptBookmarking', name: 'Prompt Bookmarks / Favorites', phase: 'monetization', enabled: true, plans: ['pro'] },
   shareablePromptLinks: { id: 'shareablePromptLinks', name: 'Shareable Prompt Links', phase: 'monetization', enabled: true, plans: ['pro'] },
   promptWorkflows: { id: 'promptWorkflows', name: 'Prompt Workflows', phase: 'monetization', enabled: true, plans: ['pro'] },
+  creditTopUps: { id: 'creditTopUps', name: 'Pay-As-You-Go Credits', phase: 'monetization', enabled: true, plans: ['free', 'pro'] },
+  proSubscription: { id: 'proSubscription', name: 'Pro Subscription', phase: 'monetization', enabled: true, plans: ['pro'] },
+  paymentGateway: { id: 'paymentGateway', name: 'Payment Gateway', phase: 'upcoming', enabled: false, plans: ['free', 'pro'] },
   aiToolRecommendation: { id: 'aiToolRecommendation', name: 'AI Tool Recommendation', phase: 'upcoming', enabled: false, plans: ['free', 'pro'] },
 });
 
