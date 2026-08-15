@@ -7,6 +7,7 @@ import { createQuotaState, getUtcDateKey } from "../src/constants/quota.js";
 const ALLOWED_MODELS = new Set(["chatgpt", "claude", "gemini", "grok"]);
 const ALLOWED_CATEGORIES = new Set(["writing", "coding", "image", "marketing", "business"]);
 const REQUEST_ID_PATTERN = /^[a-zA-Z0-9_-]{8,128}$/;
+const MAX_IMAGE_DATA_LENGTH = 4_000_000;
 
 const PRIMARY_GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 const FALLBACK_GEMINI_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.6-flash";
@@ -62,7 +63,6 @@ const getAdminCredential = () => {
       throw new ApiError(503, "server_configuration_error", "The Firebase server configuration is invalid.");
     }
   }
-
   const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT;
   const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
   const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, "\n");
@@ -89,10 +89,11 @@ const getGeminiClient = () => {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 };
 
-const validateInput = ({ idea, aiModel, category, requestId }) => {
+const validateInput = ({ idea, aiModel, category, requestId, image }) => {
   const normalizedIdea = typeof idea === "string" ? idea.trim() : "";
-  if (normalizedIdea.length < 3 || normalizedIdea.length > 6000) {
-    throw new ApiError(400, "invalid_idea", "Please provide an idea between 3 and 6,000 characters.");
+  const hasImage = Boolean(image && typeof image === "object");
+  if ((normalizedIdea.length < 3 && !hasImage) || normalizedIdea.length > 6000) {
+    throw new ApiError(400, "invalid_idea", "Please describe your idea or attach a reference image.");
   }
   if (!ALLOWED_MODELS.has(aiModel) || !ALLOWED_CATEGORIES.has(category)) {
     throw new ApiError(400, "invalid_options", "Choose a supported AI model and category.");
@@ -100,7 +101,12 @@ const validateInput = ({ idea, aiModel, category, requestId }) => {
   if (typeof requestId !== "string" || !REQUEST_ID_PATTERN.test(requestId)) {
     throw new ApiError(400, "invalid_request", "The generation request ID is invalid.");
   }
-  return normalizedIdea;
+  if (hasImage) {
+    if (image.mimeType !== "image/jpeg" || typeof image.data !== "string" || !image.data || image.data.length > MAX_IMAGE_DATA_LENGTH) {
+      throw new ApiError(400, "invalid_image", "The reference image is invalid or too large. Please choose a smaller image.");
+    }
+  }
+  return { idea: normalizedIdea, image: hasImage ? image : null };
 };
 
 const getUserAndRequestRefs = (db, uid, requestId) => {
@@ -164,7 +170,7 @@ const rollbackReservation = async ({ db, uid, requestId, now, failureCode }) => 
   });
 };
 
-const saveSuccessfulGeneration = async ({ db, uid, requestId, result, aiModel, category }) => {
+const saveSuccessfulGeneration = async ({ db, uid, requestId, result, aiModel, category, image }) => {
   const { requestRef, historyRef } = getUserAndRequestRefs(db, uid, requestId);
   return db.runTransaction(async (transaction) => {
     const requestSnapshot = await transaction.get(requestRef);
@@ -174,19 +180,23 @@ const saveSuccessfulGeneration = async ({ db, uid, requestId, result, aiModel, c
       return { prompt: request.prompt, perspectives: request.perspectives || [], intelligence: request.intelligence || null, historyId: request.historyId, quota: request.quota };
     }
     if (request.status !== "reserved") throw new ApiError(409, "request_not_active", "The generation request is no longer active.");
-    transaction.set(historyRef, {
+    const history = {
       prompt: result.prompt,
       perspectives: result.perspectives,
       intelligence: result.intelligence,
       aiModel,
       category,
+      hasReferenceImage: Boolean(image),
+      referenceImageName: image?.name || null,
       createdAt: FieldValue.serverTimestamp(),
-    });
+    };
+    transaction.set(historyRef, history);
     transaction.update(requestRef, {
       status: "succeeded",
       prompt: result.prompt,
       perspectives: result.perspectives,
       intelligence: result.intelligence,
+      hasReferenceImage: Boolean(image),
       historyId: historyRef.id,
       completedAt: FieldValue.serverTimestamp(),
     });
@@ -217,7 +227,6 @@ const normalizeIntelligence = (value, category) => {
     .slice(0, 3)
     .map((item, index) => ({ id: item.id || `perspective-${index + 1}`, label: item.label.trim().slice(0, 60), prompt: item.prompt.trim().slice(0, 12000) }))
     .filter((item) => item.prompt.length >= 20);
-
   return {
     prompt: typeof intelligence.prompt === "string" ? intelligence.prompt.trim().slice(0, 12000) : "",
     perspectives: safePerspectives,
@@ -231,12 +240,15 @@ const normalizeIntelligence = (value, category) => {
   };
 };
 
-const createOptimizedPrompt = async ({ client, idea, aiModel, category }) => {
-  const contents = `You are the intelligence engine inside PromptStudio. Transform the user's rough request into a professional, ready-to-paste AI prompt.\n\nTARGET AI: ${aiModel}\nCATEGORY: ${category}\nUSER REQUEST:\n${idea}`;
+const createOptimizedPrompt = async ({ client, idea, aiModel, category, image }) => {
+  const text = `You are the intelligence engine inside PromptStudio. Transform the user's request into a professional, ready-to-paste AI prompt.\n\nTARGET AI: ${aiModel}\nCATEGORY: ${category}\nUSER REQUEST:\n${idea || "No text was supplied; use the reference image as the primary source of truth."}`;
+  const contents = image
+    ? [{ text }, { inlineData: { mimeType: image.mimeType, data: image.data } }]
+    : text;
   const config = {
-    systemInstruction: `You are an expert prompt architect, intent analyst, and multimodal workflow designer. Your job is to improve the user's intent without inventing personal facts, visual facts, business facts, or requirements that were not supplied. Distinguish facts from reasonable recommendations and missing information. If the request is vague, make the best useful prompt possible while using neutral placeholders only where they materially matter.\n\nReturn valid JSON only with this exact shape:\n{"prompt":"...","perspectives":[{"id":"...","label":"...","prompt":"..."}],"intent":"...","outputType":"...","assumptions":["..."],"missing":["..."],"recommendations":["..."]}\n\nThe main prompt must be ready to paste and should contain only information useful to the requested task. Include role, objective, context, constraints, output format, and quality criteria when relevant; do not mechanically include every section when it does not help.\n\nCreate exactly three genuinely different perspectives. For example, image tasks may use Faithful / Professional / Creative; coding may use Robust / Minimal / Production; marketing may use Conversion / Brand / Growth. Choose labels appropriate to the user's actual intent. Each perspective must remain faithful to known facts.\n\nFor missing information, list only details that would meaningfully improve the result. Do not turn missing details into invented facts. Keep recommendations short and actionable.`,
+    systemInstruction: `You are PromptStudio's reference-aware prompt architect. You can analyze an attached reference image. Treat the image as source evidence, not as permission to invent facts. Identify the user's actual goal, distinguish visible facts from assumptions, and create a useful prompt for the selected target AI.\n\nWhen a reference image is present, analyze relevant subject, composition, framing, camera/visual characteristics, lighting, colors, materials, typography, spatial relationships, and other visible details only when they matter to the user's goal. Preserve identity-sensitive details as descriptions rather than guessing identity. Do not claim hidden information.\n\nReturn valid JSON only with this exact shape: {"prompt":"...","perspectives":[{"id":"...","label":"...","prompt":"..."}],"intent":"...","outputType":"...","assumptions":["..."],"missing":["..."],"recommendations":["..."]}.\n\nThe main prompt must be ready to paste. It should translate the user's request and reference image into explicit instructions for the target AI. Do not mechanically add sections that do not help.\n\nCreate exactly three genuinely different perspectives. For image/reference tasks prefer labels such as Faithful, Professional, and Creative when appropriate. The Faithful version prioritizes matching the reference; Professional prioritizes polished production quality; Creative introduces controlled improvements without changing the core subject or intent. Use different labels when the task calls for another set.\n\nList only meaningful missing details and reasonable recommendations. Never turn missing information into invented facts.`,
     responseMimeType: "application/json",
-    maxOutputTokens: 2200,
+    maxOutputTokens: 2600,
   };
 
   let response;
@@ -250,14 +262,12 @@ const createOptimizedPrompt = async ({ client, idea, aiModel, category }) => {
 
   const raw = response.text?.trim();
   if (!raw) throw new Error("Gemini returned an empty response.");
-
   let parsed;
   try {
     parsed = JSON.parse(raw);
   } catch {
     throw new Error("Gemini returned an invalid intelligence response.");
   }
-
   const result = normalizeIntelligence(parsed, category);
   if (!result.prompt || result.perspectives.length < 3) throw new Error("Gemini returned an incomplete intelligence response.");
   return result;
@@ -267,7 +277,7 @@ export default async function handler(request, response) {
   if (request.method !== "POST") return sendJson(response, 405, { code: "method_not_allowed", message: "Use POST to generate a prompt." });
   try {
     const body = parseBody(request.body);
-    const idea = validateInput(body);
+    const input = validateInput(body);
     const authorization = request.headers?.authorization || request.headers?.Authorization;
     const idToken = authorization?.startsWith("Bearer ") ? authorization.slice("Bearer ".length) : "";
     if (!idToken) throw new ApiError(401, "unauthenticated", "Please sign in to generate a prompt.");
@@ -280,7 +290,7 @@ export default async function handler(request, response) {
 
     let result;
     try {
-      result = await createOptimizedPrompt({ client, idea, aiModel: body.aiModel, category: body.category });
+      result = await createOptimizedPrompt({ client, idea: input.idea, aiModel: body.aiModel, category: body.category, image: input.image });
     } catch (error) {
       const quota = await rollbackReservation({ db: services.db, uid: decodedToken.uid, requestId: body.requestId, now: new Date(), failureCode: "gemini_failed" });
       console.error("Gemini generation failed", { code: error?.code || "unknown" });
@@ -288,7 +298,7 @@ export default async function handler(request, response) {
     }
 
     try {
-      const saved = await saveSuccessfulGeneration({ db: services.db, uid: decodedToken.uid, requestId: body.requestId, result, aiModel: body.aiModel, category: body.category });
+      const saved = await saveSuccessfulGeneration({ db: services.db, uid: decodedToken.uid, requestId: body.requestId, result, aiModel: body.aiModel, category: body.category, image: input.image });
       return sendJson(response, 200, saved);
     } catch (error) {
       const quota = await rollbackReservation({ db: services.db, uid: decodedToken.uid, requestId: body.requestId, now: new Date(), failureCode: "history_write_failed" });
