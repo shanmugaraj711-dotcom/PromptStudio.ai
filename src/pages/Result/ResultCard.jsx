@@ -7,8 +7,9 @@ import { AI_LAUNCH_TARGETS, launchPromptInAI } from '../../services/aiLaunchServ
 import { createShareablePrompt } from '../../services/sharePromptService';
 import { usePromptTemplates, extractPromptVariables } from '../../hooks/usePromptTemplates';
 import { useAuth } from '../../context/AuthContext';
+import WorkflowProgress from './WorkflowProgress';
 
-function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan = 'free' }) {
+function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan = 'free', workflow = null }) {
   const { user } = useAuth();
   const { createTemplate } = usePromptTemplates();
   const [copyStatus, setCopyStatus] = useState('');
@@ -25,6 +26,7 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
   const launchAccess = evaluateFeatureAccess('oneClickLaunchButtons', userPlan);
   const shareAccess = evaluateFeatureAccess('shareablePromptLinks', userPlan);
   const templateAccess = evaluateFeatureAccess('dynamicVariableFillers', userPlan);
+  const workflowAccess = evaluateFeatureAccess('promptWorkflows', userPlan);
 
   useEffect(() => {
     setSelectedId('main');
@@ -140,6 +142,8 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
           </Button>
         </div>
       </div>
+
+      {workflow && workflowAccess.allowed && <WorkflowProgress workflow={workflow} perspectives={perspectives} selectedId={selectedId} />}
 
       {templateAccess.allowed && showTemplateForm && (
         <div className="mt-5 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
