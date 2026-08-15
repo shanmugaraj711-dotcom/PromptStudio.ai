@@ -2,10 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import TextArea from '../../components/ui/TextArea';
 import Button from '../../components/ui/Button';
 import { copyToClipboard } from '../../utils/copyToClipboard';
+import { evaluateFeatureAccess } from '../../config/features';
 
-function ResultCard({ prompt, perspectives = [], intelligence = null }) {
+function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan = 'free' }) {
   const [copyStatus, setCopyStatus] = useState('');
   const [selectedId, setSelectedId] = useState('main');
+
+  const perspectiveAccess = evaluateFeatureAccess('multiPerspectiveGeneration', userPlan);
+  const intentAccess = evaluateFeatureAccess('intentIntelligence', userPlan);
 
   useEffect(() => {
     setSelectedId('main');
@@ -41,7 +45,7 @@ function ResultCard({ prompt, perspectives = [], intelligence = null }) {
         </Button>
       </div>
 
-      {intelligence?.intent && (
+      {intentAccess.allowed && intelligence?.intent && (
         <div className="mt-5 rounded-2xl border border-gray-100 bg-gray-50 p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Understood goal</p>
           <p className="mt-1 text-sm font-medium text-gray-800">{intelligence.intent}</p>
@@ -53,7 +57,7 @@ function ResultCard({ prompt, perspectives = [], intelligence = null }) {
         </div>
       )}
 
-      {perspectives.length > 0 && (
+      {perspectiveAccess.allowed && perspectives.length > 0 && (
         <div className="mt-6">
           <p className="mb-2 text-sm font-semibold text-gray-800">Choose an approach</p>
           <div className="flex flex-wrap gap-2" role="tablist" aria-label="Prompt perspectives">
@@ -88,7 +92,7 @@ function ResultCard({ prompt, perspectives = [], intelligence = null }) {
         <TextArea id="generatedPrompt" value={selectedPrompt} readOnly rows={14} />
       </div>
 
-      {intelligence?.recommendations?.length > 0 && (
+      {intentAccess.allowed && intelligence?.recommendations?.length > 0 && (
         <div className="mt-5 rounded-2xl border border-gray-100 p-4">
           <p className="text-sm font-semibold text-gray-800">PromptStudio suggestions</p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-600">
