@@ -18,7 +18,7 @@ export const FEATURE_REGISTRY = Object.freeze({
   dynamicVariableFillers: { id: 'dynamicVariableFillers', name: 'Dynamic Variable Fillers', phase: 'upcoming', enabled: false, plans: ['free', 'pro'] },
   oneClickLaunchButtons: { id: 'oneClickLaunchButtons', name: 'One-Click AI Launch', phase: 'monetization', enabled: true, plans: ['pro'] },
   promptBookmarking: { id: 'promptBookmarking', name: 'Prompt Bookmarks / Favorites', phase: 'monetization', enabled: true, plans: ['pro'] },
-  shareablePromptLinks: { id: 'shareablePromptLinks', name: 'Shareable Prompt Links', phase: 'upcoming', enabled: false, plans: ['pro'] },
+  shareablePromptLinks: { id: 'shareablePromptLinks', name: 'Shareable Prompt Links', phase: 'monetization', enabled: true, plans: ['pro'] },
   aiToolRecommendation: { id: 'aiToolRecommendation', name: 'AI Tool Recommendation', phase: 'upcoming', enabled: false, plans: ['free', 'pro'] },
 });
 
