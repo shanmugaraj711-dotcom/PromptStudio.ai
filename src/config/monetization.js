@@ -1,33 +1,19 @@
+import PRODUCT_CONFIG from './product.config.js';
+
 /**
- * PromptStudio monetization policy.
- * Keep pricing and credit costs centralized so UI, API, and future billing
- * integrations can consume one source of truth.
+ * Backward-compatible monetization API.
+ * Pricing and credit costs are sourced from product.config.js.
  */
-
-export const PRICING = Object.freeze({
-  proMonthlyInr: 79,
-  proAnnualInr: 499,
-  creditPackInr: 99,
-  creditPackSize: 25,
-});
-
-export const CREDIT_COSTS = Object.freeze({
-  standardGeneration: 1,
-  promptRefinement: 1,
-  referenceImageAnalysis: 3,
-  advancedOperation: 3,
-  heavyOperation: 5,
-});
-
+export const PRICING = PRODUCT_CONFIG.pricing;
+export const CREDIT_COSTS = PRODUCT_CONFIG.creditCosts;
 export const MONETIZATION_POLICY = Object.freeze({
-  proDailyGenerations: 100,
-  proMonthlyImageAnalyses: 100,
-  creditsAvailableToPlans: ['free', 'pro'],
-  purchasedCreditsExpire: false,
+  proDailyGenerations: PRODUCT_CONFIG.plans.pro.dailyPromptLimit,
+  proMonthlyImageAnalyses: PRODUCT_CONFIG.plans.pro.monthlyImageLimit,
+  creditsAvailableToPlans: Object.keys(PRODUCT_CONFIG.plans).filter((plan) => PRODUCT_CONFIG.plans[plan].creditsEnabled),
+  purchasedCreditsExpire: PRODUCT_CONFIG.monetization.purchasedCreditsExpire,
 });
 
 export const getCreditCost = (operation) => CREDIT_COSTS[operation] ?? null;
-
 export const getCreditPackValue = () => PRICING.creditPackSize;
 
 export default MONETIZATION_POLICY;
