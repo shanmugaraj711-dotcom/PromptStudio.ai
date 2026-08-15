@@ -1,50 +1,16 @@
 /**
  * PromptStudio single product configuration.
- *
- * Change product behavior here first. Feature access, plan allowances,
- * pricing, and credit costs are derived from this registry so future product
- * changes do not require hunting through UI/API constants.
+ * Product limits, pricing, credit costs and payment policy live here.
  */
-
 export const PRODUCT_CONFIG = Object.freeze({
   defaultPlan: 'free',
-
   plans: Object.freeze({
-    free: Object.freeze({
-      id: 'free',
-      name: 'Free',
-      dailyPromptLimit: 3,
-      monthlyImageLimit: 3,
-      creditsEnabled: true,
-    }),
-    pro: Object.freeze({
-      id: 'pro',
-      name: 'Pro',
-      dailyPromptLimit: 100,
-      monthlyImageLimit: 100,
-      creditsEnabled: true,
-    }),
+    free: Object.freeze({ id: 'free', name: 'Free', dailyPromptLimit: 3, monthlyImageLimit: 3, creditsEnabled: true }),
+    pro: Object.freeze({ id: 'pro', name: 'Pro', dailyPromptLimit: 100, monthlyImageLimit: 100, creditsEnabled: true }),
   }),
-
-  pricing: Object.freeze({
-    proMonthlyInr: 79,
-    proAnnualInr: 499,
-    creditPackInr: 99,
-    creditPackSize: 25,
-  }),
-
-  creditCosts: Object.freeze({
-    standardGeneration: 1,
-    promptRefinement: 1,
-    referenceImageAnalysis: 3,
-    advancedOperation: 3,
-    heavyOperation: 5,
-  }),
-
-  monetization: Object.freeze({
-    purchasedCreditsExpire: false,
-  }),
-
+  pricing: Object.freeze({ proMonthlyInr: 79, proAnnualInr: 499, creditPackInr: 99, creditPackSize: 25 }),
+  creditCosts: Object.freeze({ standardGeneration: 1, promptRefinement: 1, referenceImageAnalysis: 3, advancedOperation: 3, heavyOperation: 5 }),
+  monetization: Object.freeze({ purchasedCreditsExpire: false, paymentProvider: 'razorpay', paymentMode: 'test' }),
   features: Object.freeze({
     aiPromptOptimization: { id: 'aiPromptOptimization', name: 'AI Prompt Optimization', phase: 'core', enabled: true, plans: ['free', 'pro'] },
     multiPerspectiveGeneration: { id: 'multiPerspectiveGeneration', name: 'Multi-Perspective Generation', phase: 'core', enabled: true, plans: ['free', 'pro'] },
@@ -61,9 +27,8 @@ export const PRODUCT_CONFIG = Object.freeze({
     promptWorkflows: { id: 'promptWorkflows', name: 'Prompt Workflows', phase: 'monetization', enabled: true, plans: ['pro'] },
     creditTopUps: { id: 'creditTopUps', name: 'Pay-As-You-Go Credits', phase: 'monetization', enabled: true, plans: ['free', 'pro'] },
     proSubscription: { id: 'proSubscription', name: 'Pro Subscription', phase: 'monetization', enabled: true, plans: ['pro'] },
-    paymentGateway: { id: 'paymentGateway', name: 'Payment Gateway', phase: 'upcoming', enabled: false, plans: ['free', 'pro'] },
+    paymentGateway: { id: 'paymentGateway', name: 'Razorpay Payment Gateway', phase: 'monetization', enabled: true, plans: ['free', 'pro'] },
     aiToolRecommendation: { id: 'aiToolRecommendation', name: 'AI Tool Recommendation', phase: 'upcoming', enabled: false, plans: ['free', 'pro'] },
   }),
 });
-
 export default PRODUCT_CONFIG;
