@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import SectionHeading from '../../components/common/SectionHeading';
 import TextArea from '../../components/ui/TextArea';
 import Select from '../../components/ui/Select';
@@ -9,9 +10,14 @@ import { AI_MODELS } from '../../constants/aiModels';
 import { CATEGORIES } from '../../constants/categories';
 import { createQuotaState } from '../../constants/quota';
 import { useAuth } from '../../context/AuthContext';
+import { evaluateFeatureAccess } from '../../config/features';
+import { getWorkflowById } from '../../config/workflows';
 
 function PromptBuilder() {
   const fileInputRef = useRef(null);
+  const [searchParams] = useSearchParams();
+  const workflowId = searchParams.get('workflow');
+  const workflow = getWorkflowById(workflowId);
   const {
     idea,
     setIdea,
@@ -31,6 +37,7 @@ function PromptBuilder() {
     generate,
   } = usePromptBuilder();
   const { plan, promptsToday, lastPromptDate } = useAuth();
+  const workflowAccess = evaluateFeatureAccess('promptWorkflows', plan);
   const quota = createQuotaState({ plan, promptsToday, lastPromptDate });
   const quotaExhausted = quota.remaining === 0;
 
@@ -45,16 +52,42 @@ function PromptBuilder() {
     event.target.value = '';
   };
 
+  const stepLabels = { optimize: 'Optimize', perspectives: 'Perspectives', compare: 'Compare', variables: 'Variables', launch: 'Launch' };
+
   return (
     <section id="prompt-builder" className="bg-gray-50/60 py-20 lg:py-28">
       <div className="mx-auto max-w-5xl px-6 lg:px-8">
+        <div className="mb-5 flex justify-end">
+          <Link to="/workflows" className="rounded-xl border border-indigo-200 bg-white px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50">⚡ Prompt Workflows</Link>
+        </div>
+
         <SectionHeading
-          eyebrow="Try it now"
+          eyebrow={workflow && workflowAccess.allowed ? `Workflow · ${workflow.name}` : 'Try it now'}
           title="Build your prompt"
           subtitle="Describe your idea, or show PromptStudio a reference image. It will understand the intent and build a reference-aware prompt."
         />
 
-        <form className="mt-14 rounded-3xl border border-gray-100 bg-white p-8 shadow-sm sm:p-10" onSubmit={handleSubmit} aria-busy={isGenerating || isPreparingImage}>
+        {workflow && workflowAccess.allowed && (
+          <div className="mt-8 rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-bold text-indigo-900">⚡ {workflow.name} workflow active</p>
+                <p className="mt-1 text-xs text-indigo-700">Follow the guided steps below. Your existing generation quota and AI services are unchanged.</p>
+              </div>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-indigo-700">PRO</span>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {workflow.steps.map((step, index) => (
+                <span key={step} className="flex items-center gap-2">
+                  <span className="rounded-full border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-800">{index + 1}. {stepLabels[step]}</span>
+                  {index < workflow.steps.length - 1 && <span className="text-indigo-300">→</span>}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <form className="mt-8 rounded-3xl border border-gray-100 bg-white p-8 shadow-sm sm:p-10" onSubmit={handleSubmit} aria-busy={isGenerating || isPreparingImage}>
           <TextArea
             id="idea"
             label="Your idea"
@@ -80,11 +113,7 @@ function PromptBuilder() {
 
             {image && (
               <div className="mt-4 flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-3">
-                <img
-                  src={`data:${image.mimeType};base64,${image.data}`}
-                  alt="Reference preview"
-                  className="h-20 w-20 rounded-lg object-cover"
-                />
+                <img src={`data:${image.mimeType};base64,${image.data}`} alt="Reference preview" className="h-20 w-20 rounded-lg object-cover" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-gray-800">{image.name}</p>
                   <p className="mt-1 text-xs text-gray-500">Ready for visual analysis</p>
@@ -96,9 +125,7 @@ function PromptBuilder() {
 
           <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-4">
             <p className="text-sm font-semibold text-blue-700">💡 PromptStudio Intelligence</p>
-            <p className="mt-2 text-sm text-gray-700">
-              With an image, PromptStudio analyzes the visible details that matter to your goal and keeps facts separate from assumptions instead of blindly inventing details.
-            </p>
+            <p className="mt-2 text-sm text-gray-700">With an image, PromptStudio analyzes the visible details that matter to your goal and keeps facts separate from assumptions instead of blindly inventing details.</p>
           </div>
 
           <div className="mt-6 grid gap-6 sm:grid-cols-2">
@@ -108,7 +135,7 @@ function PromptBuilder() {
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Button variant="primary" size="lg" type="submit" disabled={isGenerating || isPreparingImage || quotaExhausted} className="w-full sm:w-auto">
-              {isGenerating ? 'Analyzing & building…' : 'Generate Better Prompt'}
+              {isGenerating ? 'Analyzing & building…' : workflow ? `Run ${workflow.name}` : 'Generate Better Prompt'}
             </Button>
             <p className={`text-sm font-semibold ${quotaExhausted ? 'text-red-600' : 'text-gray-600'}`} aria-live="polite">
               {quota.remaining === null ? 'Unlimited prompts available' : `${quota.remaining} / ${quota.dailyLimit} prompts remaining today`}
@@ -118,12 +145,7 @@ function PromptBuilder() {
 
         {generatedPrompt && (
           <div className="mt-10">
-            <ResultCard
-              prompt={generatedPrompt}
-              perspectives={perspectives}
-              intelligence={intelligence}
-              userPlan={plan}
-            />
+            <ResultCard prompt={generatedPrompt} perspectives={perspectives} intelligence={intelligence} userPlan={plan} workflow={workflow} />
           </div>
         )}
       </div>
