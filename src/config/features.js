@@ -1,36 +1,16 @@
+import PRODUCT_CONFIG from './product.config.js';
+
 /**
- * PromptStudio central feature registry.
- * Keep product capability switches here so features can be introduced,
- * tested, disabled, or Pro-gated without scattering feature checks across UI.
+ * Backward-compatible feature API.
+ * The actual feature source of truth lives in product.config.js.
  */
-
-export const FEATURE_REGISTRY = Object.freeze({
-  aiPromptOptimization: { id: 'aiPromptOptimization', name: 'AI Prompt Optimization', phase: 'core', enabled: true, plans: ['free', 'pro'] },
-  multiPerspectiveGeneration: { id: 'multiPerspectiveGeneration', name: 'Multi-Perspective Generation', phase: 'core', enabled: true, plans: ['free', 'pro'] },
-  intentIntelligence: { id: 'intentIntelligence', name: 'Intent Intelligence', phase: 'core', enabled: true, plans: ['free', 'pro'] },
-  dailyQuotaManagement: { id: 'dailyQuotaManagement', name: 'Daily Quota Management', phase: 'core', enabled: true, plans: ['free', 'pro'] },
-  promptHistory: { id: 'promptHistory', name: 'Prompt History', phase: 'core', enabled: true, plans: ['free', 'pro'] },
-
-  imageIntelligence: { id: 'imageIntelligence', name: 'Image → Prompt Intelligence', phase: 'core', enabled: true, plans: ['free', 'pro'] },
-  imageUploadAnalysis: { id: 'imageUploadAnalysis', name: 'Image Upload & Analysis', phase: 'core', enabled: true, plans: ['free', 'pro'] },
-  referenceAwarePrompt: { id: 'referenceAwarePrompt', name: 'Reference-Aware Prompt Generation', phase: 'core', enabled: true, plans: ['free', 'pro'] },
-
-  dynamicVariableFillers: { id: 'dynamicVariableFillers', name: 'Dynamic Variables & Reusable Prompts', phase: 'monetization', enabled: true, plans: ['pro'] },
-  oneClickLaunchButtons: { id: 'oneClickLaunchButtons', name: 'One-Click AI Launch', phase: 'monetization', enabled: true, plans: ['pro'] },
-  promptBookmarking: { id: 'promptBookmarking', name: 'Prompt Bookmarks / Favorites', phase: 'monetization', enabled: true, plans: ['pro'] },
-  shareablePromptLinks: { id: 'shareablePromptLinks', name: 'Shareable Prompt Links', phase: 'monetization', enabled: true, plans: ['pro'] },
-  promptWorkflows: { id: 'promptWorkflows', name: 'Prompt Workflows', phase: 'monetization', enabled: true, plans: ['pro'] },
-  creditTopUps: { id: 'creditTopUps', name: 'Pay-As-You-Go Credits', phase: 'monetization', enabled: true, plans: ['free', 'pro'] },
-  proSubscription: { id: 'proSubscription', name: 'Pro Subscription', phase: 'monetization', enabled: true, plans: ['pro'] },
-  paymentGateway: { id: 'paymentGateway', name: 'Payment Gateway', phase: 'upcoming', enabled: false, plans: ['free', 'pro'] },
-  aiToolRecommendation: { id: 'aiToolRecommendation', name: 'AI Tool Recommendation', phase: 'upcoming', enabled: false, plans: ['free', 'pro'] },
-});
+export const FEATURE_REGISTRY = PRODUCT_CONFIG.features;
 
 export const isFeatureActive = (featureId) => Boolean(FEATURE_REGISTRY[featureId]?.enabled);
 
-export const evaluateFeatureAccess = (featureId, userPlan = 'free') => {
+export const evaluateFeatureAccess = (featureId, userPlan = PRODUCT_CONFIG.defaultPlan) => {
   const feature = FEATURE_REGISTRY[featureId];
-  const normalizedPlan = userPlan === 'pro' ? 'pro' : 'free';
+  const normalizedPlan = Object.hasOwn(PRODUCT_CONFIG.plans, userPlan) ? userPlan : PRODUCT_CONFIG.defaultPlan;
   if (!feature) return { featureId, exists: false, active: false, allowed: false, reason: 'unknown_feature' };
   if (!feature.enabled) return { featureId, exists: true, active: false, allowed: false, reason: 'feature_disabled', phase: feature.phase };
   const allowed = feature.plans.includes(normalizedPlan);
