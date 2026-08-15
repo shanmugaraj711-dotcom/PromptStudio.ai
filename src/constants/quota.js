@@ -1,19 +1,17 @@
-export const DEFAULT_PLAN = "free";
+import PRODUCT_CONFIG from '../config/product.config.js';
 
-// Monetization policy. Keep user-facing limits here so the UI and API share one source of truth.
-export const PLAN_DAILY_PROMPT_LIMITS = Object.freeze({
-  free: 3,
-  pro: 100,
-});
+export const DEFAULT_PLAN = PRODUCT_CONFIG.defaultPlan;
 
-export const PLAN_MONTHLY_IMAGE_LIMITS = Object.freeze({
-  free: 3,
-  pro: 100,
-});
+// Backward-compatible quota API. Limits are controlled in product.config.js.
+export const PLAN_DAILY_PROMPT_LIMITS = Object.freeze(
+  Object.fromEntries(Object.entries(PRODUCT_CONFIG.plans).map(([id, plan]) => [id, plan.dailyPromptLimit]))
+);
 
-export const normalizePlan = (plan) =>
-  Object.hasOwn(PLAN_DAILY_PROMPT_LIMITS, plan) ? plan : DEFAULT_PLAN;
+export const PLAN_MONTHLY_IMAGE_LIMITS = Object.freeze(
+  Object.fromEntries(Object.entries(PRODUCT_CONFIG.plans).map(([id, plan]) => [id, plan.monthlyImageLimit]))
+);
 
+export const normalizePlan = (plan) => Object.hasOwn(PRODUCT_CONFIG.plans, plan) ? plan : DEFAULT_PLAN;
 export const getDailyPromptLimit = (plan) => PLAN_DAILY_PROMPT_LIMITS[normalizePlan(plan)];
 export const getMonthlyImageLimit = (plan) => PLAN_MONTHLY_IMAGE_LIMITS[normalizePlan(plan)];
 export const getUtcDateKey = (date = new Date()) => date.toISOString().slice(0, 10);
@@ -35,9 +33,9 @@ export function createQuotaState({ plan, promptsToday, lastPromptDate, imageAnal
   return {
     plan: normalizedPlan,
     promptsToday: usedToday,
-    lastPromptDate: typeof lastPromptDate === "string" ? lastPromptDate : null,
+    lastPromptDate: typeof lastPromptDate === 'string' ? lastPromptDate : null,
     imageAnalysesThisMonth: usedImagesThisMonth,
-    lastImageAnalysisMonth: typeof lastImageAnalysisMonth === "string" ? lastImageAnalysisMonth : null,
+    lastImageAnalysisMonth: typeof lastImageAnalysisMonth === 'string' ? lastImageAnalysisMonth : null,
     quotaVersion: toNonNegativeInteger(quotaVersion),
     dailyLimit,
     monthlyImageLimit,
