@@ -22,12 +22,12 @@ function Navbar() {
     <header
       className={`sticky top-0 z-50 w-full transition-colors duration-200 ${
         isScrolled
-          ? 'bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100'
+          ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100'
           : 'bg-white border-b border-transparent'
       }`}
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
-        <Link to="/" className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2" aria-label="PromptStudio AI home">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-sm">
             P
           </span>
@@ -39,14 +39,17 @@ function Navbar() {
             <a
               key={link.label}
               href={link.href}
-              className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-sm font-medium text-gray-600 hover:text-blue-700 transition-colors"
             >
               {link.label}
             </a>
           ))}
         </div>
 
-        <div className="hidden md:block">
+        <div className="hidden md:flex md:items-center md:gap-3">
+          <Link to="/login" className="rounded-lg px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 hover:text-gray-900">
+            Log in
+          </Link>
           <Link to="/signup">
             <Button variant="primary" size="md">
               Start Free
@@ -73,26 +76,27 @@ function Navbar() {
 
       {isMenuOpen && (
         <div className="md:hidden border-t border-gray-100 bg-white px-6 py-4">
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
                 onClick={() => setIsMenuOpen(false)}
-                className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                className="rounded-lg px-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               >
                 {link.label}
               </a>
             ))}
-
-            <Link
-              to="/signup"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <Button variant="primary" size="md" className="w-full mt-2">
-                Start Free
-              </Button>
-            </Link>
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <Link to="/login" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-center rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700">
+                Log in
+              </Link>
+              <Link to="/signup" onClick={() => setIsMenuOpen(false)}>
+                <Button variant="primary" size="md" className="w-full">
+                  Start Free
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       )}
