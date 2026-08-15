@@ -9,7 +9,7 @@ import { usePromptTemplates, extractPromptVariables } from '../../hooks/usePromp
 import { useAuth } from '../../context/AuthContext';
 import WorkflowProgress from './WorkflowProgress';
 
-function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan = 'free', workflow = null }) {
+function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan = 'free', workflow = null, category = 'writing' }) {
   const { user } = useAuth();
   const { createTemplate } = usePromptTemplates();
   const [copyStatus, setCopyStatus] = useState('');
@@ -27,6 +27,7 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
   const shareAccess = evaluateFeatureAccess('shareablePromptLinks', userPlan);
   const templateAccess = evaluateFeatureAccess('dynamicVariableFillers', userPlan);
   const workflowAccess = evaluateFeatureAccess('promptWorkflows', userPlan);
+  const isImage = category === 'image';
 
   useEffect(() => {
     setSelectedId('main');
@@ -121,7 +122,7 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
   };
 
   return (
-    <div className="relative rounded-3xl border border-blue-100 bg-white p-8 shadow-md sm:p-10">
+    <div className={`relative overflow-hidden rounded-[2rem] border p-8 shadow-[0_28px_80px_-40px_rgba(37,99,235,0.4)] sm:p-10 ${isImage ? 'border-violet-200 bg-gradient-to-b from-white via-violet-50/30 to-sky-50/50' : 'border-blue-100 bg-white'}`}>
       {(launchStatus || shareStatus || templateStatus) && (launchAccess.allowed || shareAccess.allowed || templateAccess.allowed) && (
         <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-gray-800 shadow-lg" role="status" aria-live="polite">
           {launchStatus || shareStatus || templateStatus}
@@ -130,8 +131,9 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-blue-600">PromptStudio Intelligence</p>
-          <h3 className="mt-1 text-lg font-bold text-gray-900">Your optimized prompt</h3>
+          <p className={`text-xs font-bold uppercase tracking-wider ${isImage ? 'text-violet-600' : 'text-blue-600'}`}>{isImage ? 'PromptStudio Visual Intelligence' : 'PromptStudio Intelligence'}</p>
+          <h3 className="mt-1 text-lg font-bold text-gray-900">{isImage ? 'Your image prompt is ready' : 'Your optimized prompt'}</h3>
+          {isImage && <p className="mt-1 text-sm text-gray-500">A polished visual recipe for composition, lighting, detail and finish.</p>}
         </div>
         <div className="flex flex-wrap gap-2">
           {templateAccess.active && <Button variant="secondary" size="sm" disabled={!templateAccess.allowed} onClick={openTemplateForm}>{templateAccess.allowed ? 'Save as Template' : 'Save Template · PRO'}</Button>}
@@ -142,6 +144,23 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
           </Button>
         </div>
       </div>
+
+      {isImage && (
+        <div className="mt-6 grid gap-3 sm:grid-cols-4">
+          {[
+            ['✦', 'Composition', 'Framing & focal point'],
+            ['◐', 'Lighting', 'Mood & depth'],
+            ['◇', 'Detail', 'Texture & realism'],
+            ['✧', 'Finish', 'Color & camera feel'],
+          ].map(([icon, title, detail]) => (
+            <div key={title} className="rounded-2xl border border-white bg-white/80 p-4 shadow-sm ring-1 ring-violet-100/70">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-50 text-violet-600">{icon}</div>
+              <p className="mt-3 text-sm font-bold text-gray-900">{title}</p>
+              <p className="mt-1 text-xs text-gray-500">{detail}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {workflow && workflowAccess.allowed && <WorkflowProgress workflow={workflow} perspectives={perspectives} selectedId={selectedId} />}
 
