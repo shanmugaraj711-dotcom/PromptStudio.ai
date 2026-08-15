@@ -5,30 +5,41 @@ import { copyToClipboard } from '../../utils/copyToClipboard';
 import { evaluateFeatureAccess } from '../../config/features';
 import { AI_LAUNCH_TARGETS, launchPromptInAI } from '../../services/aiLaunchService';
 import { createShareablePrompt } from '../../services/sharePromptService';
+import { usePromptTemplates, extractPromptVariables } from '../../hooks/usePromptTemplates';
 import { useAuth } from '../../context/AuthContext';
 
 function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan = 'free' }) {
   const { user } = useAuth();
+  const { createTemplate } = usePromptTemplates();
   const [copyStatus, setCopyStatus] = useState('');
   const [launchStatus, setLaunchStatus] = useState('');
   const [shareStatus, setShareStatus] = useState('');
+  const [templateStatus, setTemplateStatus] = useState('');
   const [selectedId, setSelectedId] = useState('main');
+  const [showTemplateForm, setShowTemplateForm] = useState(false);
+  const [templateName, setTemplateName] = useState('Reusable Prompt');
+  const [templateDraft, setTemplateDraft] = useState('');
 
   const perspectiveAccess = evaluateFeatureAccess('multiPerspectiveGeneration', userPlan);
   const intentAccess = evaluateFeatureAccess('intentIntelligence', userPlan);
   const launchAccess = evaluateFeatureAccess('oneClickLaunchButtons', userPlan);
   const shareAccess = evaluateFeatureAccess('shareablePromptLinks', userPlan);
+  const templateAccess = evaluateFeatureAccess('dynamicVariableFillers', userPlan);
 
   useEffect(() => {
     setSelectedId('main');
     setLaunchStatus('');
     setShareStatus('');
+    setTemplateStatus('');
+    setShowTemplateForm(false);
   }, [prompt, perspectives]);
 
   const selectedPrompt = useMemo(() => {
     if (selectedId === 'main') return prompt;
     return perspectives.find((item) => item.id === selectedId)?.prompt || prompt;
   }, [prompt, perspectives, selectedId]);
+
+  const detectedVariables = useMemo(() => extractPromptVariables(templateDraft), [templateDraft]);
 
   const handleCopy = async () => {
     const success = await copyToClipboard(selectedPrompt);
@@ -78,11 +89,40 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
     }
   };
 
+  const openTemplateForm = () => {
+    if (!templateAccess.allowed) return;
+    setTemplateDraft(selectedPrompt || '');
+    setTemplateName('Reusable Prompt');
+    setTemplateStatus('');
+    setShowTemplateForm(true);
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!templateDraft.trim() || !templateName.trim()) {
+      setTemplateStatus('Add a template name and prompt first.');
+      return;
+    }
+    try {
+      await createTemplate({
+        name: templateName,
+        template: templateDraft,
+        variables: extractPromptVariables(templateDraft),
+      });
+      setTemplateStatus('✓ Reusable prompt saved to your library.');
+      setTimeout(() => {
+        setTemplateStatus('');
+        setShowTemplateForm(false);
+      }, 1800);
+    } catch (error) {
+      setTemplateStatus(error.message || 'Unable to save reusable prompt.');
+    }
+  };
+
   return (
     <div className="relative rounded-3xl border border-blue-100 bg-white p-8 shadow-md sm:p-10">
-      {(launchStatus || shareStatus) && (launchAccess.allowed || shareAccess.allowed) && (
+      {(launchStatus || shareStatus || templateStatus) && (launchAccess.allowed || shareAccess.allowed || templateAccess.allowed) && (
         <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-gray-800 shadow-lg" role="status" aria-live="polite">
-          {launchStatus || shareStatus}
+          {launchStatus || shareStatus || templateStatus}
         </div>
       )}
 
@@ -92,6 +132,7 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
           <h3 className="mt-1 text-lg font-bold text-gray-900">Your optimized prompt</h3>
         </div>
         <div className="flex flex-wrap gap-2">
+          {templateAccess.active && <Button variant="secondary" size="sm" disabled={!templateAccess.allowed} onClick={openTemplateForm}>{templateAccess.allowed ? 'Save as Template' : 'Save Template · PRO'}</Button>}
           {shareAccess.active && <Button variant="secondary" size="sm" disabled={!shareAccess.allowed} onClick={handleShare}>{shareAccess.allowed ? 'Share Link' : 'Share Link · PRO'}</Button>}
           <Button variant="secondary" size="sm" onClick={handleCopy}>
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
@@ -99,6 +140,20 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
           </Button>
         </div>
       </div>
+
+      {templateAccess.allowed && showTemplateForm && (
+        <div className="mt-5 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <input value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="Template name" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-indigo-400 sm:w-64" />
+            <p className="self-center text-xs text-gray-600">Use <code className="rounded bg-white px-1.5 py-0.5 font-semibold">{'{{variable}}'}</code> anywhere you want a reusable field.</p>
+          </div>
+          <textarea value={templateDraft} onChange={(e) => setTemplateDraft(e.target.value)} rows={7} className="mt-3 w-full rounded-xl border border-gray-200 bg-white p-4 text-sm leading-6 outline-none focus:border-indigo-400" />
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="text-xs text-gray-600">{detectedVariables.length ? `Detected variables: ${detectedVariables.map((item) => `{{${item}}}`).join(' · ')}` : 'No variables detected yet — you can still save this as a reusable prompt.'}</div>
+            <div className="flex gap-2"><Button variant="secondary" size="sm" onClick={() => setShowTemplateForm(false)}>Cancel</Button><Button variant="primary" size="sm" onClick={handleSaveTemplate}>Save Template</Button></div>
+          </div>
+        </div>
+      )}
 
       {intentAccess.allowed && intelligence?.intent && (
         <div className="mt-5 rounded-2xl border border-gray-100 bg-gray-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Understood goal</p><p className="mt-1 text-sm font-medium text-gray-800">{intelligence.intent}</p>{intelligence.missing?.length > 0 && <p className="mt-2 text-xs text-gray-500">Optional details that could improve it: {intelligence.missing.join(' · ')}</p>}</div>
