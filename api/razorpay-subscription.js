@@ -10,24 +10,14 @@ export default async function handler(req, res) {
   try {
     const decoded = await requireUser(req);
     const billing = req.body?.billing === "annual" ? "annual" : "monthly";
-    const envName = PLAN_ENV[billing];
-    const planId = String(process.env[envName] || "").trim();
+    const planId = String(process.env[PLAN_ENV[billing]] || "").trim();
     if (!planId) return json(res, 503, { code: "subscription_plan_not_configured", message: `Razorpay ${billing} test plan ID is not configured.` });
-
-    const totalCount = billing === "annual" ? 10 : 1200;
+    const totalCount = billing === "annual" ? 10 : 120;
     const subscription = await razorpayRequest("/subscriptions", {
       method: "POST",
       body: JSON.stringify({ plan_id: planId, total_count: totalCount, quantity: 1, customer_notify: true, notes: { uid: decoded.uid, type: "pro_subscription", billing } }),
     });
-    await adminDb().collection("paymentSubscriptions").doc(subscription.id).set({
-      uid: decoded.uid,
-      billing,
-      planId,
-      amountInr: billing === "annual" ? PRODUCT_CONFIG.pricing.proAnnualInr : PRODUCT_CONFIG.pricing.proMonthlyInr,
-      status: subscription.status || "created",
-      razorpaySubscriptionId: subscription.id,
-      createdAt: new Date(),
-    });
+    await adminDb().collection("paymentSubscriptions").doc(subscription.id).set({ uid: decoded.uid, billing, planId, amountInr: billing === "annual" ? PRODUCT_CONFIG.pricing.proAnnualInr : PRODUCT_CONFIG.pricing.proMonthlyInr, status: subscription.status || "created", razorpaySubscriptionId: subscription.id, createdAt: new Date() });
     return json(res, 200, { subscriptionId: subscription.id, keyId: process.env.RAZORPAY_KEY_ID, name: "PromptStudio AI", description: `PromptStudio Pro · ${billing === "annual" ? "Annual" : "Monthly"}` });
   } catch (error) {
     console.error("Razorpay subscription creation failed", { code: error?.code || "unknown", status: error?.status });
