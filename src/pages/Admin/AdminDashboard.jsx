@@ -15,7 +15,15 @@ export default function AdminDashboard() {
     const loadClaims = async () => {
       if (!user) { if (active) setChecking(false); return; }
       try {
-        const token = await user.getIdTokenResult();
+        let token = await user.getIdTokenResult();
+        if (token.claims.admin !== true) {
+          const idToken = await user.getIdToken();
+          const response = await fetch("/api/admin-bootstrap", { method: "POST", headers: { Authorization: `Bearer ${idToken}` } });
+          if (response.ok) {
+            await user.getIdToken(true);
+            token = await user.getIdTokenResult(true);
+          }
+        }
         if (active) setIsAdmin(token.claims.admin === true);
       } catch (err) {
         console.error("Unable to read admin claims", err);
