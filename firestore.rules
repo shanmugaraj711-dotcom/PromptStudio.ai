@@ -30,7 +30,6 @@ service cloud.firestore {
 
       match /prompts/{promptId} {
         allow get, list: if isOwner(userId);
-        // History is created by the trusted API after a successful generation.
         allow create, update: if false;
         allow delete: if isOwner(userId);
       }
@@ -38,6 +37,12 @@ service cloud.firestore {
       match /generationRequests/{requestId} {
         allow read, write: if false;
       }
+    }
+
+    // Public links are resolved only through the server API. Clients must never
+    // read, enumerate, create, update, or delete share records directly.
+    match /publicPromptShares/{shareId} {
+      allow read, write: if false;
     }
   }
 }
