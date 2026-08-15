@@ -3,16 +3,20 @@ import TextArea from '../../components/ui/TextArea';
 import Button from '../../components/ui/Button';
 import { copyToClipboard } from '../../utils/copyToClipboard';
 import { evaluateFeatureAccess } from '../../config/features';
+import { AI_LAUNCH_TARGETS, launchPromptInAI } from '../../services/aiLaunchService';
 
 function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan = 'free' }) {
   const [copyStatus, setCopyStatus] = useState('');
+  const [launchStatus, setLaunchStatus] = useState('');
   const [selectedId, setSelectedId] = useState('main');
 
   const perspectiveAccess = evaluateFeatureAccess('multiPerspectiveGeneration', userPlan);
   const intentAccess = evaluateFeatureAccess('intentIntelligence', userPlan);
+  const launchAccess = evaluateFeatureAccess('oneClickLaunchButtons', userPlan);
 
   useEffect(() => {
     setSelectedId('main');
+    setLaunchStatus('');
   }, [prompt, perspectives]);
 
   const selectedPrompt = useMemo(() => {
@@ -30,6 +34,25 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
     }
   };
 
+  const handleLaunch = async (targetId) => {
+    if (!launchAccess.allowed) return;
+
+    setLaunchStatus('Opening AI…');
+    const result = await launchPromptInAI(selectedPrompt, targetId);
+
+    if (result.success) {
+      setLaunchStatus('Prompt copied — paste it into the AI that opened.');
+      setTimeout(() => setLaunchStatus(''), 3500);
+      return;
+    }
+
+    const messages = {
+      clipboard_failed: 'Could not copy the prompt. Please use Copy Prompt instead.',
+      popup_blocked: 'Your browser blocked the new tab. Allow pop-ups and try again.',
+    };
+    setLaunchStatus(messages[result.reason] || 'Could not open the AI. Please try again.');
+  };
+
   return (
     <div className="rounded-3xl border border-blue-100 bg-white p-8 shadow-md sm:p-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -39,7 +62,7 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
         </div>
         <Button variant="secondary" size="sm" onClick={handleCopy}>
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 002 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8z" />
           </svg>
           {copyStatus === 'Copied to clipboard' ? 'Copied!' : 'Copy Prompt'}
         </Button>
@@ -83,6 +106,40 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {launchAccess.active && (
+        <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">One-click AI launch</p>
+              <p className="mt-1 text-xs text-gray-600">
+                {launchAccess.allowed
+                  ? 'Your selected prompt is copied automatically, then your AI opens in a new tab.'
+                  : 'Pro unlocks direct launch to your favorite AI — no copy-paste setup.'}
+              </p>
+            </div>
+            {!launchAccess.allowed && (
+              <span className="rounded-full border border-blue-200 bg-white px-3 py-1 text-xs font-bold text-blue-700">PRO</span>
+            )}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {AI_LAUNCH_TARGETS.map((target) => (
+              <Button
+                key={target.id}
+                variant={launchAccess.allowed ? 'primary' : 'secondary'}
+                size="sm"
+                disabled={!launchAccess.allowed}
+                onClick={() => handleLaunch(target.id)}
+              >
+                Open in {target.label}
+              </Button>
+            ))}
+          </div>
+
+          {launchStatus && <p className="mt-3 text-xs font-medium text-gray-700" role="status">{launchStatus}</p>}
         </div>
       )}
 
