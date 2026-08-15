@@ -12,7 +12,9 @@ export default async function handler(req, res) {
     const billing = req.body?.billing === "annual" ? "annual" : "monthly";
     const planId = String(process.env[PLAN_ENV[billing]] || "").trim();
     if (!planId) return json(res, 503, { code: "subscription_plan_not_configured", message: `Razorpay ${billing} test plan ID is not configured.` });
-    const totalCount = billing === "annual" ? 10 : 120;
+    // Use the maximum supported subscription duration for a product that renews until cancelled.
+    // Razorpay allows up to 100 years via API; 1200 monthly cycles = 100 years and 100 annual cycles = 100 years.
+    const totalCount = billing === "annual" ? 100 : 1200;
     const subscription = await razorpayRequest("/subscriptions", {
       method: "POST",
       body: JSON.stringify({ plan_id: planId, total_count: totalCount, quantity: 1, customer_notify: true, notes: { uid: decoded.uid, type: "pro_subscription", billing } }),
