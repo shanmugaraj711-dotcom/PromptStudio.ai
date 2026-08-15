@@ -49,28 +49,27 @@ export const FEATURE_REGISTRY = Object.freeze({
   },
 
   // ---------------------------------------------------------------------------
-  // Image Intelligence — next major core capability
-  // Keep disabled until the image upload + vision pipeline is implemented.
+  // Image Intelligence — implemented in the reference-aware upload pipeline.
   // ---------------------------------------------------------------------------
   imageIntelligence: {
     id: 'imageIntelligence',
     name: 'Image → Prompt Intelligence',
-    phase: 'core-next',
-    enabled: false,
+    phase: 'core',
+    enabled: true,
     plans: ['free', 'pro'],
   },
   imageUploadAnalysis: {
     id: 'imageUploadAnalysis',
     name: 'Image Upload & Analysis',
-    phase: 'core-next',
-    enabled: false,
+    phase: 'core',
+    enabled: true,
     plans: ['free', 'pro'],
   },
   referenceAwarePrompt: {
     id: 'referenceAwarePrompt',
     name: 'Reference-Aware Prompt Generation',
-    phase: 'core-next',
-    enabled: false,
+    phase: 'core',
+    enabled: true,
     plans: ['free', 'pro'],
   },
 
