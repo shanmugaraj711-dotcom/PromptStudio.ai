@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import {
-  subscribeToPromptHistory,
-  deletePrompt,
-} from "../services/promptHistoryService";
+import { subscribeToPromptHistory, deletePrompt, setPromptFavorite } from "../services/promptHistoryService";
 
 export const usePromptHistory = () => {
   const { user } = useAuth();
@@ -14,41 +11,34 @@ export const usePromptHistory = () => {
 
   useEffect(() => {
     if (!userId) return undefined;
-
-    const unsubscribe = subscribeToPromptHistory(
-      userId,
-      (prompts) => {
-        setHistory(prompts);
-        setLoadedUserId(userId);
-        setError("");
-      },
-      (err) => {
-        console.error("Unable to load prompt history:", err);
-        setError("Unable to load prompt history. Please try again shortly.");
-        setLoadedUserId(userId);
-      }
-    );
-
+    const unsubscribe = subscribeToPromptHistory(userId, (prompts) => {
+      setHistory(prompts);
+      setLoadedUserId(userId);
+      setError("");
+    }, (err) => {
+      console.error("Unable to load prompt history:", err);
+      setError("Unable to load prompt history. Please try again shortly.");
+      setLoadedUserId(userId);
+    });
     return unsubscribe;
   }, [userId]);
 
   const removePrompt = useCallback(async (id) => {
     if (!userId || !id) return;
+    await deletePrompt(userId, id);
+  }, [userId]);
 
-    try {
-      await deletePrompt(userId, id);
-    } catch (err) {
-      console.error("Unable to delete prompt history item:", err);
-      throw err;
-    }
+  const toggleFavorite = useCallback(async (id, favorite) => {
+    if (!userId || !id) return;
+    await setPromptFavorite(userId, id, favorite);
   }, [userId]);
 
   const hasCurrentHistory = loadedUserId === userId;
-
   return {
     history: hasCurrentHistory ? history : [],
     loading: Boolean(userId) && !hasCurrentHistory,
     error: hasCurrentHistory ? error : "",
     removePrompt,
+    toggleFavorite,
   };
 };
