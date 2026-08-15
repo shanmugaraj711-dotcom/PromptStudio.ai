@@ -37,24 +37,37 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
   const handleLaunch = async (targetId) => {
     if (!launchAccess.allowed) return;
 
-    setLaunchStatus('Opening AI…');
+    const target = AI_LAUNCH_TARGETS.find((item) => item.id === targetId);
+    const targetLabel = target?.label || 'AI';
+    setLaunchStatus(`Opening ${targetLabel}…`);
+
     const result = await launchPromptInAI(selectedPrompt, targetId);
 
     if (result.success) {
-      setLaunchStatus('Prompt copied — paste it into the AI that opened.');
-      setTimeout(() => setLaunchStatus(''), 3500);
+      setLaunchStatus(`✓ Prompt copied — ${targetLabel} opened. Paste your prompt there.`);
+      setTimeout(() => setLaunchStatus(''), 4500);
       return;
     }
 
     const messages = {
       clipboard_failed: 'Could not copy the prompt. Please use Copy Prompt instead.',
-      popup_blocked: 'Your browser blocked the new tab. Allow pop-ups and try again.',
+      popup_blocked: `Your browser blocked ${targetLabel}. Allow pop-ups and try again.`,
     };
-    setLaunchStatus(messages[result.reason] || 'Could not open the AI. Please try again.');
+    setLaunchStatus(messages[result.reason] || `Could not open ${targetLabel}. Please try again.`);
   };
 
   return (
-    <div className="rounded-3xl border border-blue-100 bg-white p-8 shadow-md sm:p-10">
+    <div className="relative rounded-3xl border border-blue-100 bg-white p-8 shadow-md sm:p-10">
+      {launchStatus && launchAccess.allowed && (
+        <div
+          className="fixed bottom-6 right-6 z-50 max-w-sm rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-gray-800 shadow-lg"
+          role="status"
+          aria-live="polite"
+        >
+          {launchStatus}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-blue-600">PromptStudio Intelligence</p>
@@ -62,7 +75,7 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
         </div>
         <Button variant="secondary" size="sm" onClick={handleCopy}>
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 002 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8z" />
           </svg>
           {copyStatus === 'Copied to clipboard' ? 'Copied!' : 'Copy Prompt'}
         </Button>
