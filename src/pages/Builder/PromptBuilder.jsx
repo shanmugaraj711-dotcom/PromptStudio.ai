@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import SectionHeading from '../../components/common/SectionHeading';
 import TextArea from '../../components/ui/TextArea';
@@ -38,8 +38,13 @@ function PromptBuilder() {
   } = usePromptBuilder();
   const { plan, promptsToday, lastPromptDate } = useAuth();
   const workflowAccess = evaluateFeatureAccess('promptWorkflows', plan);
+  const workflowActive = Boolean(workflow && workflowAccess.allowed);
   const quota = createQuotaState({ plan, promptsToday, lastPromptDate });
   const quotaExhausted = quota.remaining === 0;
+
+  useEffect(() => {
+    if (workflowActive && workflow.category) setCategory(workflow.category);
+  }, [workflowActive, workflow?.category, setCategory]);
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -62,12 +67,12 @@ function PromptBuilder() {
         </div>
 
         <SectionHeading
-          eyebrow={workflow && workflowAccess.allowed ? `Workflow · ${workflow.name}` : 'Try it now'}
+          eyebrow={workflowActive ? `Workflow · ${workflow.name}` : 'Try it now'}
           title="Build your prompt"
           subtitle="Describe your idea, or show PromptStudio a reference image. It will understand the intent and build a reference-aware prompt."
         />
 
-        {workflow && workflowAccess.allowed && (
+        {workflowActive && (
           <div className="mt-8 rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -128,9 +133,11 @@ function PromptBuilder() {
             <p className="mt-2 text-sm text-gray-700">With an image, PromptStudio analyzes the visible details that matter to your goal and keeps facts separate from assumptions instead of blindly inventing details.</p>
           </div>
 
-          <div className="mt-6 grid gap-6 sm:grid-cols-2">
+          <div className={`mt-6 grid gap-6 ${workflowActive ? '' : 'sm:grid-cols-2'}`}>
             <Select id="aiModel" label="AI Model" value={aiModel} onChange={(e) => setAiModel(e.target.value)} options={AI_MODELS} disabled={isGenerating || isPreparingImage} />
-            <Select id="category" label="Category" value={category} onChange={(e) => setCategory(e.target.value)} options={CATEGORIES} disabled={isGenerating || isPreparingImage} />
+            {!workflowActive && (
+              <Select id="category" label="Category" value={category} onChange={(e) => setCategory(e.target.value)} options={CATEGORIES} disabled={isGenerating || isPreparingImage} />
+            )}
           </div>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
