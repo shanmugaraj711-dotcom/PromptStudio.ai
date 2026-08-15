@@ -78,7 +78,12 @@ function PromptBuilder() {
 
         {generatedPrompt && (
           <div className="mt-10">
-            <ResultCard prompt={generatedPrompt} perspectives={perspectives} intelligence={intelligence} />
+            <ResultCard
+              prompt={generatedPrompt}
+              perspectives={perspectives}
+              intelligence={intelligence}
+              userPlan={plan}
+            />
           </div>
         )}
       </div>
