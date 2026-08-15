@@ -13,6 +13,7 @@ export async function generatePrompt({
   category,
   idToken,
   requestId,
+  image,
   fetchImpl = fetch,
 }) {
   if (!idToken) {
@@ -29,7 +30,7 @@ export async function generatePrompt({
         "Content-Type": "application/json",
         Authorization: `Bearer ${idToken}`,
       },
-      body: JSON.stringify({ idea, aiModel, category, requestId }),
+      body: JSON.stringify({ idea, aiModel, category, requestId, image }),
     });
   } catch {
     throw new PromptGenerationError(
