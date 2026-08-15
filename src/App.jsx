@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import Account from "./pages/Account/Account";
 import PromptBuilder from "./pages/Builder/PromptBuilder";
 import SharedPrompt from "./pages/SharedPrompt/SharedPrompt";
+import WorkflowLibrary from "./pages/Workflows/WorkflowLibrary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import PromptHistory from "./pages/Result/PromptHistory";
 
@@ -22,6 +23,7 @@ export default function App() {
 
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/builder" element={<ProtectedRoute><PromptBuilder /></ProtectedRoute>} />
+      <Route path="/workflows" element={<ProtectedRoute><WorkflowLibrary /></ProtectedRoute>} />
       <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><PromptHistory /></ProtectedRoute>} />
 
