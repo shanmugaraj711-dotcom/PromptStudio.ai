@@ -74,7 +74,7 @@ export const FEATURE_REGISTRY = Object.freeze({
   },
 
   // ---------------------------------------------------------------------------
-  // Upcoming product capabilities — deliberately off until implemented.
+  // Monetization / retention features
   // ---------------------------------------------------------------------------
   dynamicVariableFillers: {
     id: 'dynamicVariableFillers',
@@ -86,16 +86,16 @@ export const FEATURE_REGISTRY = Object.freeze({
   oneClickLaunchButtons: {
     id: 'oneClickLaunchButtons',
     name: 'One-Click AI Launch',
-    phase: 'upcoming',
-    enabled: false,
-    plans: ['free', 'pro'],
+    phase: 'monetization',
+    enabled: true,
+    plans: ['pro'],
   },
   promptBookmarking: {
     id: 'promptBookmarking',
     name: 'Prompt Bookmarks / Favorites',
     phase: 'upcoming',
     enabled: false,
-    plans: ['free', 'pro'],
+    plans: ['pro'],
   },
   shareablePromptLinks: {
     id: 'shareablePromptLinks',
