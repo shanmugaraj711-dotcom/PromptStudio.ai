@@ -29,16 +29,15 @@ const post = async (url, body, user) => {
   return data;
 };
 
-export const buyCredits = async ({ user, packId = "creator", onSuccess }) => {
+const openCreditCheckout = async ({ user, order, description, onSuccess }) => {
   const Razorpay = await loadCheckout();
-  const order = await post("/api/razorpay-order", { packId }, user);
   return new Promise((resolve, reject) => {
     const checkout = new Razorpay({
       key: order.keyId,
       amount: order.amount,
       currency: order.currency,
       name: "PromptStudio AI",
-      description: `${order.credits} Creator Credits`,
+      description,
       order_id: order.orderId,
       prefill: { name: user.displayName || "", email: user.email || "" },
       theme: { color: "#4f46e5" },
@@ -53,6 +52,16 @@ export const buyCredits = async ({ user, packId = "creator", onSuccess }) => {
     });
     checkout.open();
   });
+};
+
+export const buyCredits = async ({ user, packId = "creator", onSuccess }) => {
+  const order = await post("/api/razorpay-order", { packId }, user);
+  return openCreditCheckout({ user, order, description: `${order.credits} Creator Credits`, onSuccess });
+};
+
+export const buyCustomCredits = async ({ user, amountInr, onSuccess }) => {
+  const order = await post("/api/razorpay-order", { customAmountInr: amountInr }, user);
+  return openCreditCheckout({ user, order, description: `${order.credits} Custom Creator Credits`, onSuccess });
 };
 
 export const subscribeToPro = async ({ user, billing, onSuccess }) => {
