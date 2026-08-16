@@ -3,4 +3,5 @@ export const AI_MODELS = [
   { id: 'claude', label: 'Claude' },
   { id: 'gemini', label: 'Gemini' },
   { id: 'grok', label: 'Grok' },
+  { id: 'midjourney', label: 'Midjourney' },
 ];
