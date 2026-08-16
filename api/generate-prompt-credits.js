@@ -55,16 +55,13 @@ const reserve = async ({ db, uid, requestId, now, hasImage }) => {
       if (request.status === "succeeded" && request.prompt && request.quota) return { status: "succeeded", ...request };
       throw new ApiError(409, "request_in_progress", "This generation request is still being processed. Please wait a moment.");
     }
-
     const user = userSnap.exists ? userSnap.data() : {};
     const quota = createQuotaState(user, now);
     if (hasImage && quota.imageLimit !== null && quota.imageRemaining <= 0) throw new ApiError(429, "image_quota_exhausted", `You've reached your ${quota.imagePeriod}ly reference-image limit.`, quota);
-
     const usesFreePrompt = quota.remaining > 0;
     const creditCost = hasImage ? PRODUCT_CONFIG.creditCosts.referenceImageAnalysis : PRODUCT_CONFIG.creditCosts.standardGeneration;
     const credits = Math.max(Number(user.credits || 0), 0);
     if (!usesFreePrompt && credits < creditCost) throw new ApiError(402, "credits_required", `You need ${creditCost} credits for this generation.`, quota);
-
     const nextState = {
       plan: quota.plan,
       promptsToday: usesFreePrompt ? quota.promptsToday + 1 : quota.promptsToday,
@@ -76,8 +73,8 @@ const reserve = async ({ db, uid, requestId, now, hasImage }) => {
       quotaVersion: quota.quotaVersion + 1,
     };
     if (hasImage) {
-      if (quota.dailyImageLimit !== null) { nextState.imageAnalysesToday = quota.imageUsedToday + 1; nextState.lastImageAnalysisDate = dateKey; }
-      else { nextState.imageAnalysesThisMonth = quota.imageUsedThisMonth + 1; nextState.lastImageAnalysisMonth = monthKey; }
+      if (quota.dailyImageLimit !== null) { nextState.imageAnalysesToday = quota.imageAnalysesToday + 1; nextState.lastImageAnalysisDate = dateKey; }
+      else { nextState.imageAnalysesThisMonth = quota.imageAnalysesThisMonth + 1; nextState.lastImageAnalysisMonth = monthKey; }
     }
     const reservedQuota = createQuotaState(nextState, now);
     const creditDeducted = usesFreePrompt ? 0 : creditCost;
