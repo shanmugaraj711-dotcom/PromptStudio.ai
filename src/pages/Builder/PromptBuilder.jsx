@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import SectionHeading from '../../components/common/SectionHeading';
 import TextArea from '../../components/ui/TextArea';
 import Select from '../../components/ui/Select';
@@ -32,7 +32,7 @@ function PromptBuilder() {
     idea, setIdea, aiModel, setAiModel, category, setCategory, image, selectImage, clearImage,
     generatedPrompt, perspectives, intelligence, error, isGenerating, isPreparingImage, generate,
   } = usePromptBuilder();
-  const { user, plan, promptsToday, lastPromptDate } = useAuth();
+  const { user, loading: authLoading, plan, promptsToday, lastPromptDate } = useAuth();
   const workflowAccess = evaluateFeatureAccess('promptWorkflows', plan);
   const workflowActive = Boolean(workflow && workflowAccess.allowed);
   const imageMode = category === 'image';
@@ -59,7 +59,7 @@ function PromptBuilder() {
         <div className="mb-5 flex justify-end"><Link to="/workflows" className="rounded-xl border border-indigo-200 bg-white/90 px-4 py-2 text-sm font-semibold text-indigo-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-50">⚡ Prompt Workflows</Link></div>
         <SectionHeading eyebrow={workflowActive ? `Workflow · ${workflow.name}` : 'Try it now'} title="Build your prompt" subtitle="Describe your idea, or show PromptStudio a reference image. It will understand the intent and build a reference-aware prompt." />
 
-        {!user && (
+        {!authLoading && !user && (
           <div className="mt-8 rounded-3xl border border-blue-100 bg-gradient-to-r from-blue-50 via-white to-indigo-50 p-6 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -85,8 +85,24 @@ function PromptBuilder() {
           <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-semibold text-slate-900">Reference image <span className="font-normal text-slate-500">(optional)</span></p><p className="mt-1 text-xs text-slate-500">Upload a photo, screenshot, design, or other visual reference. Max 3 MB.</p></div><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} /><Button type="button" variant="secondary" size="sm" disabled={isGenerating || isPreparingImage} onClick={() => fileInputRef.current?.click()}>{isPreparingImage ? 'Preparing image…' : image ? 'Change image' : 'Upload image'}</Button></div>{image && <div className="mt-4 flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm"><img src={`data:${image.mimeType};base64,${image.data}`} alt="Reference preview" className="h-20 w-20 rounded-lg object-cover ring-2 ring-white" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-slate-800">{image.name}</p><p className="mt-1 text-xs text-slate-500">Ready for visual analysis</p></div><Button type="button" variant="secondary" size="sm" onClick={clearImage} disabled={isGenerating}>Remove</Button></div>}</div>
           <div className="mt-6 rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50 p-4"><p className="text-sm font-semibold text-blue-700">💡 PromptStudio Intelligence</p><p className="mt-2 text-sm text-slate-700">With an image, PromptStudio analyzes the visible details that matter to your goal and keeps facts separate from assumptions instead of blindly inventing details.</p></div>
           <div className={`mt-6 grid gap-6 ${workflowActive ? '' : 'sm:grid-cols-2'}`}><Select id="aiModel" label="AI Model" value={aiModel} onChange={(e) => setAiModel(e.target.value)} options={AI_MODELS} disabled={isGenerating || isPreparingImage} />{!workflowActive && <Select id="category" label="Category" value={category} onChange={(e) => setCategory(e.target.value)} options={CATEGORIES} disabled={isGenerating || isPreparingImage} />}</div>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><Button variant="primary" size="lg" type="submit" disabled={isGenerating || isPreparingImage || quotaExhausted} className="w-full sm:w-auto">{isGenerating ? 'Signing in & building…' : workflow ? `Run ${workflow.name}` : imageMode ? 'Create Image Prompt' : 'Generate Better Prompt'}</Button><p className={`text-sm font-semibold ${quotaExhausted ? 'text-red-600' : 'text-slate-600'}`} aria-live="polite">{quota.remaining === null ? 'Unlimited prompts available' : `${quota.remaining} / ${quota.dailyLimit} prompts remaining today`}</p></div>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><Button variant="primary" size="lg" type="submit" disabled={isGenerating || isPreparingImage || quotaExhausted} className="w-full sm:w-auto">{isGenerating ? (user ? 'Building…' : 'Signing in & building…') : workflow ? `Run ${workflow.name}` : imageMode ? 'Create Image Prompt' : 'Generate Better Prompt'}</Button><p className={`text-sm font-semibold ${quotaExhausted ? 'text-red-600' : 'text-slate-600'}`} aria-live="polite">{quota.remaining === null ? 'Unlimited prompts available' : `${quota.remaining} / ${quota.dailyLimit} prompts remaining today`}</p></div>
         </form>
+
+        {quotaExhausted && plan === 'free' && (
+          <div className="mt-5 rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-white to-violet-50 p-5 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-black text-slate-900">You've used today's 3 free prompts.</p>
+                <p className="mt-1 text-xs text-slate-600">Keep creating with Pro, or get a one-time 25-credit boost.</p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Link to="/account#plans" className="rounded-xl bg-indigo-600 px-4 py-2.5 text-center text-xs font-bold text-white hover:bg-indigo-500">⭐ Upgrade · ₹79/month</Link>
+                <Link to="/account#plans" className="rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-center text-xs font-bold text-indigo-700 hover:bg-indigo-50">⚡ 25 credits · ₹99</Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {generatedPrompt && <div className="mt-10"><ResultCard prompt={generatedPrompt} perspectives={perspectives} intelligence={intelligence} userPlan={plan} workflow={workflow} category={category} /></div>}
       </div>
     </section>
