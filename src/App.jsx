@@ -11,6 +11,9 @@ import SharedPrompt from "./pages/SharedPrompt/SharedPrompt";
 import WorkflowLibrary from "./pages/Workflows/WorkflowLibrary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import PromptHistory from "./pages/Result/PromptHistory";
+import AppLayout from "./components/layout/AppLayout";
+
+const withAppLayout = (element) => <ProtectedRoute><AppLayout>{element}</AppLayout></ProtectedRoute>;
 
 export default function App() {
   return (
@@ -21,11 +24,11 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/p/:id" element={<SharedPrompt />} />
 
-      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/builder" element={<ProtectedRoute><PromptBuilder /></ProtectedRoute>} />
-      <Route path="/workflows" element={<ProtectedRoute><WorkflowLibrary /></ProtectedRoute>} />
-      <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
-      <Route path="/history" element={<ProtectedRoute><PromptHistory /></ProtectedRoute>} />
+      <Route path="/dashboard" element={withAppLayout(<Dashboard />)} />
+      <Route path="/builder" element={withAppLayout(<PromptBuilder />)} />
+      <Route path="/workflows" element={withAppLayout(<WorkflowLibrary />)} />
+      <Route path="/account" element={withAppLayout(<Account />)} />
+      <Route path="/history" element={withAppLayout(<PromptHistory />)} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
