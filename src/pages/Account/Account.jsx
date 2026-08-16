@@ -18,12 +18,16 @@ export const Account = () => {
     plan,
     promptsToday,
     lastPromptDate,
+    imageAnalysesToday: userProfile?.imageAnalysesToday,
+    lastImageAnalysisDate: userProfile?.lastImageAnalysisDate,
     imageAnalysesThisMonth: userProfile?.imageAnalysesThisMonth,
     lastImageAnalysisMonth: userProfile?.lastImageAnalysisMonth,
   });
   const credits = Math.max(Number(userProfile?.credits || 0), 0);
   const pricing = PRODUCT_CONFIG.pricing;
   const isPro = plan === "pro";
+  const starterPack = pricing.creditPacks.starter;
+  const creatorPack = pricing.creditPacks.creator;
 
   const runPayment = async (key, action) => {
     setBusy(key);
@@ -85,9 +89,9 @@ export const Account = () => {
           </div>
 
           <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="rounded-2xl border border-indigo-700/40 bg-indigo-950/30 p-5"><span className="text-xs font-bold uppercase tracking-wider text-gray-400">Current Plan</span><div className="mt-2 text-2xl font-black capitalize text-white">{plan}</div><p className="mt-1 text-xs text-gray-400">{isPro ? "Premium access" : "3 prompts every day"}</p></div>
-            <div className="rounded-2xl border border-gray-700/60 bg-gray-800/40 p-5"><span className="text-xs font-bold uppercase tracking-wider text-gray-400">Today's Usage</span><div className="mt-2 text-2xl font-black text-white">{quota.remaining === null ? "Unlimited" : `${quota.remaining} / ${quota.dailyLimit}`}</div><p className="mt-1 text-xs text-gray-400">prompts remaining</p></div>
-            <div className="rounded-2xl border border-gray-700/60 bg-gray-800/40 p-5"><span className="text-xs font-bold uppercase tracking-wider text-gray-400">Purchased Credits</span><div className="mt-2 text-2xl font-black text-white">{credits}</div><p className="mt-1 text-xs text-gray-400">Never expire</p></div>
+            <div className="rounded-2xl border border-indigo-700/40 bg-indigo-950/30 p-5"><span className="text-xs font-bold uppercase tracking-wider text-gray-400">Current Plan</span><div className="mt-2 text-2xl font-black capitalize text-white">{plan}</div><p className="mt-1 text-xs text-gray-400">{isPro ? "25 prompts daily · 20 image prompts monthly" : "3 prompts daily · 1 image prompt daily"}</p></div>
+            <div className="rounded-2xl border border-gray-700/60 bg-gray-800/40 p-5"><span className="text-xs font-bold uppercase tracking-wider text-gray-400">Today's Usage</span><div className="mt-2 text-2xl font-black text-white">{`${quota.remaining} / ${quota.dailyLimit}`}</div><p className="mt-1 text-xs text-gray-400">prompts remaining</p></div>
+            <div className="rounded-2xl border border-gray-700/60 bg-gray-800/40 p-5"><span className="text-xs font-bold uppercase tracking-wider text-gray-400">Purchased Credits</span><div className="mt-2 text-2xl font-black text-white">{credits}</div><p className="mt-1 text-xs text-gray-400">Never expire · 2 text / 5 image credits</p></div>
           </div>
         </div>
 
@@ -100,7 +104,7 @@ export const Account = () => {
               return (
                 <article key={item.id} className={`relative rounded-2xl border p-6 shadow-xl ${item.highlighted ? "border-indigo-500/70 bg-gradient-to-b from-indigo-950/80 to-gray-900" : "border-gray-800 bg-gray-900"}`}>
                   {item.highlighted && <span className="absolute right-4 top-4 rounded-full bg-indigo-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white">Best value</span>}
-                  <div className="flex items-center gap-2"><span className="text-xl">{item.id === "free" ? "💳" : item.id === "pro" ? "⭐" : "⚡"}</span><h3 className="text-lg font-black text-white">{item.name}</h3></div>
+                  <div className="flex items-center gap-2"><span className="text-xl">{item.id === "free" ? "💳" : item.id === "pro" ? "⭐" : "🖼️"}</span><h3 className="text-lg font-black text-white">{item.name}</h3></div>
                   <div className="mt-5 flex items-baseline gap-2"><span className="text-3xl font-black text-white">{item.price}</span><span className="text-xs text-gray-400">{item.period}</span></div>
                   {item.id === "pro" && <p className="mt-1 text-xs font-bold text-indigo-300">or ₹{pricing.proAnnualInr} per year</p>}
                   <p className="mt-3 min-h-10 text-sm text-gray-400">{item.description}</p>
@@ -114,18 +118,21 @@ export const Account = () => {
                       <button type="button" disabled={busy !== ""} onClick={() => runPayment("annual", () => subscribeToPro({ user, billing: "annual" }))} className="w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 px-4 py-3 text-sm font-bold text-indigo-200 hover:bg-indigo-900/60 disabled:cursor-not-allowed disabled:opacity-50">{busy === "annual" ? "Opening secure checkout…" : `Best Value · ₹${pricing.proAnnualInr}/year`}</button>
                     </div>
                   ) : (
-                    <button type="button" disabled={busy !== ""} onClick={() => runPayment("credits", () => buyCredits({ user }))} className="mt-6 w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 px-4 py-3 text-sm font-bold text-indigo-200 hover:bg-indigo-900/60 disabled:cursor-not-allowed disabled:opacity-50">{busy === "credits" ? "Opening secure checkout…" : `Buy 25 Credits · ₹${pricing.creditPackInr}`}</button>
+                    <div className="mt-6 space-y-2">
+                      <button type="button" disabled={busy !== ""} onClick={() => runPayment("starter", () => buyCredits({ user, packId: "starter" }))} className="w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 px-4 py-3 text-sm font-bold text-indigo-200 hover:bg-indigo-900/60 disabled:cursor-not-allowed disabled:opacity-50">{busy === "starter" ? "Opening secure checkout…" : `₹${starterPack.priceInr} · ${starterPack.credits} Credits`}</button>
+                      <button type="button" disabled={busy !== ""} onClick={() => runPayment("creator", () => buyCredits({ user, packId: "creator" }))} className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">{busy === "creator" ? "Opening secure checkout…" : `⭐ Best for Image Creators · ₹${creatorPack.priceInr} · ${creatorPack.credits} Credits`}</button>
+                    </div>
                   )}
                 </article>
               );
             })}
           </div>
 
-          {quota.remaining === 0 && plan === "free" && <div className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-950/20 p-4 text-sm text-amber-100"><strong>You've reached today's free limit.</strong> Upgrade to Pro for continued daily access, or choose the 25-credit pack for a one-time boost.</div>}
+          {quota.remaining === 0 && plan === "free" && <div className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-950/20 p-4 text-sm text-amber-100"><strong>You've reached today's free limit.</strong> Upgrade to Pro for continued daily access, or use Creator Credits for a one-time boost.</div>}
         </section>
 
         <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6"><h2 className="text-lg font-extrabold text-white">Your included usage</h2><div className="mt-5 space-y-5"><div><div className="flex justify-between text-sm font-bold"><span>Prompts today</span><span>{quota.remaining === null ? "Unlimited" : `${quota.remaining} / ${quota.dailyLimit}`}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-800"><div className="h-full bg-indigo-500" style={{ width: quota.remaining === null ? "100%" : `${Math.min(100, quota.remaining / Math.max(1, quota.dailyLimit) * 100)}%` }} /></div></div><div><div className="flex justify-between text-sm font-bold"><span>Reference images</span><span>{quota.imageRemaining} / {quota.monthlyImageLimit}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-800"><div className="h-full bg-violet-500" style={{ width: `${Math.min(100, quota.imageRemaining / Math.max(1, quota.monthlyImageLimit) * 100)}%` }} /></div></div></div></div>
+          <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6"><h2 className="text-lg font-extrabold text-white">Your included usage</h2><div className="mt-5 space-y-5"><div><div className="flex justify-between text-sm font-bold"><span>Prompts today</span><span>{quota.remaining} / {quota.dailyLimit} remaining</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-800"><div className="h-full bg-indigo-500" style={{ width: `${Math.min(100, quota.remaining / Math.max(1, quota.dailyLimit) * 100)}%` }} /></div></div><div><div className="flex justify-between text-sm font-bold"><span>🖼️ Reference images</span><span>{quota.imageRemaining} / {quota.imageLimit} used remaining this {quota.imagePeriod}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-800"><div className="h-full bg-violet-500" style={{ width: `${Math.min(100, quota.imageRemaining / Math.max(1, quota.imageLimit || 1) * 100)}%` }} /></div></div></div></div>
           <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6"><h2 className="text-lg font-extrabold text-white">Billing status</h2><div className="mt-4 grid gap-4 text-sm sm:grid-cols-3"><div className="rounded-xl bg-gray-800/60 p-4"><p className="text-gray-400">Subscription</p><p className="mt-1 font-bold text-white">{isPro ? userProfile?.subscriptionStatus || "Active" : "Free plan"}</p></div><div className="rounded-xl bg-gray-800/60 p-4"><p className="text-gray-400">Monthly</p><p className="mt-1 font-bold text-white">₹{pricing.proMonthlyInr}/month</p></div><div className="rounded-xl bg-gray-800/60 p-4"><p className="text-gray-400">Annual</p><p className="mt-1 font-bold text-white">₹{pricing.proAnnualInr}/year</p></div></div><p className="mt-4 text-xs text-gray-500">Payments are verified server-side before PromptStudio changes your plan or credits.</p></div>
         </section>
 
