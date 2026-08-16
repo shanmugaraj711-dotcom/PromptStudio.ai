@@ -15,6 +15,7 @@ export const PRODUCT_CONFIG = Object.freeze({
       starter: Object.freeze({ id: 'starter', name: 'Starter Credits', priceInr: 49, credits: 25 }),
       creator: Object.freeze({ id: 'creator', name: 'Creator Credits', priceInr: 99, credits: 60 }),
     }),
+    customCredits: Object.freeze({ minInr: 10, maxInr: 1000, inrPerCredit: 2 }),
   }),
   creditCosts: Object.freeze({
     standardGeneration: 2,
