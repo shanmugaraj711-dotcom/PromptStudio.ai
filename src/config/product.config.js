@@ -5,11 +5,24 @@
 export const PRODUCT_CONFIG = Object.freeze({
   defaultPlan: 'free',
   plans: Object.freeze({
-    free: Object.freeze({ id: 'free', name: 'Free', dailyPromptLimit: 3, monthlyImageLimit: 3, creditsEnabled: true }),
-    pro: Object.freeze({ id: 'pro', name: 'Pro', dailyPromptLimit: 100, monthlyImageLimit: 100, creditsEnabled: true }),
+    free: Object.freeze({ id: 'free', name: 'Free', dailyPromptLimit: 3, dailyImageLimit: 1, monthlyImageLimit: null, creditsEnabled: true }),
+    pro: Object.freeze({ id: 'pro', name: 'Pro', dailyPromptLimit: 25, dailyImageLimit: null, monthlyImageLimit: 20, creditsEnabled: true }),
   }),
-  pricing: Object.freeze({ proMonthlyInr: 79, proAnnualInr: 499, creditPackInr: 99, creditPackSize: 25 }),
-  creditCosts: Object.freeze({ standardGeneration: 1, promptRefinement: 1, referenceImageAnalysis: 3, advancedOperation: 3, heavyOperation: 5 }),
+  pricing: Object.freeze({
+    proMonthlyInr: 79,
+    proAnnualInr: 499,
+    creditPacks: Object.freeze({
+      starter: Object.freeze({ id: 'starter', name: 'Starter Credits', priceInr: 49, credits: 25 }),
+      creator: Object.freeze({ id: 'creator', name: 'Creator Credits', priceInr: 99, credits: 60 }),
+    }),
+  }),
+  creditCosts: Object.freeze({
+    standardGeneration: 2,
+    promptRefinement: 2,
+    referenceImageAnalysis: 5,
+    advancedOperation: 3,
+    heavyOperation: 5,
+  }),
   monetization: Object.freeze({ purchasedCreditsExpire: false, paymentProvider: 'razorpay', paymentMode: 'test' }),
   features: Object.freeze({
     aiPromptOptimization: { id: 'aiPromptOptimization', name: 'AI Prompt Optimization', phase: 'core', enabled: true, plans: ['free', 'pro'] },
@@ -25,7 +38,7 @@ export const PRODUCT_CONFIG = Object.freeze({
     promptBookmarking: { id: 'promptBookmarking', name: 'Prompt Bookmarks / Favorites', phase: 'monetization', enabled: true, plans: ['pro'] },
     shareablePromptLinks: { id: 'shareablePromptLinks', name: 'Shareable Prompt Links', phase: 'monetization', enabled: true, plans: ['pro'] },
     promptWorkflows: { id: 'promptWorkflows', name: 'Prompt Workflows', phase: 'monetization', enabled: true, plans: ['pro'] },
-    creditTopUps: { id: 'creditTopUps', name: 'Pay-As-You-Go Credits', phase: 'monetization', enabled: true, plans: ['free', 'pro'] },
+    creditTopUps: { id: 'creditTopUps', name: 'Pay-As-You-Go Creator Credits', phase: 'monetization', enabled: true, plans: ['free', 'pro'] },
     proSubscription: { id: 'proSubscription', name: 'Pro Subscription', phase: 'monetization', enabled: true, plans: ['pro'] },
     paymentGateway: { id: 'paymentGateway', name: 'Razorpay Payment Gateway', phase: 'monetization', enabled: true, plans: ['free', 'pro'] },
   }),
