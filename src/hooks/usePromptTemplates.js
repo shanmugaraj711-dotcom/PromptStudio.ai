@@ -16,7 +16,7 @@ export const fillPromptVariables = (template = "", values = {}) =>
   template.replace(/\{\{\s*([A-Za-z0-9_ -]{1,60})\s*\}\}/g, (_, key) => values[key.trim()] ?? `{{${key.trim()}}}`);
 
 export const usePromptTemplates = () => {
-  const { user } = useAuth();
+  const { user, plan } = useAuth();
   const userId = user?.uid || null;
   const [templates, setTemplates] = useState([]);
   const [loadedUserId, setLoadedUserId] = useState(null);
@@ -24,6 +24,16 @@ export const usePromptTemplates = () => {
 
   useEffect(() => {
     if (!userId) return undefined;
+
+    // Reusable templates are Pro-only. Free users must not query the protected
+    // Firestore collection, which would otherwise produce a permission error.
+    if (plan !== "pro") {
+      setTemplates([]);
+      setLoadedUserId(userId);
+      setError("");
+      return undefined;
+    }
+
     const unsubscribe = subscribeToPromptTemplates(userId, (items) => {
       setTemplates(items);
       setLoadedUserId(userId);
@@ -34,22 +44,25 @@ export const usePromptTemplates = () => {
       setLoadedUserId(userId);
     });
     return unsubscribe;
-  }, [userId]);
+  }, [userId, plan]);
 
   const createTemplate = useCallback(async (values) => {
     if (!userId) throw new Error("User not authenticated");
+    if (plan !== "pro") throw new Error("Reusable templates are available on Pro.");
     return createPromptTemplate(userId, values);
-  }, [userId]);
+  }, [userId, plan]);
 
   const updateTemplate = useCallback(async (id, values) => {
     if (!userId || !id) return;
+    if (plan !== "pro") throw new Error("Reusable templates are available on Pro.");
     return updatePromptTemplate(userId, id, values);
-  }, [userId]);
+  }, [userId, plan]);
 
   const removeTemplate = useCallback(async (id) => {
     if (!userId || !id) return;
+    if (plan !== "pro") throw new Error("Reusable templates are available on Pro.");
     return deletePromptTemplate(userId, id);
-  }, [userId]);
+  }, [userId, plan]);
 
   return {
     templates: loadedUserId === userId ? templates : [],
