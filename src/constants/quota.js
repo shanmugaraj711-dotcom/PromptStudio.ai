@@ -1,10 +1,9 @@
 export const DEFAULT_PLAN = "free";
 
-// This is the existing free-plan allowance advertised on the pricing page.
-// A null limit represents an unlimited plan.
+// Prompt limits are intentionally explicit so pricing, UI and enforcement stay aligned.
 export const PLAN_DAILY_PROMPT_LIMITS = Object.freeze({
   free: 3,
-  pro: null,
+  pro: 25,
 });
 
 export const normalizePlan = (plan) =>
@@ -37,7 +36,6 @@ export function createQuotaState(
     lastPromptDate: typeof lastPromptDate === "string" ? lastPromptDate : null,
     quotaVersion: toNonNegativeInteger(quotaVersion),
     dailyLimit,
-    remaining:
-      dailyLimit === null ? null : Math.max(dailyLimit - usedToday, 0),
+    remaining: Math.max(dailyLimit - usedToday, 0),
   };
 }
