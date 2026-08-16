@@ -29,16 +29,16 @@ const post = async (url, body, user) => {
   return data;
 };
 
-export const buyCredits = async ({ user, onSuccess }) => {
+export const buyCredits = async ({ user, packId = "creator", onSuccess }) => {
   const Razorpay = await loadCheckout();
-  const order = await post("/api/razorpay-order", {}, user);
+  const order = await post("/api/razorpay-order", { packId }, user);
   return new Promise((resolve, reject) => {
     const checkout = new Razorpay({
       key: order.keyId,
       amount: order.amount,
       currency: order.currency,
       name: "PromptStudio AI",
-      description: "25 PromptStudio Credits",
+      description: `${order.credits} Creator Credits`,
       order_id: order.orderId,
       prefill: { name: user.displayName || "", email: user.email || "" },
       theme: { color: "#4f46e5" },
