@@ -31,7 +31,7 @@ const prepareImage = (file) => new Promise((resolve, reject) => {
 });
 
 export function usePromptBuilder() {
-  const { user, updateQuotaState } = useAuth();
+  const { user, loginWithGoogle, updateQuotaState } = useAuth();
   const [idea, setIdea] = useState("");
   const [aiModel, setAiModel] = useState("chatgpt");
   const [category, setCategory] = useState("writing");
@@ -56,10 +56,30 @@ export function usePromptBuilder() {
   const generate = useCallback(async () => {
     if (requestInFlightRef.current) return;
     if (!idea.trim() && !image) return setError("Describe what you want AI to create or attach a reference image.");
-    if (!user) return setError("You must be logged in to generate and save prompts.");
-    setError(""); requestInFlightRef.current = true; setIsGenerating(true);
+
+    setError("");
+    requestInFlightRef.current = true;
+    setIsGenerating(true);
+
     try {
-      const idToken = await user.getIdToken();
+      // Keep the current builder state untouched while Google authentication is open.
+      // Use the returned Firebase user immediately so generation does not depend on
+      // the asynchronous onAuthStateChanged cycle finishing first.
+      let authenticatedUser = user;
+      if (!authenticatedUser) {
+        try {
+          authenticatedUser = await loginWithGoogle();
+        } catch (err) {
+          if (err?.code === "auth/popup-closed-by-user" || err?.code === "auth/cancelled-popup-request") {
+            return;
+          }
+          throw err;
+        }
+      }
+
+      if (!authenticatedUser) return;
+
+      const idToken = await authenticatedUser.getIdToken();
       const result = await generatePrompt({ idea: idea.trim(), aiModel, category, idToken, requestId: createRequestId(), image });
       setGeneratedPrompt(result.prompt);
       setHistoryId(result.historyId || "");
@@ -70,8 +90,11 @@ export function usePromptBuilder() {
       console.error("Failed to generate prompt:", err);
       if (err.quota) updateQuotaState(err.quota);
       setError(err.message || "Unable to generate a prompt. Please try again.");
-    } finally { requestInFlightRef.current = false; setIsGenerating(false); }
-  }, [idea, aiModel, category, image, user, updateQuotaState]);
+    } finally {
+      requestInFlightRef.current = false;
+      setIsGenerating(false);
+    }
+  }, [idea, aiModel, category, image, user, loginWithGoogle, updateQuotaState]);
 
   const reset = useCallback(() => {
     setIdea(""); setImage(null); setGeneratedPrompt(""); setHistoryId(""); setPerspectives([]); setIntelligence(null); setError("");
