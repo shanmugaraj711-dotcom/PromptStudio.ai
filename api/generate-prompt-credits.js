@@ -58,11 +58,8 @@ const reserve = async ({ db, uid, requestId, now, hasImage }) => {
 
     const user = userSnap.exists ? userSnap.data() : {};
     const quota = createQuotaState(user, now);
-    const imageLimitAvailable = !hasImage || quota.imageLimit === null || quota.imageRemaining > 0;
-    if (!imageLimitAvailable) throw new ApiError(429, "image_quota_exhausted", `You've reached your ${quota.imagePeriod}ly reference-image limit.`, quota);
+    if (hasImage && quota.imageLimit !== null && quota.imageRemaining <= 0) throw new ApiError(429, "image_quota_exhausted", `You've reached your ${quota.imagePeriod}ly reference-image limit.`, quota);
 
-    const imageUsed = hasImage ? quota.imageUsed + 1 : quota.imageUsed;
-    const nextPromptCount = quota.promptsToday < quota.dailyLimit ? quota.promptsToday + 1 : quota.promptsToday;
     const usesFreePrompt = quota.remaining > 0;
     const creditCost = hasImage ? PRODUCT_CONFIG.creditCosts.referenceImageAnalysis : PRODUCT_CONFIG.creditCosts.standardGeneration;
     const credits = Math.max(Number(user.credits || 0), 0);
@@ -70,12 +67,12 @@ const reserve = async ({ db, uid, requestId, now, hasImage }) => {
 
     const nextState = {
       plan: quota.plan,
-      promptsToday: nextPromptCount,
+      promptsToday: usesFreePrompt ? quota.promptsToday + 1 : quota.promptsToday,
       lastPromptDate: dateKey,
       imageAnalysesToday: quota.imageAnalysesToday,
       lastImageAnalysisDate: quota.lastImageAnalysisDate,
       imageAnalysesThisMonth: quota.imageAnalysesThisMonth,
-      lastImageAnalysisMonth: quota.lastImageAnalysesMonth,
+      lastImageAnalysisMonth: quota.lastImageAnalysisMonth,
       quotaVersion: quota.quotaVersion + 1,
     };
     if (hasImage) {
@@ -101,10 +98,9 @@ const rollback = async ({ db, uid, requestId, now, failureCode }) => {
     const reservation = requestSnap.data();
     const user = userSnap.exists ? userSnap.data() : {};
     const quota = createQuotaState(user, now);
-    const restorePrompt = reservation.usesFreePrompt && reservation.dateKey === dateKey && quota.lastPromptDate === dateKey;
     const restored = {
       plan: quota.plan,
-      promptsToday: restorePrompt ? Math.max(quota.promptsToday - 1, 0) : quota.promptsToday,
+      promptsToday: reservation.usesFreePrompt && reservation.dateKey === dateKey && quota.lastPromptDate === dateKey ? Math.max(quota.promptsToday - 1, 0) : quota.promptsToday,
       lastPromptDate: quota.lastPromptDate,
       imageAnalysesToday: quota.imageAnalysesToday,
       lastImageAnalysisDate: quota.lastImageAnalysisDate,
@@ -132,14 +128,9 @@ const generate = async ({ client, idea, aiModel, category, image }) => {
     responseMimeType: "application/json",
     maxOutputTokens: 2600,
   };
-  const call = (model, timeoutMs) => {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-    return client.models.generateContent({ model, contents, config: { ...config, abortSignal: controller.signal } }).finally(() => clearTimeout(timeout));
-  };
+  const call = (model, timeoutMs) => { const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), timeoutMs); return client.models.generateContent({ model, contents, config: { ...config, abortSignal: controller.signal } }).finally(() => clearTimeout(timeout)); };
   let response;
-  try { response = await call(PRIMARY_MODEL, 8000); }
-  catch (error) { response = await call(FALLBACK_MODEL, 7000); }
+  try { response = await call(PRIMARY_MODEL, 8000); } catch { response = await call(FALLBACK_MODEL, 7000); }
   const parsed = JSON.parse(response.text?.trim() || "{}");
   const perspectives = Array.isArray(parsed.perspectives) ? parsed.perspectives.filter((x) => x?.label && x?.prompt).slice(0, 3) : [];
   if (!parsed.prompt || perspectives.length < 3) throw new Error("Gemini returned an incomplete intelligence response.");
@@ -152,24 +143,23 @@ export default async function handler(req, res) {
     const body = parseBody(req.body);
     const input = validate(body);
     const decoded = await requireUser(req);
+    if (!process.env.GEMINI_API_KEY) throw new ApiError(503, "server_configuration_error", "The generation service is not configured yet. Please try again later.");
     const db = adminDb();
-    const now = new Date();
-    const reservation = await reserve({ db, uid: decoded.uid, requestId: body.requestId, now, hasImage: Boolean(input.image) });
+    const reservation = await reserve({ db, uid: decoded.uid, requestId: body.requestId, now: new Date(), hasImage: Boolean(input.image) });
     if (reservation.status === "succeeded") return json(res, 200, reservation);
-    const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     let result;
-    try { result = await generate({ client, idea: input.idea, aiModel: body.aiModel, category: body.category, image: input.image }); }
-    catch (error) { const quota = await rollback({ db, uid: decoded.uid, requestId: body.requestId, now: new Date(), failureCode: "generation_failed" }); return json(res, 502, { code: "generation_failed", message: "The AI service could not generate a prompt. Your quota and credits were restored.", quota }); }
+    try { result = await generate({ client: new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }), idea: input.idea, aiModel: body.aiModel, category: body.category, image: input.image }); }
+    catch { const quota = await rollback({ db, uid: decoded.uid, requestId: body.requestId, now: new Date(), failureCode: "generation_failed" }); return json(res, 502, { code: "generation_failed", message: "The AI service could not generate a prompt. Your quota and credits were restored.", quota }); }
     const userRef = db.collection("users").doc(decoded.uid);
     const requestRef = userRef.collection("generationRequests").doc(body.requestId);
     const historyRef = userRef.collection("prompts").doc(body.requestId);
     const saved = await db.runTransaction(async (tx) => {
       const requestSnap = await tx.get(requestRef);
       if (!requestSnap.exists || requestSnap.data().status !== "reserved") throw new ApiError(409, "request_not_active", "The generation request is no longer active.");
-      const history = { prompt: result.prompt, perspectives: result.perspectives, intelligence: result.intelligence, aiModel: body.aiModel, category: body.category, hasReferenceImage: Boolean(input.image), referenceImageName: input.image?.name || null, createdAt: FieldValue.serverTimestamp() };
-      tx.set(historyRef, history);
+      const request = requestSnap.data();
+      tx.set(historyRef, { prompt: result.prompt, perspectives: result.perspectives, intelligence: result.intelligence, aiModel: body.aiModel, category: body.category, hasReferenceImage: Boolean(input.image), referenceImageName: input.image?.name || null, createdAt: FieldValue.serverTimestamp() });
       tx.update(requestRef, { status: "succeeded", prompt: result.prompt, perspectives: result.perspectives, intelligence: result.intelligence, historyId: historyRef.id, completedAt: FieldValue.serverTimestamp() });
-      return { prompt: result.prompt, perspectives: result.perspectives, intelligence: result.intelligence, historyId: historyRef.id, quota: requestSnap.data().quota, creditsRemaining: reservation.creditsRemaining, creditCost: reservation.creditCost || 0 };
+      return { prompt: result.prompt, perspectives: result.perspectives, intelligence: result.intelligence, historyId: historyRef.id, quota: request.quota, creditsRemaining: reservation.creditsRemaining, creditCost: reservation.creditCost || 0 };
     });
     return json(res, 200, saved);
   } catch (error) {
