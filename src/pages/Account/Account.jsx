@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { createQuotaState } from "../../constants/quota";
 import { PRICING_PLANS } from "../../constants/pricingPlans";
 import PRODUCT_CONFIG from "../../config/product.config";
-import { buyCredits, subscribeToPro } from "../../services/razorpay";
+import { buyCredits, buyCustomCredits, subscribeToPro } from "../../services/razorpay";
 
 export const Account = () => {
   const { user, userProfile, logout, plan, promptsToday, lastPromptDate } = useAuth();
@@ -13,6 +13,7 @@ export const Account = () => {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [customAmount, setCustomAmount] = useState("10");
 
   const quota = createQuotaState({
     plan,
@@ -25,6 +26,7 @@ export const Account = () => {
   });
   const credits = Math.max(Number(userProfile?.credits || 0), 0);
   const pricing = PRODUCT_CONFIG.pricing;
+  const customConfig = pricing.customCredits;
   const isPro = plan === "pro";
   const starterPack = pricing.creditPacks.starter;
   const creatorPack = pricing.creditPacks.creator;
@@ -39,6 +41,15 @@ export const Account = () => {
       console.error("Payment error:", err);
       setError(err?.message || "Payment could not be completed. Please try again.");
     } finally { setBusy(""); }
+  };
+
+  const handleCustomPurchase = () => {
+    const amount = Number(customAmount);
+    if (!Number.isInteger(amount) || amount < customConfig.minInr || amount > customConfig.maxInr) {
+      setError(`Choose a whole-number amount between ₹${customConfig.minInr} and ₹${customConfig.maxInr}.`);
+      return;
+    }
+    runPayment("custom", () => buyCustomCredits({ user, amountInr: amount }));
   };
 
   const handleLogout = async () => {
@@ -83,6 +94,14 @@ export const Account = () => {
               </article>;
             })}
           </div>
+
+          <div className="mt-5 rounded-2xl border border-violet-500/30 bg-gradient-to-r from-violet-950/50 via-gray-900 to-indigo-950/50 p-5 shadow-xl">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div><p className="text-sm font-black text-white">💎 Custom Creator Credits</p><p className="mt-1 text-xs text-gray-400">Pay only what you need. ₹{customConfig.inrPerCredit} = 1 credit · minimum ₹{customConfig.minInr}. Credits never expire.</p></div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center"><label className="sr-only" htmlFor="custom-credit-amount">Custom credit amount</label><div className="flex items-center rounded-xl border border-gray-700 bg-gray-950 px-3"><span className="text-sm font-bold text-gray-400">₹</span><input id="custom-credit-amount" type="number" min={customConfig.minInr} max={customConfig.maxInr} step="1" value={customAmount} onChange={(event) => setCustomAmount(event.target.value)} className="w-24 bg-transparent px-2 py-3 text-sm font-bold text-white outline-none" /></div><span className="text-xs font-bold text-violet-300">≈ {Math.floor((Number(customAmount) || 0) / customConfig.inrPerCredit)} credits</span><button type="button" disabled={busy !== ""} onClick={handleCustomPurchase} className="rounded-xl bg-violet-600 px-5 py-3 text-sm font-black text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50">{busy === "custom" ? "Opening secure checkout…" : "Buy Custom Credits"}</button></div>
+            </div>
+          </div>
+
           {quota.remaining === 0 && plan === "free" && <div className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-950/20 p-4 text-sm text-amber-100"><strong>You've reached today's free limit.</strong> Upgrade to Pro for continued daily access, or use Creator Credits for a one-time boost.</div>}
         </section>
 
