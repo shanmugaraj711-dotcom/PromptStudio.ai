@@ -4,7 +4,7 @@ import { adminDb, json, requireUser } from "./_firebaseAdmin.js";
 import { createQuotaState, getUtcDateKey, getUtcMonthKey } from "../src/constants/quota.js";
 import PRODUCT_CONFIG from "../src/config/product.config.js";
 
-const MODELS = new Set(["chatgpt", "claude", "gemini", "grok"]);
+const MODELS = new Set(["chatgpt", "claude", "gemini", "grok", "midjourney"]);
 const CATEGORIES = new Set(["writing", "coding", "image", "marketing", "business"]);
 const REQUEST_ID = /^[a-zA-Z0-9_-]{8,128}$/;
 const MAX_IMAGE_DATA_LENGTH = 4_000_000;
@@ -73,8 +73,8 @@ const reserve = async ({ db, uid, requestId, now, hasImage }) => {
       quotaVersion: quota.quotaVersion + 1,
     };
     if (hasImage) {
-      if (quota.dailyImageLimit !== null) { nextState.imageAnalysesToday = quota.imageAnalysesToday + 1; nextState.lastImageAnalysisDate = dateKey; }
-      else { nextState.imageAnalysesThisMonth = quota.imageAnalysesThisMonth + 1; nextState.lastImageAnalysisMonth = monthKey; }
+      if (quota.dailyImageLimit !== null) { nextState.imageAnalysesToday = quota.imageUsedToday + 1; nextState.lastImageAnalysisDate = dateKey; }
+      else { nextState.imageAnalysesThisMonth = quota.imageUsedThisMonth + 1; nextState.lastImageAnalysisMonth = monthKey; }
     }
     const reservedQuota = createQuotaState(nextState, now);
     const creditDeducted = usesFreePrompt ? 0 : creditCost;
