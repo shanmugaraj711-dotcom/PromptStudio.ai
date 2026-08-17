@@ -1,15 +1,15 @@
 {
-  "indexes": [
+  "indexes": [],
+  "fieldOverrides": [
     {
       "collectionGroup": "prompts",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
+      "fieldPath": "hasReferenceImage",
+      "indexes": [
         {
-          "fieldPath": "hasReferenceImage",
+          "queryScope": "COLLECTION_GROUP",
           "order": "ASCENDING"
         }
       ]
     }
-  ],
-  "fieldOverrides": []
+  ]
 }
