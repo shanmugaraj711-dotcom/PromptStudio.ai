@@ -2,79 +2,39 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
-    }
-
-    function isPro(userId) {
-      return isOwner(userId)
-        && get(/databases/$(database)/documents/users/$(userId)).data.plan == 'pro';
-    }
+    function isOwner(userId) { return request.auth != null && request.auth.uid == userId; }
+    function isPro(userId) { return isOwner(userId) && get(/databases/$(database)/documents/users/$(userId)).data.plan == 'pro'; }
 
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
-
-      // Client-created profiles contain only identity and display data. Plan and
-      // quota fields are written only by the trusted generation API.
       allow create: if isOwner(userId)
-        && request.resource.data.keys().hasOnly([
-          'uid', 'name', 'email', 'photoURL', 'createdAt', 'lastLogin'
-        ])
-        && request.resource.data.keys().hasAll([
-          'uid', 'name', 'email', 'photoURL', 'createdAt', 'lastLogin'
-        ])
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'email', 'photoURL', 'createdAt', 'lastLogin'])
+        && request.resource.data.keys().hasAll(['uid', 'name', 'email', 'photoURL', 'createdAt', 'lastLogin'])
         && request.resource.data.uid == userId
         && request.resource.data.email == request.auth.token.email;
-
       allow update: if isOwner(userId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'name', 'photoURL', 'lastLogin'
-        ]);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'photoURL', 'lastLogin']);
       allow delete: if false;
 
-      match /prompts/{promptId} {
-        allow get, list: if isOwner(userId);
-        allow create, update: if false;
-        allow delete: if isOwner(userId);
-      }
-
+      match /prompts/{promptId} { allow get, list: if isOwner(userId); allow create, update: if false; allow delete: if isOwner(userId); }
       match /promptTemplates/{templateId} {
         allow get, list: if isPro(userId);
-        allow create: if isPro(userId)
-          && request.resource.data.keys().hasOnly([
-            'name', 'template', 'variables', 'createdAt', 'updatedAt'
-          ])
-          && request.resource.data.name is string
-          && request.resource.data.name.size() > 0
-          && request.resource.data.name.size() <= 120
-          && request.resource.data.template is string
-          && request.resource.data.template.size() > 0
-          && request.resource.data.variables is list
-          && request.resource.data.variables.size() <= 30;
-        allow update: if isPro(userId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'name', 'template', 'variables', 'updatedAt'
-          ])
-          && request.resource.data.name is string
-          && request.resource.data.name.size() > 0
-          && request.resource.data.name.size() <= 120
-          && request.resource.data.template is string
-          && request.resource.data.template.size() > 0
-          && request.resource.data.variables is list
-          && request.resource.data.variables.size() <= 30;
+        allow create: if isPro(userId) && request.resource.data.keys().hasOnly(['name', 'template', 'variables', 'createdAt', 'updatedAt']) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 120 && request.resource.data.template is string && request.resource.data.template.size() > 0 && request.resource.data.variables is list && request.resource.data.variables.size() <= 30;
+        allow update: if isPro(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'template', 'variables', 'updatedAt']) && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 120 && request.resource.data.template is string && request.resource.data.template.size() > 0 && request.resource.data.variables is list && request.resource.data.variables.size() <= 30;
         allow delete: if isPro(userId);
       }
-
-      match /generationRequests/{requestId} {
-        allow read, write: if false;
-      }
+      match /generationRequests/{requestId} { allow read, write: if false; }
     }
 
-    // Public links are resolved only through the server API. Clients must never
-    // read, enumerate, create, update, or delete share records directly.
-    match /publicPromptShares/{shareId} {
-      allow read, write: if false;
-    }
+    // Server/Admin SDK only. Never expose runtime business rules or audit records to clients.
+    match /systemConfig/{document} { allow read, write: if false; }
+    match /adminAudit/{document} { allow read, write: if false; }
+    match /paymentOrders/{document} { allow read, write: if false; }
+    match /paymentSubscriptions/{document} { allow read, write: if false; }
+    match /paymentWebhookEvents/{document} { allow read, write: if false; }
+    match /supportMessages/{document} { allow read, write: if false; }
+    match /feedback/{document} { allow read, write: if false; }
+    match /publicPromptShares/{shareId} { allow read, write: if false; }
   }
 }
