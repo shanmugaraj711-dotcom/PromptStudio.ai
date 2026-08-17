@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import SectionHeading from '../../components/common/SectionHeading';
 import TextArea from '../../components/ui/TextArea';
@@ -14,6 +14,7 @@ import { useAuth } from '../../context/AuthContext';
 import { evaluateFeatureAccess } from '../../config/features';
 import { getWorkflowById } from '../../config/workflows';
 import PRODUCT_CONFIG from '../../config/product.config';
+import { fetchRuntimeProductConfig } from '../../services/runtimeProductConfig';
 
 const IMAGE_IDEAS = [
   { label: 'Cinematic portrait', text: 'Create a cinematic portrait with dramatic but natural lighting and shallow depth of field.' },
@@ -27,6 +28,7 @@ const IMAGE_IDEAS = [
 function PromptBuilder() {
   const fileInputRef = useRef(null);
   const [searchParams] = useSearchParams();
+  const [runtimeConfig, setRuntimeConfig] = useState(null);
   const workflowId = searchParams.get('workflow');
   const requestedModel = searchParams.get('model');
   const workflow = getWorkflowById(workflowId);
@@ -35,14 +37,20 @@ function PromptBuilder() {
   const workflowAccess = evaluateFeatureAccess('promptWorkflows', plan);
   const workflowActive = Boolean(workflow && workflowAccess.allowed);
   const imageMode = category === 'image';
-  const quota = createQuotaState({ plan, promptsToday, lastPromptDate, imageAnalysesToday: userProfile?.imageAnalysesToday, lastImageAnalysisDate: userProfile?.lastImageAnalysisDate, imageAnalysesThisMonth: userProfile?.imageAnalysesThisMonth, lastImageAnalysisMonth: userProfile?.lastImageAnalysisMonth });
+  const quota = createQuotaState({ plan, promptsToday, lastPromptDate, imageAnalysesToday: userProfile?.imageAnalysesToday, lastImageAnalysisDate: userProfile?.lastImageAnalysisDate, imageAnalysesThisMonth: userProfile?.imageAnalysesThisMonth, lastImageAnalysisMonth: userProfile?.lastImageAnalysisMonth }, new Date(), runtimeConfig);
   const credits = Math.max(Number(userProfile?.credits || 0), 0);
-  const generationCreditCost = image ? PRODUCT_CONFIG.creditCosts.referenceImageAnalysis : PRODUCT_CONFIG.creditCosts.standardGeneration;
+  const generationCreditCost = image ? (runtimeConfig?.creditCosts?.referenceImageAnalysis ?? PRODUCT_CONFIG.creditCosts.referenceImageAnalysis) : (runtimeConfig?.creditCosts?.standardGeneration ?? PRODUCT_CONFIG.creditCosts.standardGeneration);
   const quotaExhausted = quota.remaining === 0;
   const imageQuotaExhausted = Boolean(image && quota.imageLimit !== null && quota.imageRemaining <= 0);
   const creditBlocked = quotaExhausted && credits < generationCreditCost;
   const generationBlocked = imageQuotaExhausted || creditBlocked;
 
+  useEffect(() => {
+    let active = true;
+    if (!user) return undefined;
+    fetchRuntimeProductConfig(user).then((config) => { if (active) setRuntimeConfig(config); }).catch((configError) => console.error('Unable to load runtime product config', configError));
+    return () => { active = false; };
+  }, [user]);
   useEffect(() => { if (requestedModel && AI_MODELS.some((model) => model.id === requestedModel)) setAiModel(requestedModel); }, [requestedModel, setAiModel]);
   useEffect(() => { if (workflowActive && workflow.category) setCategory(workflow.category); }, [workflowActive, workflow?.category, setCategory]);
 
@@ -51,6 +59,7 @@ function PromptBuilder() {
   const useImageIdea = (text) => setIdea((current) => current.trim() ? `${current.trim()}\n\n${text}` : text);
   const applyDiscovery = (item) => { if (item.idea) setIdea(item.idea); if (item.modelId && AI_MODELS.some((model) => model.id === item.modelId)) setAiModel(item.modelId); };
   const stepLabels = { optimize: 'Optimize', perspectives: 'Perspectives', compare: 'Compare', variables: 'Variables', launch: 'Launch' };
+  const freeDailyLimit = runtimeConfig?.plans?.free?.dailyPromptLimit ?? quota.dailyLimit;
 
   return (
     <section id="prompt-builder" className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-blue-50/50 py-20 lg:py-28">
@@ -72,7 +81,7 @@ function PromptBuilder() {
           <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50/80 p-4"><div className="grid grid-cols-1 gap-3 sm:grid-cols-3"><div className="rounded-xl bg-white p-3 shadow-sm"><p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">⚡ Prompts</p><p className="mt-1 text-sm font-black text-slate-900">{quota.remaining} / {quota.dailyLimit} today</p></div><div className="rounded-xl bg-white p-3 shadow-sm"><p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">🖼️ Images</p><p className="mt-1 text-sm font-black text-slate-900">{quota.imageRemaining} / {quota.imageLimit ?? '∞'} {quota.imagePeriod}</p></div><div className="rounded-xl bg-white p-3 shadow-sm"><p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">💎 Credits</p><Link to="/account#plans" className="mt-1 block text-sm font-black text-indigo-700 hover:text-indigo-500">{credits} available →</Link></div></div></div>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><Button variant="primary" size="lg" type="submit" disabled={isGenerating || isPreparingImage || generationBlocked} className="w-full sm:w-auto">{isGenerating ? (user ? 'Building…' : 'Signing in & building…') : workflow ? `Run ${workflow.name}` : imageMode ? 'Create Image Prompt' : 'Generate Better Prompt'}</Button><div className="text-right text-sm font-semibold" aria-live="polite"><p className={quotaExhausted ? (credits >= generationCreditCost ? 'text-emerald-700' : 'text-red-600') : 'text-slate-600'}>{quotaExhausted ? (credits >= generationCreditCost ? `Using ${generationCreditCost} credits for this generation` : `Need ${generationCreditCost} credits to continue`) : `${quota.remaining} / ${quota.dailyLimit} prompts remaining today`}</p>{image && <p className="mt-1 text-xs text-slate-500">Image analysis: {generationCreditCost} credits after free prompt usage</p>}</div></div>
         </form>
-        {quotaExhausted && plan === 'free' && <div className="mt-5 rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-white to-violet-50 p-5 shadow-sm"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-black text-slate-900">You've used today's 3 free prompts.</p><p className="mt-1 text-xs text-slate-600">{credits > 0 ? `You have ${credits} credits available. Continue creating, or get more when you need them.` : 'Continue with Creator Credits or upgrade to Pro.'}</p></div><div className="flex flex-col gap-2 sm:flex-row"><Link to="/account#plans" className="rounded-xl bg-indigo-600 px-4 py-2.5 text-center text-xs font-bold text-white hover:bg-indigo-500">⭐ Upgrade · ₹79/month</Link><Link to="/account#plans" className="rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-center text-xs font-bold text-indigo-700 hover:bg-indigo-50">💎 Creator Credits</Link></div></div></div>}
+        {quotaExhausted && plan === 'free' && <div className="mt-5 rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-white to-violet-50 p-5 shadow-sm"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-black text-slate-900">You've used today's {freeDailyLimit} free prompts.</p><p className="mt-1 text-xs text-slate-600">{credits > 0 ? `You have ${credits} credits available. Continue creating, or get more when you need them.` : 'Continue with Creator Credits or upgrade to Pro.'}</p></div><div className="flex flex-col gap-2 sm:flex-row"><Link to="/account#plans" className="rounded-xl bg-indigo-600 px-4 py-2.5 text-center text-xs font-bold text-white hover:bg-indigo-500">⭐ Upgrade · ₹79/month</Link><Link to="/account#plans" className="rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-center text-xs font-bold text-indigo-700 hover:bg-indigo-50">💎 Creator Credits</Link></div></div></div>}
         {imageQuotaExhausted && <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900"><strong>You've reached your reference-image allowance.</strong><p className="mt-1 text-xs">Credits do not bypass the image allowance. You can continue with text prompts or return when your image allowance resets.</p></div>}
         {generatedPrompt && <div className="mt-10"><ResultCard prompt={generatedPrompt} perspectives={perspectives} intelligence={intelligence} userPlan={plan} workflow={workflow} category={category} /></div>}
       </div>
