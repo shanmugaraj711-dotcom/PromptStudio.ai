@@ -1,0 +1,44 @@
+import { adminAuth, adminDb, json } from "./_firebaseAdmin.js";
+import { requireFounderAdmin } from "./_adminSecurity.js";
+import { getRuntimeProductConfig, saveRuntimeProductConfig, writeConfigAudit } from "./_productConfig.js";
+
+const count = async (query) => (await query.count().get()).data().count;
+const money = (value) => Math.round(Number(value || 0) * 100) / 100;
+const health = async (db) => {
+  const config = await getRuntimeProductConfig(db);
+  return { ok: true, checkedAt: new Date().toISOString(), firebaseAdmin: true, gemini: Boolean(process.env.GEMINI_API_KEY), razorpay: Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET), razorpayPlans: Boolean(process.env.RAZORPAY_PRO_MONTHLY_PLAN_ID && process.env.RAZORPAY_PRO_ANNUAL_PLAN_ID), razorpayWebhook: Boolean(process.env.RAZORPAY_WEBHOOK_SECRET), paymentMode: config.monetization.paymentMode, plans: { free: config.plans.free, pro: config.plans.pro }, creditPricing: config.pricing.creditPacks, runtimeConfig: (await db.collection("systemConfig").doc("product").get()).exists };
+};
+const analytics = async (db) => {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const [users, newUsers, prompts, imagePrompts, orders, paidOrders, failedPayments, subscriptions, activeSubscriptions, feedback, support] = await Promise.all([
+    count(db.collection("users")), count(db.collection("users").where("createdAt", ">=", since)), count(db.collectionGroup("prompts")), count(db.collectionGroup("prompts").where("hasReferenceImage", "==", true)), count(db.collection("paymentOrders")), db.collection("paymentOrders").where("fulfilled", "==", true).get(), count(db.collection("paymentOrders").where("status", "==", "failed")), count(db.collection("paymentSubscriptions")), count(db.collection("paymentSubscriptions").where("status", "in", ["active", "authenticated", "resumed"])), count(db.collection("feedback")), count(db.collection("supportMessages")),
+  ]);
+  const revenue = paidOrders.docs.reduce((sum, doc) => sum + Number(doc.data().amountInr || 0), 0);
+  return { ok: true, checkedAt: new Date().toISOString(), users, newUsers, promptsGenerated: prompts, imageToPromptUsage: imagePrompts, creditsPurchased: paidOrders.docs.reduce((sum, doc) => sum + Number(doc.data().credits || 0), 0), creditOrders: orders, proSubscribers: activeSubscriptions, subscriptions, revenueInr: money(revenue), failedPayments, feedback, supportMessages: support };
+};
+const inbox = async (db) => {
+  const [supportSnap, feedbackSnap] = await Promise.all([db.collection("supportMessages").orderBy("createdAt", "desc").limit(20).get(), db.collection("feedback").orderBy("createdAt", "desc").limit(20).get()]);
+  const map = (snap) => snap.docs.map((doc) => { const data = doc.data(); return { id: doc.id, ...data, createdAt: data.createdAt?.toDate?.()?.toISOString?.() || null }; });
+  return { ok: true, support: map(supportSnap), feedback: map(feedbackSnap) };
+};
+
+export default async function handler(req, res) {
+  const action = String(req.query?.action || req.body?.action || "health");
+  try {
+    const write = req.method === "PUT" && action === "config";
+    await requireFounderAdmin(req, { write });
+    const db = adminDb();
+    if (req.method === "GET" && action === "health") { adminAuth(); return json(res, 200, await health(db)); }
+    if (req.method === "GET" && action === "analytics") return json(res, 200, await analytics(db));
+    if (req.method === "GET" && action === "config") return json(res, 200, { config: await getRuntimeProductConfig(db) });
+    if (req.method === "GET" && action === "inbox") return json(res, 200, await inbox(db));
+    if (req.method === "PUT" && action === "config") {
+      const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
+      if (!body.config || typeof body.config !== "object") return json(res, 400, { message: "A product configuration object is required." });
+      const before = await getRuntimeProductConfig(db); const after = await saveRuntimeProductConfig({ db, config: body.config, actor: (await requireFounderAdmin(req, { write: true })).uid });
+      const actor = await requireFounderAdmin(req, { write: true }); await writeConfigAudit({ db, actor, before, after, requestId: body.requestId });
+      return json(res, 200, { ok: true, config: after });
+    }
+    return json(res, 405, { message: "Unsupported admin operation." });
+  } catch (error) { console.error("Founder admin operation failed", { action, code: error?.code || "unknown" }); return json(res, error?.status || 500, { message: error?.message || "Founder admin operation failed." }); }
+}
