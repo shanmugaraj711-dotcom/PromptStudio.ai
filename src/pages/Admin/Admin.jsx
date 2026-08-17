@@ -1,163 +1,70 @@
-import { useCallback, useEffect, useState } from "react";
-import { Navigate, Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, Navigate } from "react-router-dom";
 import { auth } from "../../firebase";
 import { useAuth } from "../../context/AuthContext";
 
-const statusClass = (ok) => ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800";
+const card = "rounded-3xl border border-slate-200 bg-white p-6 shadow-sm";
+const input = "mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100";
+const number = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
+const requestId = () => `${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
 
-function StatusCard({ label, ok, detail }) {
-  return (
-    <div className={`rounded-2xl border p-4 ${statusClass(ok)}`}>
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-bold">{label}</span>
-        <span className="text-xs font-black">{ok ? "● OK" : "● CHECK"}</span>
-      </div>
-      <p className="mt-2 text-xs opacity-80">{detail}</p>
-    </div>
-  );
-}
+function Stat({ label, value, hint }) { return <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p><p className="mt-2 text-2xl font-black text-slate-950">{value ?? "—"}</p>{hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}</div>; }
+function Toggle({ label, value, onChange }) { return <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 p-3"><span className="text-sm font-semibold text-slate-800">{label}</span><input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} className="h-4 w-4" /></label>; }
 
 export default function Admin() {
   const { user, userProfile, loading } = useAuth();
-  const [adminClaim, setAdminClaim] = useState(null);
-  const [checkingClaim, setCheckingClaim] = useState(true);
-  const [bootstrapping, setBootstrapping] = useState(false);
-  const [bootstrapMessage, setBootstrapMessage] = useState("");
-  const [health, setHealth] = useState(null);
-  const [healthLoading, setHealthLoading] = useState(false);
-  const [healthError, setHealthError] = useState("");
+  const [adminClaim, setAdminClaim] = useState(null); const [checkingClaim, setCheckingClaim] = useState(true); const [bootstrapping, setBootstrapping] = useState(false); const [bootstrapMessage, setBootstrapMessage] = useState("");
+  const [tab, setTab] = useState("analytics"); const [health, setHealth] = useState(null); const [analytics, setAnalytics] = useState(null); const [config, setConfig] = useState(null); const [savedConfig, setSavedConfig] = useState(null); const [loadingData, setLoadingData] = useState(false); const [saving, setSaving] = useState(false); const [message, setMessage] = useState(""); const [error, setError] = useState("");
   const [inbox, setInbox] = useState({ support: [], feedback: [] });
-  const [inboxLoading, setInboxLoading] = useState(false);
-  const [inboxError, setInboxError] = useState("");
 
-  const refreshClaim = useCallback(async (forceRefresh = true) => {
-    if (!auth.currentUser) return null;
-    const tokenResult = await auth.currentUser.getIdTokenResult(forceRefresh);
-    setAdminClaim(tokenResult.claims.admin === true);
-    setCheckingClaim(false);
-    return tokenResult;
-  }, []);
+  const refreshClaim = useCallback(async () => { if (!auth.currentUser) return; const result = await auth.currentUser.getIdTokenResult(true); setAdminClaim(result.claims.admin === true); setCheckingClaim(false); }, []);
+  const api = useCallback(async (url, options = {}) => { const token = await auth.currentUser?.getIdToken(); const response = await fetch(url, { ...options, headers: { ...(options.headers || {}), Authorization: `Bearer ${token}`, "Content-Type": "application/json" } }); const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.message || "Request failed."); return body; }, []);
 
-  const bootstrapAdmin = async () => {
-    setBootstrapping(true);
-    setBootstrapMessage("");
-    try {
-      const token = await auth.currentUser?.getIdToken();
-      const response = await fetch("/api/admin-bootstrap", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.message || "Unable to enable founder admin.");
-      setBootstrapMessage(body.message || "Admin enabled.");
-      await refreshClaim(true);
-    } catch (error) {
-      setBootstrapMessage(error.message || "Unable to enable founder admin.");
-    } finally {
-      setBootstrapping(false);
-    }
+  const loadAll = useCallback(async () => {
+    setLoadingData(true); setError("");
+    try { const [h, a, c, i] = await Promise.all([api("/api/admin-health"), api("/api/admin-analytics"), api("/api/admin-config"), api("/api/admin-inbox")]); setHealth(h); setAnalytics(a); setConfig(c.config); setSavedConfig(c.config); setInbox({ support: i.support || [], feedback: i.feedback || [] }); }
+    catch (e) { setError(e.message || "Could not load founder control room."); } finally { setLoadingData(false); }
+  }, [api]);
+
+  useEffect(() => { if (!loading && user) refreshClaim().catch(() => setCheckingClaim(false)); }, [loading, user, refreshClaim]);
+  useEffect(() => { if (adminClaim === true) loadAll(); }, [adminClaim, loadAll]);
+
+  const bootstrapAdmin = async () => { setBootstrapping(true); setBootstrapMessage(""); try { const body = await api("/api/admin-bootstrap", { method: "POST" }); setBootstrapMessage(body.message || "Admin enabled. Refreshing…"); await refreshClaim(); } catch (e) { setBootstrapMessage(e.message || "Unable to enable founder admin."); } finally { setBootstrapping(false); } };
+
+  const save = async () => {
+    if (!config) return; if (!window.confirm("Change PromptStudio business rules now? This affects backend quota/pricing enforcement for new requests.")) return;
+    setSaving(true); setError(""); setMessage("");
+    try { const body = await api("/api/admin-config", { method: "PUT", body: JSON.stringify({ config, requestId: requestId() }) }); setConfig(body.config); setSavedConfig(body.config); setMessage("Business configuration saved securely. Backend will use it for new requests."); await loadAll(); }
+    catch (e) { setError(e.message || "Configuration update failed."); } finally { setSaving(false); }
   };
 
-  const runHealthCheck = useCallback(async () => {
-    setHealthLoading(true);
-    setHealthError("");
-    try {
-      const token = await auth.currentUser?.getIdToken();
-      const response = await fetch("/api/admin-health", { headers: { Authorization: `Bearer ${token}` } });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.message || "Health check failed.");
-      setHealth(body);
-    } catch (error) {
-      setHealthError(error.message || "Health check failed.");
-    } finally {
-      setHealthLoading(false);
-    }
-  }, []);
-
-  const loadInbox = useCallback(async () => {
-    setInboxLoading(true);
-    setInboxError("");
-    try {
-      const token = await auth.currentUser?.getIdToken();
-      const response = await fetch("/api/admin-inbox", { headers: { Authorization: `Bearer ${token}` } });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.message || "Could not load inbox.");
-      setInbox({ support: body.support || [], feedback: body.feedback || [] });
-    } catch (error) {
-      setInboxError(error.message || "Could not load inbox.");
-    } finally {
-      setInboxLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!loading && user) refreshClaim(true).catch(() => setCheckingClaim(false));
-  }, [loading, user, refreshClaim]);
-
-  useEffect(() => {
-    if (adminClaim === true) {
-      runHealthCheck();
-      loadInbox();
-    }
-  }, [adminClaim, runHealthCheck, loadInbox]);
+  const dirty = useMemo(() => JSON.stringify(config) !== JSON.stringify(savedConfig), [config, savedConfig]);
+  const updatePlan = (plan, key, value) => setConfig((c) => ({ ...c, plans: { ...c.plans, [plan]: { ...c.plans[plan], [key]: value } } }));
+  const updatePricing = (key, value) => setConfig((c) => ({ ...c, pricing: { ...c.pricing, [key]: value } }));
+  const updatePack = (id, key, value) => setConfig((c) => ({ ...c, pricing: { ...c.pricing, creditPacks: { ...c.pricing.creditPacks, [id]: { ...c.pricing.creditPacks[id], [key]: value } } } }));
+  const updateCost = (key, value) => setConfig((c) => ({ ...c, creditCosts: { ...c.creditCosts, [key]: value } }));
+  const updateFeature = (key, value) => setConfig((c) => ({ ...c, features: { ...c.features, [key]: { ...c.features[key], enabled: value } } }));
 
   if (!loading && !user) return <Navigate to="/login?next=/admin" replace />;
   if (loading || checkingClaim) return <div className="min-h-screen bg-slate-950 p-10 text-white">Checking founder access…</div>;
+  if (adminClaim !== true) return <main className="min-h-screen bg-slate-950 px-6 py-12 text-white"><div className="mx-auto max-w-xl rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-2xl"><p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-300">Founder Admin</p><h1 className="mt-3 text-3xl font-black">Enable your admin access</h1><p className="mt-3 text-sm leading-6 text-slate-300">Bootstrap is allowed only for your verified Firebase email configured on the server. After bootstrap, all admin APIs require the Firebase admin claim and founder allowlist.</p><p className="mt-4 rounded-xl bg-slate-800 p-3 text-xs text-slate-300">Signed in as: <strong className="text-white">{user.email}</strong></p><button disabled={bootstrapping} onClick={bootstrapAdmin} className="mt-6 w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold hover:bg-indigo-500 disabled:opacity-50">{bootstrapping ? "Enabling…" : "Enable Founder Admin"}</button>{bootstrapMessage && <p className="mt-4 text-sm text-indigo-200">{bootstrapMessage}</p>}</div></main>;
 
-  if (adminClaim !== true) {
-    return (
-      <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
-        <div className="mx-auto max-w-xl rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-2xl">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-300">Founder Admin</p>
-          <h1 className="mt-3 text-3xl font-black">Enable your admin access</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-300">This one-time bootstrap only succeeds when your verified Firebase email exactly matches PROMPTSTUDIO_ADMIN_EMAIL on Vercel.</p>
-          <p className="mt-4 rounded-xl bg-slate-800 p-3 text-xs text-slate-300">Signed in as: <strong className="text-white">{user.email}</strong></p>
-          <button disabled={bootstrapping} onClick={bootstrapAdmin} className="mt-6 w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold hover:bg-indigo-500 disabled:opacity-50">{bootstrapping ? "Enabling…" : "Enable Founder Admin"}</button>
-          {bootstrapMessage && <p className="mt-4 text-sm text-indigo-200">{bootstrapMessage}</p>}
-          <Link to="/dashboard" className="mt-6 inline-block text-sm font-semibold text-slate-400 hover:text-white">← Back to Dashboard</Link>
-        </div>
-      </main>
-    );
-  }
+  return <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-950 sm:px-6"><div className="mx-auto max-w-7xl">
+    <header className="flex flex-col gap-4 rounded-3xl bg-slate-950 p-7 text-white shadow-xl sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-300">PromptStudio · Private Founder Area</p><h1 className="mt-2 text-4xl font-black">Control Center</h1><p className="mt-2 max-w-3xl text-sm text-slate-400">Analytics, secure business controls, system health and customer feedback. Nothing here is trusted from the browser; every admin action is verified server-side.</p></div><div className="flex gap-2"><Link to="/dashboard" className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-bold hover:bg-slate-900">Dashboard</Link><button onClick={loadAll} disabled={loadingData} className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold hover:bg-indigo-500 disabled:opacity-50">{loadingData ? "Refreshing…" : "Refresh"}</button></div></header>
+    {error && <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}{message && <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">{message}</div>}
+    <nav className="mt-6 flex flex-wrap gap-2">{[["analytics","📊 Analytics"],["config","⚙️ Business Controls"],["health","🛡️ Security & Health"],["inbox","💬 Feedback / Support"]].map(([id,label]) => <button key={id} onClick={() => setTab(id)} className={`rounded-xl px-4 py-2 text-sm font-black ${tab === id ? "bg-slate-950 text-white" : "border border-slate-200 bg-white text-slate-700"}`}>{label}</button>)}</nav>
 
-  const allHealthy = health && health.firebaseAdmin && health.gemini && health.razorpay && health.razorpayPlans && health.razorpayWebhook;
+    {tab === "analytics" && <section className="mt-6 space-y-6"><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><Stat label="Total users" value={analytics?.users} /><Stat label="Prompts generated" value={analytics?.promptsGenerated} /><Stat label="Image → Prompt" value={analytics?.imageToPromptUsage} /><Stat label="Pro subscribers" value={analytics?.proSubscribers} /></div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><Stat label="Credits sold" value={analytics?.creditsPurchased} /><Stat label="Credit orders" value={analytics?.creditOrders} /><Stat label="Revenue" value={analytics ? `₹${analytics.revenueInr}` : null} /><Stat label="Failed payments" value={analytics?.failedPayments} /></div><div className={card}><div className="flex items-center justify-between"><div><h2 className="text-lg font-black">Business snapshot</h2><p className="mt-1 text-sm text-slate-500">Read-only production signals from Firebase payment and product collections.</p></div><span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">Founder only</span></div><div className="mt-5 grid gap-4 md:grid-cols-3"><Stat label="Feedback" value={analytics?.feedback} /><Stat label="Support messages" value={analytics?.supportMessages} /><Stat label="Subscription records" value={analytics?.subscriptions} /></div></div></section>}
 
-  return (
-    <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
-      <div className="mx-auto max-w-6xl">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-300">PromptStudio AI · Founder</p>
-            <h1 className="mt-2 text-4xl font-black">Control Room</h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-400">Private operational view for backend health, payments configuration, product limits and your current founder account.</p>
-          </div>
-          <div className="flex gap-2"><Link to="/dashboard" className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold hover:bg-slate-900">Dashboard</Link><button onClick={() => { runHealthCheck(); loadInbox(); }} disabled={healthLoading || inboxLoading} className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold hover:bg-indigo-500 disabled:opacity-50">{healthLoading || inboxLoading ? "Checking…" : "Refresh Health & Inbox"}</button></div>
-        </div>
+    {tab === "config" && config && <section className="mt-6 space-y-6"><div className={card}><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-xl font-black">Live business configuration</h2><p className="mt-1 text-sm text-slate-500">Changes are stored server-side in Firestore and enforced by backend APIs. Your static config remains the safe fallback.</p></div><button onClick={save} disabled={!dirty || saving} className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-black text-white disabled:opacity-40">{saving ? "Saving securely…" : "Save changes"}</button></div><div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-800"><strong>Security:</strong> config writes require your founder admin claim, verified email, optional founder UID allowlist, and a Firebase session authenticated within the last 10 minutes. Razorpay secrets and plan IDs are never editable here.</div></div>
+      <div className="grid gap-6 lg:grid-cols-2"><div className={card}><h2 className="text-lg font-black">Free plan</h2><div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-sm font-bold">Daily prompts<input className={input} type="number" min="0" max="10000" value={config.plans.free.dailyPromptLimit} onChange={(e) => updatePlan("free","dailyPromptLimit",number(e.target.value))}/></label><label className="text-sm font-bold">Daily images<input className={input} type="number" min="0" max="10000" value={config.plans.free.dailyImageLimit ?? 0} onChange={(e) => updatePlan("free","dailyImageLimit",number(e.target.value))}/></label></div></div><div className={card}><h2 className="text-lg font-black">Pro plan</h2><div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-sm font-bold">Daily prompts<input className={input} type="number" min="0" max="10000" value={config.plans.pro.dailyPromptLimit} onChange={(e) => updatePlan("pro","dailyPromptLimit",number(e.target.value))}/></label><label className="text-sm font-bold">Monthly images<input className={input} type="number" min="0" max="10000" value={config.plans.pro.monthlyImageLimit ?? 0} onChange={(e) => updatePlan("pro","monthlyImageLimit",number(e.target.value))}/></label></div></div></div>
+      <div className={card}><h2 className="text-lg font-black">Pricing</h2><div className="mt-4 grid gap-4 md:grid-cols-2"><label className="text-sm font-bold">Pro monthly (₹)<input className={input} type="number" min="1" value={config.pricing.proMonthlyInr} onChange={(e) => updatePricing("proMonthlyInr",number(e.target.value))}/><span className="mt-1 block text-xs font-normal text-amber-700">Must match the Razorpay monthly plan before selling at the new price.</span></label><label className="text-sm font-bold">Pro annual (₹)<input className={input} type="number" min="1" value={config.pricing.proAnnualInr} onChange={(e) => updatePricing("proAnnualInr",number(e.target.value))}/><span className="mt-1 block text-xs font-normal text-amber-700">Must match the Razorpay annual plan before selling at the new price.</span></label></div><div className="mt-5 grid gap-4 md:grid-cols-2"><div className="rounded-2xl bg-slate-50 p-4"><p className="font-black">Credit pack: {config.pricing.creditPacks.starter.name}</p><div className="mt-3 grid grid-cols-2 gap-3"><label className="text-xs font-bold">Price ₹<input className={input} type="number" min="1" value={config.pricing.creditPacks.starter.priceInr} onChange={(e) => updatePack("starter","priceInr",number(e.target.value))}/></label><label className="text-xs font-bold">Credits<input className={input} type="number" min="1" value={config.pricing.creditPacks.starter.credits} onChange={(e) => updatePack("starter","credits",number(e.target.value))}/></label></div></div><div className="rounded-2xl bg-slate-50 p-4"><p className="font-black">Credit pack: {config.pricing.creditPacks.creator.name}</p><div className="mt-3 grid grid-cols-2 gap-3"><label className="text-xs font-bold">Price ₹<input className={input} type="number" min="1" value={config.pricing.creditPacks.creator.priceInr} onChange={(e) => updatePack("creator","priceInr",number(e.target.value))}/></label><label className="text-xs font-bold">Credits<input className={input} type="number" min="1" value={config.pricing.creditPacks.creator.credits} onChange={(e) => updatePack("creator","credits",number(e.target.value))}/></label></div></div></div></div>
+      <div className={card}><h2 className="text-lg font-black">Credit costs</h2><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{Object.entries(config.creditCosts).map(([key,value]) => <label key={key} className="text-xs font-bold capitalize">{key.replace(/([A-Z])/g," $1")}<input className={input} type="number" min="0" max="1000" value={value} onChange={(e) => updateCost(key,number(e.target.value))}/></label>)}</div></div>
+      <div className={card}><h2 className="text-lg font-black">Feature switches</h2><p className="mt-1 text-sm text-slate-500">Disabling a feature is a safe emergency kill switch. It does not delete user data.</p><div className="mt-4 grid gap-3 md:grid-cols-2">{Object.entries(config.features).map(([key,feature]) => <Toggle key={key} label={feature.name || key} value={feature.enabled} onChange={(v) => updateFeature(key,v)}/>)}</div></div>
+    </section>}
 
-        <section className="mt-8 rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="text-sm font-bold text-slate-200">System health</p><p className="mt-1 text-xs text-slate-500">Server-side checks only. Browser never receives secrets.</p></div>
-            <span className={`rounded-full px-3 py-1 text-xs font-black ${allHealthy ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}`}>{allHealthy ? "ALL SYSTEMS OK" : "ACTION REQUIRED"}</span>
-          </div>
-          {healthError && <p className="mt-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{healthError}</p>}
-          {health && <div className="mt-5 grid gap-3 md:grid-cols-3"><StatusCard label="Firebase Admin" ok={health.firebaseAdmin} detail="Admin SDK initializes successfully." /><StatusCard label="Gemini" ok={health.gemini} detail="Generation API key is present." /><StatusCard label="Razorpay" ok={health.razorpay} detail="Server payment credentials are present." /><StatusCard label="Razorpay Plans" ok={health.razorpayPlans} detail="Monthly and annual plan IDs are configured." /><StatusCard label="Webhook" ok={health.razorpayWebhook} detail="Webhook secret is configured." /><StatusCard label="Payment Mode" ok={health.paymentMode === "live"} detail={`Current configured mode: ${health.paymentMode}.`} /></div>}
-          {health?.checkedAt && <p className="mt-4 text-xs text-slate-600">Last checked: {new Date(health.checkedAt).toLocaleString()}</p>}
-        </section>
+    {tab === "health" && <section className="mt-6 space-y-6"><div className={card}><h2 className="text-lg font-black">Founder security</h2><div className="mt-4 grid gap-3 md:grid-cols-3"><Stat label="Admin claim" value="TRUE" hint="Firebase custom claim"/><Stat label="Founder email" value={user.email} hint="Verified session"/><Stat label="Plan" value={userProfile?.plan || "unknown"}/></div></div><div className={card}><h2 className="text-lg font-black">System health</h2><div className="mt-4 grid gap-3 md:grid-cols-3">{[["Firebase Admin",health?.firebaseAdmin],["Gemini",health?.gemini],["Razorpay",health?.razorpay],["Razorpay plans",health?.razorpayPlans],["Webhook",health?.razorpayWebhook],["Runtime config",health?.runtimeConfig]].map(([label,ok]) => <div key={label} className={`rounded-2xl border p-4 ${ok ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}><div className="flex justify-between"><span className="text-sm font-bold">{label}</span><span className="text-xs font-black">{ok ? "OK" : "CHECK"}</span></div></div>)}</div><p className="mt-4 text-xs text-slate-500">Payment mode: {health?.paymentMode || "unknown"} · Last checked: {health?.checkedAt ? new Date(health.checkedAt).toLocaleString() : "—"}</p></div></section>}
 
-        <section className="mt-6 grid gap-6 lg:grid-cols-2">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6"><p className="text-sm font-bold text-slate-200">Founder account</p><div className="mt-4 space-y-3 text-sm"><div className="flex justify-between gap-4"><span className="text-slate-500">Email</span><span>{user.email}</span></div><div className="flex justify-between gap-4"><span className="text-slate-500">Plan</span><span>{userProfile?.plan || "unknown"}</span></div><div className="flex justify-between gap-4"><span className="text-slate-500">Credits</span><span>{Number(userProfile?.credits || 0)}</span></div><div className="flex justify-between gap-4"><span className="text-slate-500">Admin claim</span><span className="text-emerald-300">admin = true</span></div></div></div>
-          <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6"><p className="text-sm font-bold text-slate-200">Product configuration</p>{health?.plans && <div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-xl bg-slate-800 p-4"><p className="text-xs text-slate-500">Free</p><p className="mt-1 text-lg font-black">{health.plans.free.dailyPromptLimit}/day</p><p className="text-xs text-slate-500">{health.plans.free.dailyImageLimit} image/day</p></div><div className="rounded-xl bg-slate-800 p-4"><p className="text-xs text-slate-500">Pro</p><p className="mt-1 text-lg font-black">{health.plans.pro.dailyPromptLimit}/day</p><p className="text-xs text-slate-500">{health.plans.pro.monthlyImageLimit} images/month</p></div></div>}</div>
-        </section>
-
-        <section className="mt-6 rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <div className="flex items-center justify-between gap-4"><div><p className="text-sm font-bold text-slate-200">Customer inbox</p><p className="mt-1 text-xs text-slate-500">Messages sent from Help & Chat and product feedback.</p></div><span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-bold text-slate-300">{inbox.support.length + inbox.feedback.length} recent</span></div>
-          {inboxError && <p className="mt-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{inboxError}</p>}
-          <div className="mt-5 grid gap-5 lg:grid-cols-2">
-            <div><h2 className="text-sm font-black text-indigo-300">Support chat</h2><div className="mt-3 space-y-3">{inbox.support.length === 0 ? <p className="rounded-xl bg-slate-800 p-4 text-sm text-slate-500">No support messages yet.</p> : inbox.support.map((item) => <article key={item.id} className="rounded-2xl bg-slate-800 p-4"><div className="flex justify-between gap-3 text-xs text-slate-500"><span>{item.email || "Unknown user"}</span><span>{item.createdAt ? new Date(item.createdAt).toLocaleString() : ""}</span></div><p className="mt-2 text-sm leading-6 text-slate-200">{item.message}</p><p className="mt-2 text-[11px] text-slate-600">{item.page || ""}</p></article>)}</div></div>
-            <div><h2 className="text-sm font-black text-indigo-300">Feedback</h2><div className="mt-3 space-y-3">{inbox.feedback.length === 0 ? <p className="rounded-xl bg-slate-800 p-4 text-sm text-slate-500">No feedback yet.</p> : inbox.feedback.map((item) => <article key={item.id} className="rounded-2xl bg-slate-800 p-4"><div className="flex justify-between gap-3 text-xs text-slate-500"><span>{item.email || "Unknown user"} · {item.type || "feedback"}</span><span>{item.createdAt ? new Date(item.createdAt).toLocaleString() : ""}</span></div><p className="mt-2 text-sm text-amber-300">{"★".repeat(Math.max(1, Math.min(5, Number(item.rating || 5))))}</p><p className="mt-2 text-sm leading-6 text-slate-200">{item.message}</p></article>)}</div></div>
-          </div>
-        </section>
-      </div>
-    </main>
-  );
+    {tab === "inbox" && <section className="mt-6 grid gap-6 lg:grid-cols-2"><div className={card}><h2 className="text-lg font-black">Support</h2><div className="mt-4 space-y-3">{inbox.support.length ? inbox.support.map((x) => <article key={x.id} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">{x.email || "Unknown"}</p><p className="mt-2 text-sm leading-6">{x.message}</p></article>) : <p className="text-sm text-slate-500">No support messages.</p>}</div></div><div className={card}><h2 className="text-lg font-black">Feedback / bugs / ideas / payments</h2><div className="mt-4 space-y-3">{inbox.feedback.length ? inbox.feedback.map((x) => <article key={x.id} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">{x.email || "Unknown"} · {x.type || "feedback"}</p><p className="mt-2 text-sm leading-6">{x.message}</p></article>) : <p className="text-sm text-slate-500">No feedback yet.</p>}</div></div></section>}
+  </div></main>;
 }
