@@ -1,21 +1,15 @@
 {
   "version": 2,
   "functions": {
-    "api/generate-prompt.js": {
-      "maxDuration": 30
-    }
+    "api/generate-prompt.js": { "maxDuration": 30 }
   },
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+    { "src": "/api/admin-health", "dest": "/api/admin?action=health" },
+    { "src": "/api/admin-analytics", "dest": "/api/admin?action=analytics" },
+    { "src": "/api/admin-config", "dest": "/api/admin?action=config" },
+    { "src": "/api/admin-inbox", "dest": "/api/admin?action=inbox" },
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
