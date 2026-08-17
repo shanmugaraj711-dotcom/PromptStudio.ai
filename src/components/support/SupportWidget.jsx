@@ -59,20 +59,20 @@ export default function SupportWidget() {
           </div>
           <div className="max-h-80 space-y-3 overflow-y-auto px-5 py-4">
             <div className="rounded-2xl bg-slate-900 p-3 text-sm leading-6 text-slate-300">{greeting}</div>
-            {!user && <Link to="/login?next=/help" className="block rounded-xl bg-indigo-600 px-4 py-2.5 text-center text-sm font-bold">Sign in to chat</Link>}
+            {!user && <Link to="/login?next=/help" className="block rounded-xl bg-blue-600 px-4 py-2.5 text-center text-sm font-bold">Sign in to chat</Link>}
             {user && messages.length === 0 && (
               <div className="space-y-2">
                 <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-600">Quick questions</p>
-                {quickQuestions.map((item) => <button key={item.label} type="button" onClick={() => setMessage(item.message)} className="block w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5 text-left text-xs font-semibold text-slate-300 hover:border-indigo-500/40 hover:text-white">{item.label}</button>)}
+                {quickQuestions.map((item) => <button key={item.label} type="button" onClick={() => setMessage(item.message)} className="block w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5 text-left text-xs font-semibold text-slate-300 hover:border-blue-500/40 hover:text-white">{item.label}</button>)}
               </div>
             )}
-            {messages.map((item, index) => <div key={`${item.role}-${index}`} className={`rounded-2xl p-3 text-sm leading-6 ${item.role === "user" ? "ml-8 bg-indigo-600/20 text-indigo-100" : "mr-8 bg-slate-900 text-slate-300"}`}>{item.text}</div>)}
+            {messages.map((item, index) => <div key={`${item.role}-${index}`} className={`rounded-2xl p-3 text-sm leading-6 ${item.role === "user" ? "ml-8 bg-blue-600/20 text-blue-100" : "mr-8 bg-slate-900 text-slate-300"}`}>{item.text}</div>)}
             {status && <p className="rounded-xl bg-red-500/10 p-3 text-xs text-red-300">{status}</p>}
           </div>
-          {user && <form onSubmit={send} className="border-t border-slate-800 p-4"><div className="flex gap-2"><input value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Type your question…" className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm outline-none placeholder:text-slate-600 focus:border-indigo-500" /><button disabled={sending || !message.trim()} className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold disabled:opacity-40">{sending ? "…" : "Send"}</button></div><Link to="/feedback" className="mt-3 block text-center text-xs font-semibold text-slate-500 hover:text-slate-200">Send product feedback instead →</Link></form>}
+          {user && <form onSubmit={send} className="border-t border-slate-800 p-4"><div className="flex gap-2"><input value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Type your question…" className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm outline-none placeholder:text-slate-600 focus:border-blue-500" /><button disabled={sending || !message.trim()} className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold disabled:opacity-40">{sending ? "…" : "Send"}</button></div><Link to="/feedback" className="mt-3 block text-center text-xs font-semibold text-slate-500 hover:text-slate-200">Send product feedback instead →</Link></form>}
         </div>
       )}
-      <button type="button" onClick={() => setOpen((value) => !value)} className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-3 text-sm font-black text-white shadow-xl shadow-indigo-600/25 transition hover:-translate-y-0.5 hover:bg-indigo-500" aria-label="Open PromptStudio support">💬 Help & Chat</button>
+      <button type="button" onClick={() => setOpen((value) => !value)} className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-full bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-xl shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-500" aria-label="Open PromptStudio support">💬 Help & Chat</button>
     </>
   );
 }
