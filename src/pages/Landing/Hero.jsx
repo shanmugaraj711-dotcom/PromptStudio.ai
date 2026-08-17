@@ -14,7 +14,7 @@ function Hero() {
             </div>
 
             <h1 className="mt-6 max-w-3xl text-4xl font-extrabold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-              Turn rough ideas into <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-clip-text text-transparent">better AI results.</span>
+              Turn rough ideas into <span className="bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">better AI results.</span>
             </h1>
 
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-600">
@@ -65,7 +65,7 @@ function Hero() {
               <div className="mt-4 grid grid-cols-3 gap-2">
                 <div className="rounded-xl border border-blue-100 bg-blue-50 p-3"><p className="text-[10px] font-bold text-blue-700">Best fit</p><p className="mt-1 text-[9px] text-slate-500">Production</p></div>
                 <div className="rounded-xl border border-violet-100 bg-violet-50 p-3"><p className="text-[10px] font-bold text-violet-700">Creative</p><p className="mt-1 text-[9px] text-slate-500">Bold angle</p></div>
-                <div className="rounded-xl border border-sky-100 bg-sky-50 p-3"><p className="text-[10px] font-bold text-sky-700">Visual</p><p className="mt-1 text-[9px] text-slate-500">Image-ready</p></div>
+                <div className="rounded-xl border border-sky-100 bg-sky-50 p-3"><p className="text-[10px] font-bold text-sky-700">Visual</p><p className="mt-1 text-[9px] text-slate-600">Image-ready</p></div>
               </div>
 
               <div className="mt-4 flex items-center justify-between rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-white shadow-lg">
