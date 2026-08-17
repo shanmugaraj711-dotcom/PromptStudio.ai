@@ -1,5 +1,4 @@
-import { getAuth } from "firebase-admin/auth";
-import { adminDb, json } from "./_firebaseAdmin.js";
+import { adminAuth, adminDb, json } from "./_firebaseAdmin.js";
 import { getRuntimeProductConfig } from "./_productConfig.js";
 
 const bearerToken = (req) => {
@@ -20,7 +19,7 @@ export default async function handler(req, res) {
   try {
     const token = bearerToken(req);
     if (!token) return json(res, 401, { message: "Authentication required." });
-    await getAuth().verifyIdToken(token);
+    await adminAuth().verifyIdToken(token);
     const config = await getRuntimeProductConfig(adminDb());
     res.setHeader?.("Cache-Control", "no-store, max-age=0");
     return json(res, 200, { config: safeClientConfig(config) });
