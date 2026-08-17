@@ -15,11 +15,13 @@ import Help from "./pages/Help/Help";
 import Feedback from "./pages/Feedback/Feedback";
 import Contact from "./pages/Contact/Contact";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { RuntimeFeatureRoute } from "./components/RuntimeFeatureRoute";
 import PromptHistory from "./pages/Result/PromptHistory";
 import AppLayout from "./components/layout/AppLayout";
 import SupportWidget from "./components/support/SupportWidget";
 
 const withAppLayout = (element) => <ProtectedRoute><AppLayout>{element}</AppLayout></ProtectedRoute>;
+const withRuntimeFeature = (feature, element) => <ProtectedRoute><RuntimeFeatureRoute feature={feature}><AppLayout>{element}</AppLayout></RuntimeFeatureRoute></ProtectedRoute>;
 
 export default function App() {
   return (
@@ -39,7 +41,7 @@ export default function App() {
         <Route path="/builder" element={withAppLayout(<PromptBuilder />)} />
         <Route path="/workflows" element={withAppLayout(<WorkflowLibrary />)} />
         <Route path="/account" element={withAppLayout(<Account />)} />
-        <Route path="/history" element={withAppLayout(<PromptHistory />)} />
+        <Route path="/history" element={withRuntimeFeature("promptHistory", <PromptHistory />)} />
         <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
