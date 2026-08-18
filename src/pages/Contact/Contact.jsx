@@ -38,7 +38,7 @@ export default function Contact() {
         </div>
 
         <div className="mt-8 flex justify-center gap-4 text-sm text-slate-500">
-          <Link to="/" className="hover:text-white">Home</Link>
+          <a href="/" className="hover:text-white">Home</a>
           <Link to="/about" className="hover:text-white">About</Link>
           <Link to="/help" className="hover:text-white">Help</Link>
         </div>
