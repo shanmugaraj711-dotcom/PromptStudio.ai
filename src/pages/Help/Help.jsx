@@ -52,7 +52,7 @@ export default function Help() {
         </section>
 
         <div className="mt-7 flex justify-center gap-4 text-sm text-slate-500">
-          <Link to="/" className="hover:text-white">⌂ Home</Link>
+          <a href="/" className="hover:text-white">⌂ Home</a>
           <Link to="/about" className="hover:text-white">About</Link>
           <Link to="/contact" className="hover:text-white">Contact</Link>
         </div>
