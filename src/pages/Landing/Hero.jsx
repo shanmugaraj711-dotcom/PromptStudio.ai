@@ -14,16 +14,16 @@ function Hero() {
             </div>
 
             <h1 className="mt-6 max-w-3xl text-4xl font-extrabold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-              Turn rough ideas into <span className="bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">better AI results.</span>
+              Turn rough ideas and <span className="bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">reference images</span> into better AI results.
             </h1>
 
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-600">
-              PromptStudio understands your goal, improves the prompt, compares strong approaches, and helps you launch it in the AI you already use.
+              PromptStudio understands your goal, transforms reference images into detailed prompts, improves your wording, and helps you launch the result in the AI you already use.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3 text-sm font-medium text-slate-500">
-              <span className="rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-slate-100">🧠 Intelligence</span>
-              <span className="rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-slate-100">🎨 Image prompts</span>
+              <span className="rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-slate-100">🧠 Prompt intelligence</span>
+              <span className="rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-slate-100">🖼️ Image → Prompt</span>
               <span className="rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-slate-100">🚀 One-click launch</span>
             </div>
 
@@ -50,13 +50,18 @@ function Hero() {
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-600">PromptStudio Intelligence</p>
-                  <p className="mt-1 text-sm font-bold text-slate-900">Your optimized prompt</p>
+                  <p className="mt-1 text-sm font-bold text-slate-900">Reference → production prompt</p>
                 </div>
                 <span className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-bold text-emerald-700">READY</span>
               </div>
 
               <div className="mt-4 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                <div className="h-2 w-24 rounded-full bg-blue-200" />
+                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500">
+                  <span className="rounded-md bg-white px-2 py-1 ring-1 ring-slate-200">Reference image</span>
+                  <span>→</span>
+                  <span className="rounded-md bg-blue-50 px-2 py-1 text-blue-700 ring-1 ring-blue-100">AI prompt</span>
+                </div>
+                <div className="mt-4 h-2 w-24 rounded-full bg-blue-200" />
                 <div className="mt-3 h-2 w-full rounded-full bg-slate-200" />
                 <div className="mt-2 h-2 w-11/12 rounded-full bg-slate-200" />
                 <div className="mt-2 h-2 w-4/5 rounded-full bg-slate-200" />
