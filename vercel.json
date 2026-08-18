@@ -3,6 +3,19 @@
   "functions": {
     "api/generate-prompt.js": { "maxDuration": 30 }
   },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
+        { "key": "Content-Security-Policy", "value": "frame-ancestors 'none'" },
+        { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" }
+      ]
+    }
+  ],
   "routes": [
     { "src": "/api/admin-health", "dest": "/api/admin?action=health" },
     { "src": "/api/admin-analytics", "dest": "/api/admin?action=analytics" },
