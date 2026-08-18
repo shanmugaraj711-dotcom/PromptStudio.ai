@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb, json, requireUser } from "./_firebaseAdmin.js";
+import { enforceGenerationRateLimit } from "./_generationRateLimit.js";
 import { createQuotaState, getUtcDateKey, getUtcMonthKey } from "../src/constants/quota.js";
 import { getRuntimeProductConfig } from "./_productConfig.js";
 
@@ -76,6 +77,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return json(res, 405, { code: "method_not_allowed", message: "Use POST to generate a prompt." });
   try {
     const body = parseBody(req.body); const input = validate(body); const decoded = await requireUser(req);
+    await enforceGenerationRateLimit(req, decoded.uid);
     if (!process.env.GEMINI_API_KEY) throw new ApiError(503, "server_configuration_error", "The generation service is not configured yet. Please try again later.");
     const db = adminDb(); const productConfig = await getRuntimeProductConfig(db);
     const reservation = await reserve({ db, uid: decoded.uid, requestId: body.requestId, now: new Date(), hasImage: Boolean(input.image), productConfig });
