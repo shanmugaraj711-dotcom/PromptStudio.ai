@@ -2,7 +2,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "./_firebaseAdmin.js";
 
 const WINDOW_MS = 60_000;
-const USER_LIMIT = 8;
+const USER_LIMIT = 1;
 const IP_LIMIT = 20;
 
 const normalizeIp = (req) => {
