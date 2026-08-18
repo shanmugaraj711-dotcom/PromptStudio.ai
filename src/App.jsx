@@ -17,6 +17,7 @@ import Contact from "./pages/Contact/Contact";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RuntimeFeatureRoute } from "./components/RuntimeFeatureRoute";
 import PromptHistory from "./pages/Result/PromptHistory";
+import PromptRemix from "./pages/Result/PromptRemix";
 import AppLayout from "./components/layout/AppLayout";
 import SupportWidget from "./components/support/SupportWidget";
 
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/workflows" element={withAppLayout(<WorkflowLibrary />)} />
         <Route path="/account" element={withAppLayout(<Account />)} />
         <Route path="/history" element={withRuntimeFeature("promptHistory", <PromptHistory />)} />
+        <Route path="/history/remix" element={withRuntimeFeature("promptHistory", <PromptRemix />)} />
         <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
