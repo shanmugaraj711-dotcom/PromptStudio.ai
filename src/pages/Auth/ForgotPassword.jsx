@@ -53,7 +53,7 @@ export const ForgotPassword = () => {
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 text-gray-100">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <h1 className="text-3xl font-extrabold tracking-tight text-indigo-400">
+        <h1 className="text-3xl font-extrabold tracking-tight text-blue-400">
           PromptStudio AI
         </h1>
         <p className="mt-2 text-sm text-gray-400">
@@ -112,7 +112,7 @@ export const ForgotPassword = () => {
             Remembered your password?{" "}
             <Link
               to="/login"
-              className="font-semibold text-indigo-400 hover:text-indigo-300"
+              className="font-semibold text-blue-400 hover:text-indigo-300"
             >
               Back to Login
             </Link>
