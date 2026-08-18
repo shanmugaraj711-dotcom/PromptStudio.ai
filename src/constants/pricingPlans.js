@@ -4,9 +4,9 @@ export const PRICING_PLANS = [
     name: 'Free',
     price: '₹0',
     period: 'forever',
-    description: 'Try PromptStudio with 3 prompt generations and 1 image-to-prompt each day.',
+    description: 'Try PromptStudio with 4 prompt generations and 1 image-to-prompt each day.',
     features: [
-      '3 Prompt Generations per Day',
+      '4 Prompt Generations per Day',
       '1 Image → Prompt per Day',
       'Works with ChatGPT',
       'Works with Claude',
