@@ -7,6 +7,7 @@ import { fetchRuntimeProductConfig } from "../../services/runtimeProductConfig";
 const baseNavItems = [
   { to: "/builder", label: "🪄 Builder" },
   { to: "/history", label: "📜 History", feature: "promptHistory" },
+  { to: "/history/remix", label: "♻️ Remix", feature: "promptHistory" },
   { to: "/account", label: "⚙️ Account" },
   { to: "/help", label: "❓ Help" },
 ];
