@@ -16,7 +16,7 @@ input:focus {
   outline: none;
 }
 
-/* Builder UX: keep the same generation logic while making the journey feel like a clear sequence. */
+/* Builder UX: preserve the existing generation logic while making the journey feel linear. */
 @media (min-width: 1024px) {
   #prompt-builder form {
     display: grid;
@@ -25,54 +25,39 @@ input:focus {
     align-items: start;
   }
 
-  #prompt-builder form > .builder-ai-panel {
-    grid-column: 1 / -1;
-    margin-top: 0;
-  }
-
-  #prompt-builder form > div:first-child {
+  #prompt-builder form > .builder-ai-panel,
+  #prompt-builder form > div:has(#category),
+  #prompt-builder form > div:has(.grid.grid-cols-1) {
     grid-column: 1 / -1;
   }
 
-  #prompt-builder form > div:nth-child(3),
-  #prompt-builder form > div:nth-child(4),
-  #prompt-builder form > div:nth-child(5),
-  #prompt-builder form > div:nth-child(6) {
-    margin-top: 0;
-  }
-
-  #prompt-builder form > div:nth-child(3) {
+  #prompt-builder form > div:has(#idea) {
     grid-column: 1;
+    margin-top: 0;
   }
 
-  #prompt-builder form > div:nth-child(4) {
+  #prompt-builder form > div:has(input[type="file"]) {
     grid-column: 2;
+    margin-top: 0;
   }
 
-  #prompt-builder form > div:nth-child(5) {
+  #prompt-builder form > div:has(input[type="file"]) + div,
+  #prompt-builder form > div:has(input[type="file"]) + div + div {
     grid-column: 1 / -1;
   }
 
-  #prompt-builder form > div:nth-child(6) {
+  #prompt-builder form > div:has(#idea) + div:not(.builder-ai-panel) {
     grid-column: 1 / -1;
   }
+}
 
-  #prompt-builder form > div:nth-child(7) {
-    grid-column: 1 / -1;
-  }
-
-  #prompt-builder form > div:nth-child(8) {
-    grid-column: 1 / -1;
-  }
+/* Result and approach controls use a stable anchor so selection never leaves the user below the result. */
+#prompt-builder .builder-result-anchor {
+  scroll-margin-top: 6.5rem;
 }
 
 @media (max-width: 1023px) {
   #prompt-builder form {
     scroll-margin-top: 5rem;
   }
-}
-
-/* After a result is generated, keep the result heading visible when approach changes. */
-#prompt-builder .builder-result-anchor {
-  scroll-margin-top: 6.5rem;
 }
