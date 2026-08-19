@@ -25,39 +25,26 @@ input:focus {
     align-items: start;
   }
 
+  #prompt-builder form > div {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
+
   #prompt-builder form > .builder-ai-panel,
-  #prompt-builder form > div:has(#category),
-  #prompt-builder form > div:has(.grid.grid-cols-1) {
+  #prompt-builder form > div:has(#category) {
     grid-column: 1 / -1;
   }
 
   #prompt-builder form > div:has(#idea) {
     grid-column: 1;
-    margin-top: 0;
   }
 
   #prompt-builder form > div:has(input[type="file"]) {
     grid-column: 2;
-    margin-top: 0;
-  }
-
-  #prompt-builder form > div:has(input[type="file"]) + div,
-  #prompt-builder form > div:has(input[type="file"]) + div + div {
-    grid-column: 1 / -1;
-  }
-
-  #prompt-builder form > div:has(#idea) + div:not(.builder-ai-panel) {
-    grid-column: 1 / -1;
   }
 }
 
-/* Result and approach controls use a stable anchor so selection never leaves the user below the result. */
+/* Keep the result heading visible when a user switches between generated approaches. */
 #prompt-builder .builder-result-anchor {
   scroll-margin-top: 6.5rem;
-}
-
-@media (max-width: 1023px) {
-  #prompt-builder form {
-    scroll-margin-top: 5rem;
-  }
 }
