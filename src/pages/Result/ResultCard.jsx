@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import TextArea from '../../components/ui/TextArea';
 import Button from '../../components/ui/Button';
 import { copyToClipboard } from '../../utils/copyToClipboard';
@@ -12,6 +12,7 @@ import WorkflowProgress from './WorkflowProgress';
 function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan = 'free', workflow = null, category = 'writing' }) {
   const { user } = useAuth();
   const { createTemplate } = usePromptTemplates();
+  const generatedPromptRef = useRef(null);
   const [copyStatus, setCopyStatus] = useState('');
   const [launchStatus, setLaunchStatus] = useState('');
   const [shareStatus, setShareStatus] = useState('');
@@ -36,6 +37,14 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
     setTemplateStatus('');
     setShowTemplateForm(false);
   }, [prompt, perspectives]);
+
+  useEffect(() => {
+    if (selectedId === 'main') return undefined;
+    const timer = window.setTimeout(() => {
+      generatedPromptRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+    return () => window.clearTimeout(timer);
+  }, [selectedId]);
 
   const selectedPrompt = useMemo(() => {
     if (selectedId === 'main') return prompt;
@@ -139,7 +148,7 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
           {templateAccess.active && <Button variant="secondary" size="sm" disabled={!templateAccess.allowed} onClick={openTemplateForm}>{templateAccess.allowed ? 'Save as Template' : 'Save Template · PRO'}</Button>}
           {shareAccess.active && <Button variant="secondary" size="sm" disabled={!shareAccess.allowed} onClick={handleShare}>{shareAccess.allowed ? 'Share Link' : 'Share Link · PRO'}</Button>}
           <Button variant="secondary" size="sm" onClick={handleCopy}>
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
             {copyStatus === 'Copied to clipboard' ? 'Copied!' : 'Copy Prompt'}
           </Button>
         </div>
@@ -185,7 +194,7 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
       {perspectiveAccess.allowed && perspectives.length > 0 && (
         <div className="mt-6 rounded-2xl border border-indigo-100 bg-white/80 p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
-            <div><p className="text-sm font-bold text-gray-900">Choose an approach</p><p className="mt-1 text-xs text-gray-500">Switch the recipe without losing the generated result position.</p></div>
+            <div><p className="text-sm font-bold text-gray-900">4. Choose an approach</p><p className="mt-1 text-xs text-gray-500">Switch the recipe — the generated prompt below updates instantly.</p></div>
             <span className="hidden rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-bold text-indigo-700 sm:inline">{selectedId === 'main' ? 'BEST FIT' : 'ALTERNATIVE'}</span>
           </div>
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory" role="tablist" aria-label="Prompt perspectives">
@@ -196,7 +205,7 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
       )}
 
       {copyStatus && <p className="mt-3 text-sm text-gray-600" role="status">{copyStatus}</p>}
-      <div className="mt-5 rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div ref={generatedPromptRef} className="builder-result-anchor mt-5 rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3"><p className="text-sm font-bold text-gray-900">Generated prompt</p><span className="text-xs font-medium text-gray-400">{selectedId === 'main' ? 'Best fit' : 'Selected approach'}</span></div>
         <div className="p-3 sm:p-4"><TextArea id="generatedPrompt" value={selectedPrompt} readOnly rows={12} /></div>
       </div>
