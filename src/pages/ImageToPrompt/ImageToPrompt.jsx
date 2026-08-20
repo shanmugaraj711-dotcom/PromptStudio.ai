@@ -24,7 +24,7 @@ function ImageToPrompt() {
           </p>
           <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
             <a href="/signup" className="rounded-xl bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800">
-              Try Image → Prompt free
+              Try Image → Prompt
             </a>
             <a href="/login" className="rounded-xl border border-slate-200 px-6 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
               Explore PromptStudio
@@ -73,7 +73,7 @@ function ImageToPrompt() {
             Try PromptStudio's reference-image workflow and see what prompt it can build from your visual idea.
           </p>
           <a href="/signup" className="mt-8 inline-flex rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100">
-            Try Image → Prompt free
+            Try Image → Prompt
           </a>
         </section>
       </main>
