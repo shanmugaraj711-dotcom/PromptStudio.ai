@@ -1,0 +1,52 @@
+name: Temporary conversion funnel patch
+
+on:
+  push:
+    branches:
+      - feature/founder-conversion-funnel
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply targeted patch
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          admin_api = Path("api/admin.js")
+          text = admin_api.read_text()
+          old = 'creditsPurchased:paidOrders.docs.reduce((sum,doc)=>sum+Number(doc.data().credits||0),0),creditOrders:orders,paidCustomers,freeToPaidConversionPercent'
+          new = 'creditsPurchased:paidOrders.docs.reduce((sum,doc)=>sum+Number(doc.data().credits||0),0),creditOrders:orders,checkoutStarted:orders,successfulPurchases:paidOrders.size,paidCustomers,freeToPaidConversionPercent'
+          if text.count(old) != 1:
+              raise SystemExit(f"admin.js patch anchor count={text.count(old)}")
+          admin_api.write_text(text.replace(old, new, 1))
+
+          admin_ui = Path("src/pages/Admin/Admin.jsx")
+          text = admin_ui.read_text()
+          anchor = '<div className={card}><div className="flex items-center justify-between"><div><h2 className="text-lg font-black">Business snapshot</h2>'
+          if text.count(anchor) != 1:
+              raise SystemExit(f"Admin.jsx patch anchor count={text.count(anchor)}")
+          funnel = '''<div className={card}><div className="flex items-center justify-between"><div><h2 className="text-lg font-black">Conversion funnel</h2><p className="mt-1 text-sm text-slate-500">Founder-only purchase journey from checkout start to paid conversion.</p></div><span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-700">Founder only</span></div><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5"><Stat label="Free users" value={analytics?.users != null && analytics?.paidCustomers != null ? Math.max(0, analytics.users - analytics.paidCustomers) : null} /><Stat label="Checkout started" value={analytics?.checkoutStarted} /><Stat label="Successful purchases" value={analytics?.successfulPurchases} /><Stat label="Paid customers" value={analytics?.paidCustomers} /><Stat label="Free → Paid" value={analytics?.freeToPaidConversionPercent != null ? `${analytics.freeToPaidConversionPercent}%` : null} /></div></div>'''
+          admin_ui.write_text(text.replace(anchor, funnel + anchor, 1))
+
+          workflow = Path(".github/workflows/temp-conversion-funnel.yml")
+          workflow.unlink()
+          PY
+
+      - name: Commit targeted patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add api/admin.js src/pages/Admin/Admin.jsx .github/workflows/temp-conversion-funnel.yml
+          git diff --cached --check
+          git diff --cached --stat
+          git commit -m "feat: expose founder conversion funnel analytics"
+          git push origin HEAD:feature/founder-conversion-funnel
