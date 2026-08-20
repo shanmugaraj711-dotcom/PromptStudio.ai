@@ -22,6 +22,24 @@ const paymentHistory = async (uid) => {
   return transactions;
 };
 
+const referralHistory = async (uid) => {
+  const db = adminDb();
+  const [asReferrer, asReferee] = await Promise.all([
+    db.collection("referrals").where("referrerUid", "==", uid).get(),
+    db.collection("referrals").where("refereeUid", "==", uid).get(),
+  ]);
+  const items = [];
+  asReferrer.docs.forEach((doc) => {
+    const data = doc.data() || {};
+    if (data.status === "completed") items.push({ id: `${doc.id}:referrer`, kind: "referral", role: "referrer", credits: Number(data.referrerReward || 0), status: "completed", createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAt || null, completedAt: data.completedAt?.toDate?.()?.toISOString?.() || data.completedAt || null });
+  });
+  asReferee.docs.forEach((doc) => {
+    const data = doc.data() || {};
+    if (data.status === "completed") items.push({ id: `${doc.id}:referee`, kind: "referral", role: "referee", credits: Number(data.refereeReward || 0), status: "completed", createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAt || null, completedAt: data.completedAt?.toDate?.()?.toISOString?.() || data.completedAt || null });
+  });
+  return items;
+};
+
 const applyCredits = async (uid, paymentId, orderId) => {
   const db = adminDb();
   const userRef = db.collection("users").doc(uid);
@@ -59,7 +77,7 @@ export default async function handler(req, res) {
   if (!isConfigured() && req.method !== "GET") return json(res, 503, { code: "payment_not_configured", message: "Razorpay is not configured." });
   try {
     const decoded = await requireUser(req);
-    if (req.method === "GET") return json(res, 200, { transactions: await paymentHistory(decoded.uid) });
+    if (req.method === "GET") return json(res, 200, { transactions: [...await paymentHistory(decoded.uid), ...await referralHistory(decoded.uid)].sort((a, b) => new Date(b.paidAt || b.completedAt || b.createdAt || 0) - new Date(a.paidAt || a.completedAt || a.createdAt || 0)) });
     if (req.method !== "POST") return json(res, 405, { message: "Method not allowed." });
     const body = req.body || {};
     if (body.type === "credit") {
