@@ -4,49 +4,8 @@ import { useAuth } from "../../context/AuthContext";
 const formatDate = (value) => value ? new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—";
 
 export default function Transactions() {
-  const { user } = useAuth();
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const token = await user?.getIdToken();
-        const response = await fetch("/api/razorpay-verify", { headers: { Authorization: `Bearer ${token}` } });
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(body.message || "Unable to load transactions.");
-        if (active) setItems(body.transactions || []);
-      } catch (err) {
-        if (active) setError(err.message || "Unable to load transactions.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-    if (user) load();
-    return () => { active = false; };
-  }, [user]);
-
-  const getHelp = (transaction) => {
-    window.dispatchEvent(new CustomEvent("promptstudio:open-support", {
-      detail: {
-        message: `I need help with my transaction. Amount: ₹${transaction.amountInr}. Credits: ${transaction.credits}. Status: ${transaction.status}. Order ID: ${transaction.orderId}. Payment ID: ${transaction.paymentId || "not available"}. Date: ${formatDate(transaction.paidAt || transaction.createdAt)}.`
-      }
-    }));
-  };
-
-  return (
-    <div className="min-h-[calc(100vh-4.5rem)] bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-7">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-600">Billing</p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Transactions</h1>
-          <p className="mt-2 text-sm text-slate-500">Your verified purchases, credits and payment details.</p>
-        </div>
-        {error && <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
-        {loading ? <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">Loading your transactions…</div> : items.length === 0 ? <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center"><div className="text-3xl">💳</div><h2 className="mt-3 text-lg font-black text-slate-900">No transactions yet</h2><p className="mt-1 text-sm text-slate-500">Your verified credit purchases will appear here.</p></div> : <div className="space-y-4">{items.map((item) => <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><div className="flex flex-wrap items-center gap-2"><span className="text-lg font-black text-slate-950">₹{item.amountInr}</span><span className={`rounded-full px-2.5 py-1 text-[11px] font-black uppercase ${item.status === "paid" ? "bg-emerald-100 text-emerald-700" : item.status === "failed" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>{item.status}</span></div><p className="mt-1 text-sm font-bold text-slate-700">{item.credits} credits · {item.packId}</p><p className="mt-1 text-xs text-slate-500">{formatDate(item.paidAt || item.createdAt)}</p></div><button type="button" onClick={() => getHelp(item)} className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-black text-blue-700 hover:bg-blue-100">Get help with this transaction →</button></div><div className="mt-4 grid gap-3 border-t border-slate-100 pt-4 text-xs sm:grid-cols-2"><div><span className="font-bold text-slate-500">Order ID</span><p className="mt-1 break-all font-mono text-slate-700">{item.orderId}</p></div><div><span className="font-bold text-slate-500">Payment ID</span><p className="mt-1 break-all font-mono text-slate-700">{item.paymentId || "Not available"}</p></div></div></article>)}</div>}
-      </div>
-    </div>
-  );
+  const { user } = useAuth(); const [items, setItems] = useState([]); const [loading, setLoading] = useState(true); const [error, setError] = useState("");
+  useEffect(() => { let active = true; const load = async () => { try { const token = await user?.getIdToken(); const headers = { Authorization: `Bearer ${token}` }; const [paymentResponse, referralResponse] = await Promise.all([fetch("/api/razorpay-verify", { headers }), fetch("/api/admin?action=referral-public", { headers })]); const paymentBody = await paymentResponse.json().catch(() => ({})); const referralBody = await referralResponse.json().catch(() => ({})); if (!paymentResponse.ok) throw new Error(paymentBody.message || "Unable to load transactions."); const referralItems = referralResponse.ok ? (referralBody.referrals || []).filter((item) => item.status === "completed").map((item) => ({ id: `referral:${item.id}:${item.role}`, kind: "referral", role: item.role, credits: Number(item.role === "referee" ? item.refereeReward : item.referrerReward) || 0, status: "completed", createdAt: item.createdAt, completedAt: item.completedAt })) : []; if (active) setItems([...(paymentBody.transactions || []), ...referralItems].sort((a, b) => new Date(b.paidAt || b.completedAt || b.createdAt || 0) - new Date(a.paidAt || a.completedAt || a.createdAt || 0))); } catch (err) { if (active) setError(err.message || "Unable to load transactions."); } finally { if (active) setLoading(false); } }; if (user) load(); return () => { active = false; }; }, [user]);
+  const getHelp = (transaction) => { window.dispatchEvent(new CustomEvent("promptstudio:open-support", { detail: { message: transaction.kind === "referral" ? `I need help with my referral reward. Credits: ${transaction.credits}. Referral ID: ${transaction.id}. Status: ${transaction.status}. Date: ${formatDate(transaction.completedAt || transaction.createdAt)}.` : `I need help with my transaction. Amount: ₹${transaction.amountInr}. Credits: ${transaction.credits}. Status: ${transaction.status}. Order ID: ${transaction.orderId}. Payment ID: ${transaction.paymentId || "not available"}. Date: ${formatDate(transaction.paidAt || transaction.createdAt)}.` } })); };
+  return <div className="min-h-[calc(100vh-4.5rem)] bg-slate-50 px-4 py-8 sm:px-6 lg:px-8"><div className="mx-auto max-w-5xl"><div className="mb-7"><p className="text-xs font-black uppercase tracking-[0.18em] text-blue-600">Billing</p><h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Transactions</h1><p className="mt-2 text-sm text-slate-500">Your verified purchases, credits and referral rewards.</p></div>{error && <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}{loading ? <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">Loading your transactions…</div> : items.length === 0 ? <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center"><div className="text-3xl">💳</div><h2 className="mt-3 text-lg font-black text-slate-900">No transactions yet</h2><p className="mt-1 text-sm text-slate-500">Your verified purchases and referral rewards will appear here.</p></div> : <div className="space-y-4">{items.map((item) => item.kind === "referral" ? <article key={item.id} className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 shadow-sm sm:p-6"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><div className="flex flex-wrap items-center gap-2"><span className="text-lg font-black text-slate-950">+{item.credits} credits</span><span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black uppercase text-emerald-700">completed</span></div><p className="mt-1 text-sm font-bold text-slate-700">{item.role === "referrer" ? "Referral reward" : "Referral welcome bonus"}</p><p className="mt-1 text-xs text-slate-500">{formatDate(item.completedAt || item.createdAt)}</p></div><button type="button" onClick={() => getHelp(item)} className="rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-xs font-black text-emerald-700 hover:bg-emerald-50">Get help →</button></div><div className="mt-4 grid gap-3 border-t border-emerald-100 pt-4 text-xs sm:grid-cols-2"><div><span className="font-bold text-slate-500">Referral ID</span><p className="mt-1 break-all font-mono text-slate-700">{item.id}</p></div><div><span className="font-bold text-slate-500">Status</span><p className="mt-1 text-slate-700">Reward credited successfully</p></div></div></article> : <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><div className="flex flex-wrap items-center gap-2"><span className="text-lg font-black text-slate-950">₹{item.amountInr}</span><span className={`rounded-full px-2.5 py-1 text-[11px] font-black uppercase ${item.status === "paid" ? "bg-emerald-100 text-emerald-700" : item.status === "failed" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>{item.status}</span></div><p className="mt-1 text-sm font-bold text-slate-700">{item.credits} credits · {item.packId}</p><p className="mt-1 text-xs text-slate-500">{formatDate(item.paidAt || item.createdAt)}</p></div><button type="button" onClick={() => getHelp(item)} className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-black text-blue-700 hover:bg-blue-100">Get help with this transaction →</button></div><div className="mt-4 grid gap-3 border-t border-slate-100 pt-4 text-xs sm:grid-cols-2"><div><span className="font-bold text-slate-500">Order ID</span><p className="mt-1 break-all font-mono text-slate-700">{item.orderId}</p></div><div><span className="font-bold text-slate-500">Payment ID</span><p className="mt-1 break-all font-mono text-slate-700">{item.paymentId || "Not available"}</p></div></div></article>)}</div>}</div></div>;
 }
