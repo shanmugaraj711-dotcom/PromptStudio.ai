@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0",
+  "project": "PromptStudio.ai",
+  "role": "golden-reference",
+  "phase": 1,
+  "status": "blueprint-complete",
+  "pipeline": [
+    "intake",
+    "requirements",
+    "acceptance",
+    "plan",
+    "build",
+    "test",
+    "verify",
+    "diagnose",
+    "repair",
+    "regression",
+    "security",
+    "deploy",
+    "smoke-test",
+    "handoff"
+  ],
+  "completionRule": "All required acceptance criteria must have evidence-backed PASS status or an explicit human-approved exception.",
+  "resumeRule": "A future run reads this checkpoint plus the linked evidence before taking new actions.",
+  "nextPhase": "Implement a controlled orchestrator with persistent state and evidence collection."
+}
