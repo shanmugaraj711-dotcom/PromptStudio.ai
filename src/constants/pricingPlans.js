@@ -4,16 +4,16 @@ export const PRICING_PLANS = [
     name: 'Free',
     price: '₹0',
     period: 'forever',
-    description: 'Try PromptStudio with 4 prompt generations and 1 image-to-prompt each day.',
+    description: 'Try PromptStudio with 3 prompt generations and 1 image-to-prompt each day.',
     features: [
-      '4 Prompt Generations per Day',
+      '3 Prompt Generations per Day',
       '1 Image → Prompt per Day',
       'Works with ChatGPT',
       'Works with Claude',
       'Works with Gemini',
       'Copy Generated Prompt',
     ],
-    cta: 'Current Plan',
+    cta: 'Start Free',
     highlighted: false,
   },
   {
@@ -48,7 +48,7 @@ export const PRICING_PLANS = [
       'No recurring payment',
       'Credits never expire',
     ],
-    cta: 'Choose Creator Credits',
+    cta: 'Get Creator Credits',
     highlighted: false,
   },
 ];
