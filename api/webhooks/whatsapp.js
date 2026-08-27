@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import { extractIncomingMessages } from "./whatsapp-utils.js";
 
 function sendJson(res, status, payload) {
   res.statusCode = status;
@@ -42,7 +41,6 @@ function verifySignature(req, rawBody) {
 export default async function handler(req, res) {
   res.setHeader("X-PromptStudio-Webhook", "whatsapp");
 
-  // Meta webhook verification handshake.
   if (req.method === "GET") {
     const mode = req.query?.["hub.mode"];
     const token = req.query?.["hub.verify_token"];
@@ -62,7 +60,6 @@ export default async function handler(req, res) {
     return sendJson(res, 405, { error: "method_not_allowed" });
   }
 
-  // Keep the public endpoint fail-closed until the user's Meta credentials are configured.
   if (!process.env.WHATSAPP_VERIFY_TOKEN || !process.env.WHATSAPP_APP_SECRET) {
     return sendJson(res, 503, { error: "whatsapp_not_configured" });
   }
@@ -81,18 +78,16 @@ export default async function handler(req, res) {
     return sendJson(res, 400, { error: "invalid_json" });
   }
 
-  // Infrastructure-only batch: parse inbound messages but do not send replies
-  // until the business number and credentials are configured.
-  const messages = extractIncomingMessages(payload);
+  const entries = Array.isArray(payload.entry) ? payload.entry : [];
+  const eventCount = entries.reduce((count, entry) => {
+    const changes = Array.isArray(entry?.changes) ? entry.changes : [];
+    return count + changes.length;
+  }, 0);
 
   console.info("PromptStudio WhatsApp webhook received", {
     object: payload.object || null,
-    messageCount: messages.length,
-    messageIds: messages.map((message) => message.id),
+    eventCount,
   });
 
-  return sendJson(res, 200, {
-    received: true,
-    messageCount: messages.length,
-  });
+  return sendJson(res, 200, { received: true });
 }
