@@ -22,7 +22,7 @@ function Hero() {
             </h1>
 
             <p className="mt-6 max-w-xl text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
-              Turn any image into a powerful AI prompt — or start with an idea. PromptStudio makes the path from your thought to a ready-to-use prompt simple.
+              Turn any reference image into a powerful AI prompt. Upload what inspires you and PromptStudio turns the visual details into a ready-to-use prompt.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -35,17 +35,16 @@ function Hero() {
             </div>
 
             <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-semibold text-slate-400">
+              <span>🎁 3 free prompts every day</span>
+              <span className="text-slate-700">•</span>
               <span>Reference image aware</span>
               <span className="text-slate-700">•</span>
-              <span>Built for ChatGPT, Claude & Gemini</span>
-              <span className="text-slate-700">•</span>
-              <span>One workspace</span>
+              <span>Built for your AI workflow</span>
             </div>
           </div>
 
           <div className="relative mx-auto w-full max-w-2xl">
             <div className="absolute -inset-10 rounded-[4rem] bg-gradient-to-br from-blue-500/20 via-violet-500/10 to-cyan-400/10 blur-3xl" />
-
             <div className="relative rounded-[2rem] border border-white/10 bg-white/[0.055] p-2 shadow-2xl shadow-black/50 backdrop-blur-2xl sm:p-3">
               <div className="rounded-[1.5rem] border border-white/10 bg-slate-950/90 p-4 sm:p-5">
                 <div className="flex items-center justify-between border-b border-white/10 pb-4">
@@ -61,9 +60,7 @@ function Hero() {
                 <div className="mt-5 grid gap-3 sm:grid-cols-[0.9fr_1.1fr]">
                   <Link to="/image-to-prompt" className="group relative min-h-[290px] overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-3 transition hover:border-blue-400/40">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_65%_35%,rgba(251,191,36,0.32),transparent_22%),radial-gradient(circle_at_30%_70%,rgba(59,130,246,0.28),transparent_30%)]" />
-                    <div className="relative flex items-center justify-between text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
-                      <span>Reference image</span><span>01</span>
-                    </div>
+                    <div className="relative flex items-center justify-between text-[9px] font-black uppercase tracking-[0.18em] text-slate-400"><span>Reference image</span><span>01</span></div>
                     <div className="relative mt-4 flex h-52 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
                       <div className="absolute h-40 w-40 rounded-full bg-amber-300/20 blur-3xl" />
                       <div className="relative h-36 w-28 rotate-[-7deg] rounded-[2rem] border border-white/20 bg-gradient-to-br from-amber-100 via-orange-300 to-rose-500 shadow-[0_30px_60px_-20px_rgba(251,146,60,0.75)] transition duration-500 group-hover:scale-105">
@@ -71,7 +68,7 @@ function Hero() {
                         <div className="absolute bottom-5 right-4 h-8 w-8 rounded-full border border-white/30 bg-white/20" />
                       </div>
                     </div>
-                    <div className="relative mt-3 flex items-center justify-between text-xs font-bold text-white"><span>See the visual</span><span className="text-blue-300">→</span></div>
+                    <div className="relative mt-3 flex items-center justify-between text-xs font-bold text-white"><span>Upload your image</span><span className="text-blue-300">→</span></div>
                   </Link>
 
                   <div className="relative min-h-[290px] overflow-hidden rounded-2xl border border-blue-400/20 bg-gradient-to-br from-blue-500/10 via-white/[0.03] to-violet-500/10 p-4">
@@ -90,10 +87,7 @@ function Hero() {
                 </div>
               </div>
             </div>
-
-            <div className="pointer-events-none absolute -bottom-5 -left-5 hidden rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-xs font-bold text-slate-300 shadow-xl backdrop-blur-xl sm:block">
-              <span className="text-emerald-300">✦</span> Image → Prompt, made simple.
-            </div>
+            <div className="pointer-events-none absolute -bottom-5 -left-5 hidden rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-xs font-bold text-slate-300 shadow-xl backdrop-blur-xl sm:block"><span className="text-emerald-300">✦</span> Image → Prompt, made simple.</div>
           </div>
         </div>
       </div>
