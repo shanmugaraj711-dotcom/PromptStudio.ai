@@ -4,8 +4,6 @@ import Hero from './Hero';
 import HowItWorks from './HowItWorks';
 import Features from './Features';
 import WorksWith from './WorksWith';
-import PromptBuilder from '../Builder/PromptBuilder';
-import BeforeAfter from '../Builder/BeforeAfter';
 import ExampleGallery from './ExampleGallery';
 import Pricing from './Pricing';
 
@@ -18,8 +16,6 @@ function Landing() {
       <Features />
       <ExampleGallery />
       <WorksWith />
-      <PromptBuilder />
-      <BeforeAfter />
       <Pricing />
       <Footer />
     </div>
