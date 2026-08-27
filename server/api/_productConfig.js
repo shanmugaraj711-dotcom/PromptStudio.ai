@@ -1,4 +1,4 @@
-import PRODUCT_CONFIG from "../src/config/product.config.js";
+import PRODUCT_CONFIG from "../../src/config/product.config.js";
 import { FieldValue } from "firebase-admin/firestore";
 
 const COLLECTION = "systemConfig";
@@ -18,7 +18,6 @@ export const normalizeProductConfig = (input) => {
       else if (source[key] !== undefined) { const value = clampInt(source[key], 0, 10000); if (value === null) throw new Error(`Invalid ${id}.${key}.`); next.plans[id][key] = value; }
     }
   }
-
   next.pricing = clone(base.pricing);
   const pricing = raw.pricing || {};
   next.pricing.proMonthlyInr = clampInt(pricing.proMonthlyInr, 1, 100000) ?? base.pricing.proMonthlyInr;
@@ -34,14 +33,10 @@ export const normalizeProductConfig = (input) => {
   next.pricing.customCredits.minInr = clampInt(custom.minInr, 1, 100000) ?? base.pricing.customCredits.minInr;
   next.pricing.customCredits.maxInr = clampInt(custom.maxInr, next.pricing.customCredits.minInr, 1000000) ?? base.pricing.customCredits.maxInr;
   next.pricing.customCredits.inrPerCredit = Math.max(Number(custom.inrPerCredit || base.pricing.customCredits.inrPerCredit), 0.01);
-
   next.creditCosts = { ...base.creditCosts };
   for (const key of Object.keys(base.creditCosts)) next.creditCosts[key] = clampInt(raw.creditCosts?.[key], 0, 1000) ?? base.creditCosts[key];
-
   next.features = clone(base.features);
   for (const key of Object.keys(base.features)) if (typeof raw.features?.[key]?.enabled === "boolean") next.features[key].enabled = raw.features[key].enabled;
-
-  // Payment provider/mode and Razorpay identifiers remain deployment-controlled.
   next.monetization = { ...base.monetization, purchasedCreditsExpire: base.monetization.purchasedCreditsExpire, paymentProvider: base.monetization.paymentProvider, paymentMode: base.monetization.paymentMode };
   return next;
 };
