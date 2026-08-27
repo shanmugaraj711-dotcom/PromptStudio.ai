@@ -1,32 +1,41 @@
-# WhatsApp Business Integration — Provider Setup
+# PromptStudio WhatsApp — Setup
 
-The codebase is provider-ready but the actual WhatsApp Business authentication/webhook configuration is intentionally left for the project owner.
+## Current status
 
-## Owner setup checklist
-1. Create/confirm the WhatsApp Business Platform app and business phone number.
-2. Obtain the provider access token and required identifiers.
-3. Configure the webhook callback URL to the deployed PromptStudio webhook endpoint.
-4. Configure the webhook verification token/challenge.
-5. Subscribe to the required messaging events.
-6. Add provider secrets to the deployment environment only; never commit them.
-7. Test inbound message verification.
-8. Test a payment/credit support conversation.
-9. Test transaction ownership lookup.
-10. Test media/image handling only after text support is stable.
+WhatsApp infrastructure is implemented on `development`. WhatsApp number authentication and Meta credentials are intentionally postponed.
 
-## Security requirements
-- Secrets are deployment environment variables only.
-- Verify webhook signatures according to the provider's current specification.
-- Reject replayed webhook events with event idempotency.
-- Never trust a WhatsApp phone number as sufficient authorization for a customer's private transaction data.
-- Resolve the PromptStudio user identity through the approved account-linking flow.
+## Webhook endpoint
 
-## Initial supported intents
-- payment_issue
-- credits_missing
-- transaction_question
-- generation_issue
-- account_help
+`GET/POST https://promptstudioai.in/api/webhooks/whatsapp`
 
-## Not enabled yet
-This document does not claim that a WhatsApp webhook is live. Provider credentials and webhook configuration are still pending project-owner setup.
+## Meta configuration after authentication
+
+Configure these as server-side deployment environment variables:
+
+- `WHATSAPP_VERIFY_TOKEN` — private webhook verification token.
+- `WHATSAPP_APP_SECRET` — Meta app secret for `X-Hub-Signature-256` validation.
+- `WHATSAPP_ACCESS_TOKEN` — Meta Cloud API access token. Never expose it to the browser.
+- `WHATSAPP_PHONE_NUMBER_ID` — Meta phone number ID for the PromptStudio business number.
+
+## Verification flow
+
+1. Meta calls the webhook with `hub.mode`, `hub.verify_token`, and `hub.challenge`.
+2. PromptStudio returns the challenge only when the verification token matches.
+3. POST events are accepted only when the `X-Hub-Signature-256` signature validates.
+4. Verified events are acknowledged with HTTP 200.
+5. Outbound replies remain disabled until the business number and credentials are configured.
+
+## Customer flow after activation
+
+Customer sends image/message
+→ Meta WhatsApp Cloud API
+→ PromptStudio webhook
+→ existing Image → Prompt engine
+→ structured prompt result
+→ WhatsApp reply
+
+## Safety
+
+Do not commit access tokens, app secrets, verification tokens, or phone credentials to GitHub. Configure them only in the deployment environment.
+
+Do not change `main` as part of this work.
