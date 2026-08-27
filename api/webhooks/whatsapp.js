@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { extractIncomingMessages } from "./whatsapp-utils.js";
 
 function sendJson(res, status, payload) {
   res.statusCode = status;
@@ -80,18 +81,18 @@ export default async function handler(req, res) {
     return sendJson(res, 400, { error: "invalid_json" });
   }
 
-  // Infrastructure-only batch: acknowledge verified Meta events without attempting
-  // outbound messages until the WhatsApp number and credentials are configured.
-  const entries = Array.isArray(payload.entry) ? payload.entry : [];
-  const eventCount = entries.reduce((count, entry) => {
-    const changes = Array.isArray(entry?.changes) ? entry.changes : [];
-    return count + changes.length;
-  }, 0);
+  // Infrastructure-only batch: parse inbound messages but do not send replies
+  // until the business number and credentials are configured.
+  const messages = extractIncomingMessages(payload);
 
   console.info("PromptStudio WhatsApp webhook received", {
     object: payload.object || null,
-    eventCount,
+    messageCount: messages.length,
+    messageIds: messages.map((message) => message.id),
   });
 
-  return sendJson(res, 200, { received: true });
+  return sendJson(res, 200, {
+    received: true,
+    messageCount: messages.length,
+  });
 }
