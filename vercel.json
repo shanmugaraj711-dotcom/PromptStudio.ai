@@ -1,7 +1,7 @@
 {
   "version": 2,
   "functions": {
-    "api/generate-prompt.js": { "maxDuration": 30 }
+    "api/index.js": { "maxDuration": 30 }
   },
   "headers": [
     {
