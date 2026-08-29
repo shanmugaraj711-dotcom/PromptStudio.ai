@@ -1,4 +1,11 @@
+import { Link } from 'react-router-dom';
 import { getAICatalog } from '../../config/aiCatalog';
+
+const CODING_EXAMPLES = [
+  { title: 'Improve dashboard UX', description: 'Upload a dashboard screenshot and turn your UX goal into a coding-ready improvement prompt.' },
+  { title: 'Recreate an existing UI', description: 'Show a web or app screen and generate a structured implementation prompt.' },
+  { title: 'Modernize an old app', description: 'Combine screenshots, product context, and requirements into a focused modernization prompt.' },
+];
 
 function AIDiscoveryPanel({ category, aiModel, onToolSelect, onExample }) {
   const catalog = getAICatalog(category);
@@ -6,7 +13,29 @@ function AIDiscoveryPanel({ category, aiModel, onToolSelect, onExample }) {
 
   return (
     <div className="builder-ai-panel mt-5 rounded-2xl border border-indigo-100 bg-gradient-to-br from-white via-indigo-50/40 to-violet-50/60 p-4 shadow-sm sm:p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 via-white to-violet-50 p-4 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-black text-slate-950">🧠 Reference → Prompt</p>
+            <p className="mt-1 text-xs leading-relaxed text-slate-600">Have a reference? Choose the workflow that matches what you want AI to create.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full bg-blue-600 px-3 py-1.5 text-[10px] font-black text-white">🖼️ Image → Prompt</span>
+            <Link to="/reference-coding" className="rounded-full border border-indigo-200 bg-white px-3 py-1.5 text-[10px] font-black text-indigo-700 transition hover:bg-indigo-50">💻 Reference → Code Prompt →</Link>
+          </div>
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {CODING_EXAMPLES.map((example) => (
+            <Link key={example.title} to="/reference-coding" className="rounded-xl border border-slate-200 bg-white p-3 transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm">
+              <p className="text-xs font-black text-indigo-700">{example.title}</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-600">{example.description}</p>
+              <span className="mt-2 inline-flex text-[10px] font-bold text-slate-500">Try this →</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-sm font-black text-slate-900">2. Choose your AI</p>
           <p className="mt-1 text-xs leading-relaxed text-slate-600">Recommended tools for {catalog.title}. Choosing an example never changes this selection.</p>
