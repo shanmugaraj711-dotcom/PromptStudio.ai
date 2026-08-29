@@ -4,7 +4,7 @@ export async function generateReferenceCoding({ idea, idToken, requestId, images
   if (!idToken) throw new PromptGenerationError('Your session has expired. Please sign in again.', { code: 'unauthenticated' });
   let response;
   try {
-    response = await fetchImpl('/api/generate-prompt-credits', {
+    response = await fetchImpl('/api/reference-coding', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
       body: JSON.stringify({
