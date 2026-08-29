@@ -18,6 +18,34 @@ const EXAMPLES = [
     accent: 'violet',
   },
   {
+    category: 'Reference → Code',
+    title: 'Improve dashboard UX',
+    reference: 'Existing dashboard screenshot · confusing hierarchy · improve navigation and responsive behavior',
+    prompt: 'Analyze the dashboard reference as an existing product. Preserve its core business purpose and important information while improving navigation hierarchy, task flow, spacing, responsive behavior, accessibility, loading and empty states, and component consistency. Produce a production-ready implementation plan and coding prompt without inventing unsupported business logic.',
+    accent: 'indigo',
+  },
+  {
+    category: 'Reference → Code',
+    title: 'Recreate an app screen',
+    reference: 'Mobile app screenshot · recreate the interface as a responsive web experience',
+    prompt: 'Recreate the referenced application screen as a responsive web interface. Match the visible layout, hierarchy, spacing, typography, controls, visual states, and interaction intent. Use reusable components, accessible semantics, responsive breakpoints, and realistic loading, error, and empty states. Clearly separate observed details from assumptions.',
+    accent: 'sky',
+  },
+  {
+    category: 'Reference → Code',
+    title: 'Modernize an existing app',
+    reference: 'Existing application references · modern UI · preserve current functionality',
+    prompt: 'Modernize the existing application shown in the supplied references while preserving its current functionality and user intent. Identify UX friction, improve visual hierarchy and consistency, define reusable components and responsive behavior, and provide a safe implementation sequence with regression considerations. Do not remove existing business-critical behavior unless explicitly requested.',
+    accent: 'emerald',
+  },
+  {
+    category: 'Coding',
+    title: 'Production API task',
+    reference: 'Rough request · add authenticated rate limiting',
+    prompt: 'Act as a senior backend engineer. Design an authenticated API rate-limiting implementation with clear limits, atomic enforcement, safe failure behavior, observability, tests for boundary conditions, and a migration path that does not break existing clients.',
+    accent: 'indigo',
+  },
+  {
     category: 'Writing',
     title: 'Professional email',
     reference: 'Rough idea · ask for a project deadline extension',
@@ -30,13 +58,6 @@ const EXAMPLES = [
     reference: 'New AI productivity product · early-access launch',
     prompt: 'Create a launch post for an AI productivity product entering early access. Lead with the user outcome, explain the differentiator in plain language, add one concrete use case, create a confident but non-hype CTA, and provide three short headline variations.',
     accent: 'emerald',
-  },
-  {
-    category: 'Coding',
-    title: 'Production API task',
-    reference: 'Rough request · add authenticated rate limiting',
-    prompt: 'Act as a senior backend engineer. Design an authenticated API rate-limiting implementation with clear limits, atomic enforcement, safe failure behavior, observability, tests for boundary conditions, and a migration path that does not break existing clients.',
-    accent: 'indigo',
   },
   {
     category: 'Business',
@@ -69,6 +90,8 @@ function ExampleCard({ example }) {
     }
   };
 
+  const isReferenceCoding = example.category === 'Reference → Code';
+
   return (
     <article className="flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl">
       <div className="flex items-center justify-between gap-3">
@@ -93,8 +116,8 @@ function ExampleCard({ example }) {
         <button type="button" onClick={copyPrompt} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-blue-200 hover:text-blue-700">
           {copied ? '✓ Copied' : 'Copy prompt'}
         </button>
-        <Link to="/builder" className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-500">
-          Try in Builder →
+        <Link to={isReferenceCoding ? '/reference-coding' : '/builder'} className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-500">
+          {isReferenceCoding ? 'Try Reference Coding →' : 'Try in Builder →'}
         </Link>
       </div>
     </article>
@@ -108,17 +131,20 @@ function ExampleGallery() {
         <SectionHeading
           eyebrow="Real examples"
           title="See what PromptStudio turns into a usable prompt"
-          subtitle="Start with a rough brief or a visual reference, then turn it into a prompt you can actually use."
+          subtitle="Start with a visual reference or rough brief. PromptStudio turns what you show us and what you want into an instruction your AI can actually use."
         />
         <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {EXAMPLES.map((example) => <ExampleCard key={example.title} example={example} />)}
         </div>
         <div className="mt-10 flex flex-col items-center justify-between gap-4 rounded-3xl border border-blue-100 bg-gradient-to-r from-blue-50 via-white to-indigo-50 p-6 text-center shadow-sm sm:flex-row sm:text-left">
           <div>
-            <p className="text-sm font-black text-slate-950">Your idea can be this clear in one step.</p>
-            <p className="mt-1 text-sm text-slate-600">Bring a reference image or rough idea and let PromptStudio structure the details for your target AI.</p>
+            <p className="text-sm font-black text-slate-950">Have a reference? Show us what you have.</p>
+            <p className="mt-1 text-sm text-slate-600">Use Image → Prompt for visual creation or Reference → Code for existing UIs, apps, screenshots, and UX improvements.</p>
           </div>
-          <Link to="/builder" className="shrink-0 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-500">Build your prompt →</Link>
+          <div className="flex shrink-0 flex-wrap justify-center gap-2 sm:justify-end">
+            <Link to="/image-to-prompt" className="rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-bold text-blue-700 shadow-sm transition hover:bg-blue-50">🖼️ Image → Prompt</Link>
+            <Link to="/reference-coding" className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-500">💻 Reference → Code</Link>
+          </div>
         </div>
       </div>
     </section>
