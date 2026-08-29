@@ -38,6 +38,7 @@
     { "src": "/api/admin-user-management", "dest": "/api/admin?action=users" },
     { "src": "/api/admin-support", "dest": "/api/admin?action=support" },
     { "src": "/api/admin-coupons", "dest": "/api/admin?action=coupons" },
+    { "src": "/api/reference-coding", "dest": "/api/index.js?route=reference-coding" },
     { "src": "/api/(.*)", "dest": "/api/$1" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
