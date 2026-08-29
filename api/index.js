@@ -3,6 +3,7 @@ const ROUTES = {
   "/api/admin": "../server/api/admin.js",
   "/api/feedback": "../server/api/feedback.js",
   "/api/generate-prompt-credits": "../server/api/generate-prompt-credits.js",
+  "/api/reference-coding": "../server/api/reference-coding.js",
   "/api/generate-prompt": "../server/api/generate-prompt.js",
   "/api/product-config": "../server/api/product-config.js",
   "/api/razorpay-order": "../server/api/razorpay-order.js",
