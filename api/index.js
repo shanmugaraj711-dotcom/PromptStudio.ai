@@ -1,9 +1,10 @@
+import referenceCodingHandler from "../server/api/reference-coding.js";
+
 const ROUTES = {
   "/api/admin-bootstrap": "../server/api/admin-bootstrap.js",
   "/api/admin": "../server/api/admin.js",
   "/api/feedback": "../server/api/feedback.js",
   "/api/generate-prompt-credits": "../server/api/generate-prompt-credits.js",
-  "/api/reference-coding": "../server/api/reference-coding.js",
   "/api/generate-prompt": "../server/api/generate-prompt.js",
   "/api/product-config": "../server/api/product-config.js",
   "/api/razorpay-order": "../server/api/razorpay-order.js",
@@ -19,6 +20,10 @@ const ROUTES = {
   "/api/webhooks/whatsapp": "../server/api/webhooks/whatsapp.js"
 };
 
+const STATIC_HANDLERS = {
+  "/api/reference-coding": referenceCodingHandler,
+};
+
 const normalizePath = (value) => {
   const path = String(value || "").split("?")[0].replace(/\/+$/, "");
   return path || "/";
@@ -28,8 +33,11 @@ export default async function handler(req, res) {
   const requestedPath = normalizePath(req.url);
   const requestedRoute = String(req.query?.route || "").trim();
   const route = normalizePath(requestedRoute ? `/api/${requestedRoute.replace(/^\/api\//, "")}` : requestedPath);
-  const modulePath = ROUTES[route];
+  const staticHandler = STATIC_HANDLERS[route];
 
+  if (staticHandler) return await staticHandler(req, res);
+
+  const modulePath = ROUTES[route];
   if (!modulePath) {
     res.statusCode = 404;
     res.setHeader("Content-Type", "application/json; charset=utf-8");
