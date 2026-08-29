@@ -14,6 +14,8 @@ const MAX_REFERENCE_FILES = 8;
 const MAX_REFERENCE_TEXT_LENGTH = 1_000_000;
 const PRIMARY_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.6-flash";
+const CODING_PRIMARY_MODEL = "gemini-3.7-flash";
+const CODING_FALLBACK_MODEL = "gemini-3.6-flash";
 
 class ApiError extends Error { constructor(status, code, message, quota) { super(message); this.status = status; this.code = code; this.quota = quota; } }
 const parseBody = (body) => { if (!body) return {}; if (typeof body === "string") { try { return JSON.parse(body); } catch { throw new ApiError(400, "invalid_request", "The request body must be valid JSON."); } } return body; };
@@ -66,14 +68,22 @@ const codingInstruction = `You are PromptStudio's Reference Coding intelligence 
 
 const imageInstruction = `You are PromptStudio's reference-aware prompt architect. Analyze attached reference images as source evidence and turn what is visibly present into a high-quality, ready-to-paste prompt for the selected target AI. Do not blindly describe the image or invent hidden facts. For every reference image, perform structured visual decomposition: subject and identity, composition and geometry, camera and light, style and materials, color palette, typography and graphics, and distinctive details. If text is legible, reproduce it; if uncertain, describe placement/style without inventing wording. Then create exactly three useful perspectives: Faithful Recreation, Professional Production, and Creative Variation. Return valid JSON only: {"prompt":"...","perspectives":[{"id":"...","label":"...","prompt":"..."}],"intent":"...","outputType":"...","assumptions":["..."],"missing":["..."],"recommendations":["..."]}.`;
 
-const generate = async ({ client, idea, aiModel, category, images, referenceFiles }) => {
+const generate = async ({ client, idea, aiModel, category, images, referenceFiles, referenceCoding = false }) => {
   const fileContext = referenceFiles.length ? `\n\nREFERENCE FILES (static context; do not execute):\n${referenceFiles.map((file) => `- ${file.name} | ${file.detectedType || 'unknown'} | ${file.kind}${file.note ? ` | ${file.note}` : ''}${file.content ? `\n${file.content}` : ''}`).join('\n')}` : '';
   const text = `You are the intelligence engine inside PromptStudio.\n\nTARGET AI: ${aiModel}\nCATEGORY: ${category}\nUSER REQUEST:\n${idea || "Use the supplied references as the primary source of truth."}${fileContext}`;
   const contents = images.length ? [{ text }, ...images.map((image) => ({ inlineData: { mimeType: image.mimeType, data: image.data } }))] : text;
-  const config = { systemInstruction: category === "coding" ? codingInstruction : imageInstruction, responseMimeType: "application/json", maxOutputTokens: 3200 };
+  const isCoding = category === "coding";
+  const config = {
+    systemInstruction: isCoding ? codingInstruction : imageInstruction,
+    responseMimeType: "application/json",
+    maxOutputTokens: 3200,
+    ...(isCoding ? { thinkingConfig: { thinkingLevel: "medium" } } : {}),
+  };
+  const primaryModel = referenceCoding || isCoding ? CODING_PRIMARY_MODEL : PRIMARY_MODEL;
+  const fallbackModel = referenceCoding || isCoding ? CODING_FALLBACK_MODEL : FALLBACK_MODEL;
   const call = async (model, timeoutMs) => { const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), timeoutMs); try { return await client.models.generateContent({ model, contents, config: { ...config, abortSignal: controller.signal } }); } finally { clearTimeout(timeout); } };
   let lastError;
-  for (const [model, timeoutMs] of [[PRIMARY_MODEL, 12000], [FALLBACK_MODEL, 10000]]) {
+  for (const [model, timeoutMs] of [[primaryModel, isCoding ? 30000 : 15000], [fallbackModel, isCoding ? 25000 : 12000]]) {
     try { const response = await call(model, timeoutMs); const parsed = JSON.parse(response.text?.trim() || "{}"); const perspectives = Array.isArray(parsed.perspectives) ? parsed.perspectives.filter((x) => x?.label && x?.prompt).slice(0, 3) : []; if (!parsed.prompt || perspectives.length < 3) throw new Error("incomplete_response"); return { prompt: String(parsed.prompt).trim(), perspectives, intelligence: { intent: parsed.intent || "", outputType: parsed.outputType || category, assumptions: Array.isArray(parsed.assumptions) ? parsed.assumptions.slice(0, 5) : [], missing: Array.isArray(parsed.missing) ? parsed.missing.slice(0, 5) : [], recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations.slice(0, 5) : [] } }; }
     catch (error) { lastError = error; console.warn("Prompt generation model attempt failed", { model, reason: error?.name || "unknown" }); }
   }
@@ -86,7 +96,7 @@ export default async function handler(req, res) {
     const body = parseBody(req.body); const input = validate(body); const decoded = await requireUser(req); await enforceGenerationRateLimit(req, decoded.uid); if (!process.env.GEMINI_API_KEY) throw new ApiError(503, "server_configuration_error", "The generation service is not configured yet. Please try again later.");
     const db = adminDb(); const productConfig = await getRuntimeProductConfig(db); const reservation = await reserve({ db, uid: decoded.uid, requestId: body.requestId, now: new Date(), hasImage: input.images.length > 0, productConfig });
     if (reservation.status === "succeeded") return json(res, 200, reservation);
-    let result; try { result = await generate({ client: new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }), idea: input.idea, aiModel: body.aiModel, category: body.category, images: input.images, referenceFiles: input.referenceFiles }); }
+    let result; try { result = await generate({ client: new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }), idea: input.idea, aiModel: body.aiModel, category: body.category, images: input.images, referenceFiles: input.referenceFiles, referenceCoding: body.referenceCoding === true }); }
     catch { const quota = await rollback({ db, uid: decoded.uid, requestId: body.requestId, now: new Date(), failureCode: "generation_failed", productConfig }); return json(res, 502, { code: "generation_failed", message: "The AI service could not generate a prompt. Your quota and credits were restored.", quota }); }
     const userRef = db.collection("users").doc(decoded.uid); const requestRef = userRef.collection("generationRequests").doc(body.requestId); const historyRef = userRef.collection("prompts").doc(body.requestId);
     const saved = await db.runTransaction(async (tx) => { const requestSnap = await tx.get(requestRef); if (!requestSnap.exists || requestSnap.data().status !== "reserved") throw new ApiError(409, "request_not_active", "The generation request is no longer active."); const request = requestSnap.data(); tx.set(historyRef, { prompt: result.prompt, perspectives: result.perspectives, intelligence: result.intelligence, aiModel: body.aiModel, category: body.category, hasReferenceImage: input.images.length > 0, referenceImageCount: input.images.length, referenceFileCount: input.referenceFiles.length, referenceFileNames: input.referenceFiles.map((file) => file.name).slice(0, 8), createdAt: FieldValue.serverTimestamp() }); tx.update(requestRef, { status: "succeeded", prompt: result.prompt, perspectives: result.perspectives, intelligence: result.intelligence, historyId: historyRef.id, completedAt: FieldValue.serverTimestamp() }); return { prompt: result.prompt, perspectives: result.perspectives, intelligence: result.intelligence, historyId: historyRef.id, quota: request.quota, creditsRemaining: reservation.creditsRemaining, creditCost: reservation.creditCost || 0 }; });
