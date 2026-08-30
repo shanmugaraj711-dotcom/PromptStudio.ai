@@ -1,4 +1,5 @@
 import referenceCodingHandler from "../server/api/reference-coding.js";
+import generatePromptCreditsHandler from "../server/api/generate-prompt-credits.js";
 
 const ROUTES = {
   "/api/admin-bootstrap": "../server/api/admin-bootstrap.js",
@@ -22,6 +23,7 @@ const ROUTES = {
 
 const STATIC_HANDLERS = {
   "/api/reference-coding": referenceCodingHandler,
+  "/api/generate-prompt-credits": generatePromptCreditsHandler,
 };
 
 const normalizePath = (value) => {
