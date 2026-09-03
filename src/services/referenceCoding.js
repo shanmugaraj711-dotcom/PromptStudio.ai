@@ -1,6 +1,6 @@
 import { PromptGenerationError } from './promptGenerator';
 
-export async function generateReferenceCoding({ idea, idToken, requestId, images = [], referenceFiles = [], fetchImpl = fetch }) {
+export async function generateReferenceCoding({ idea, idToken, requestId, images = [], referenceFiles = [], outputFormat = 'notsure', targetAI = 'any', fetchImpl = fetch }) {
   if (!idToken) throw new PromptGenerationError('Your session has expired. Please sign in again.', { code: 'unauthenticated' });
   let response;
   try {
@@ -14,6 +14,8 @@ export async function generateReferenceCoding({ idea, idToken, requestId, images
         requestId,
         images,
         referenceFiles,
+        outputFormat,
+        targetAI,
       }),
     });
   } catch {
