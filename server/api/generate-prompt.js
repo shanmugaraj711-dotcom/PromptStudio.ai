@@ -7,6 +7,7 @@ import { getRuntimeProductConfig } from "./_productConfig.js";
 
 const ALLOWED_MODELS = new Set(["chatgpt", "claude", "gemini", "grok"]);
 const ALLOWED_CATEGORIES = new Set(["writing", "coding", "image", "marketing", "business"]);
+const ALLOWED_OUTPUT_FORMATS = new Set(["notsure", "react", "html", "vue", "fullstack"]);
 const REQUEST_ID_PATTERN = /^[a-zA-Z0-9_-]{8,128}$/;
 const MAX_IMAGE_DATA_LENGTH = 4_000_000;
 const PRIMARY_GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
@@ -76,13 +77,58 @@ const normalizeIntelligence = (value, category) => {
   const safePerspectives = perspectives.filter((item) => item && typeof item.label === "string" && typeof item.prompt === "string").slice(0, 3).map((item, index) => ({ id: item.id || `perspective-${index + 1}`, label: item.label.trim().slice(0, 60), prompt: item.prompt.trim().slice(0, 12000) })).filter((item) => item.prompt.length >= 20);
   return { prompt: typeof intelligence.prompt === "string" ? intelligence.prompt.trim().slice(0, 12000) : "", perspectives: safePerspectives, intelligence: { intent: typeof intelligence.intent === "string" ? intelligence.intent.trim().slice(0, 240) : "", outputType: typeof intelligence.outputType === "string" ? intelligence.outputType.trim().slice(0, 120) : category, assumptions: Array.isArray(intelligence.assumptions) ? intelligence.assumptions.filter((x) => typeof x === "string").slice(0, 5) : [], missing: Array.isArray(intelligence.missing) ? intelligence.missing.filter((x) => typeof x === "string").slice(0, 5) : [], recommendations: Array.isArray(intelligence.recommendations) ? intelligence.recommendations.filter((x) => typeof x === "string").slice(0, 5) : [] } };
 };
-const createOptimizedPrompt = async ({ client, idea, aiModel, category, image }) => {
+const getOutputFormatInstruction = (outputFormat) => {
+  if (!ALLOWED_OUTPUT_FORMATS.has(outputFormat) || outputFormat === "notsure") return "";
+  const instructions = {
+    react: "OUTPUT FORMAT CONTRACT: React (JSX). The generated coding prompt MUST explicitly state `Output format: React (JSX)` and must not prescribe Vue, Angular, or another framework as the implementation stack.",
+    html: "OUTPUT FORMAT CONTRACT: plain HTML + CSS. The generated coding prompt MUST explicitly state `Output format: plain HTML + CSS` and must not prescribe React, Vue, Angular, or Next.js as the implementation stack.",
+    vue: "OUTPUT FORMAT CONTRACT: Vue (Single File Component). The generated coding prompt MUST explicitly state `Output format: Vue (Single File Component)` and must not prescribe React, Next.js, Angular, or another framework as the implementation stack.",
+    fullstack: "OUTPUT FORMAT CONTRACT: full-stack. The generated coding prompt MUST explicitly state `Output format: full-stack` and must require both frontend and backend/API implementation where needed.",
+  };
+  return instructions[outputFormat];
+};
+const hasExplicitFormatDirective = (prompt, outputFormat) => {
+  const text = typeof prompt === "string" ? prompt : "";
+  const directives = {
+    react: /output\s*format\s*:\s*react\s*\(jsx\)/i,
+    html: /output\s*format\s*:\s*plain\s*html\s*\+\s*css/i,
+    vue: /output\s*format\s*:\s*vue\s*\(single\s*file\s*component\)/i,
+    fullstack: /output\s*format\s*:\s*full[-\s]?stack/i,
+  };
+  return Boolean(directives[outputFormat]?.test(text));
+};
+const hasConflictingImplementationStack = (prompt, outputFormat) => {
+  const text = typeof prompt === "string" ? prompt : "";
+  const stackLine = text.match(/(?:tech\s*stack|implementation\s*stack|framework|use\s+(?:the\s+)?(?:react|vue|angular|next\.js|nextjs))[^\n]{0,100}/i)?.[0] || "";
+  if (!stackLine) return false;
+  const forbidden = {
+    react: /vue|angular/i,
+    html: /react|vue|angular|next\.js|nextjs/i,
+    vue: /react|next\.js|nextjs|angular/i,
+    fullstack: /a\s+frontend-only\s+implementation/i,
+  };
+  return Boolean(forbidden[outputFormat]?.test(stackLine));
+};
+const satisfiesOutputFormat = (result, outputFormat) => {
+  if (!outputFormat || outputFormat === "notsure") return true;
+  const prompts = [result.prompt, ...(result.perspectives || []).map((item) => item.prompt)];
+  return prompts.length > 0 && prompts.every((prompt) => hasExplicitFormatDirective(prompt, outputFormat) && !hasConflictingImplementationStack(prompt, outputFormat));
+};
+const createOptimizedPrompt = async ({ client, idea, aiModel, category, image, outputFormat = "notsure" }) => {
   const text = `You are the intelligence engine inside PromptStudio. Transform the user's request into a professional, ready-to-paste AI prompt.\n\nTARGET AI: ${aiModel}\nCATEGORY: ${category}\nUSER REQUEST:\n${idea || "No text was supplied; use the reference image as the primary source of truth."}`;
   const contents = image ? [{ text }, { inlineData: { mimeType: image.mimeType, data: image.data } }] : text;
-  const config = { systemInstruction: `You are PromptStudio's reference-aware prompt architect. You can analyze an attached reference image. Treat the image as source evidence, not as permission to invent facts. Identify the user's actual goal, distinguish visible facts from assumptions, and create a useful prompt for the selected target AI.\n\nWhen a reference image is present, analyze relevant subject, composition, framing, camera/visual characteristics, lighting, colors, materials, typography, spatial relationships, and other visible details only when they matter to the user's goal. Preserve identity-sensitive details as descriptions rather than guessing identity. Do not claim hidden information.\n\nReturn valid JSON only with this exact shape: {"prompt":"...","perspectives":[{"id":"...","label":"...","prompt":"..."}],"intent":"...","outputType":"...","assumptions":["..."],"missing":["..."],"recommendations":["..."]}.\n\nThe main prompt must be ready to paste. It should translate the user's request and reference image into explicit instructions for the target AI. Do not mechanically add sections that do not help.\n\nCreate exactly three genuinely different perspectives. For image/reference tasks prefer labels such as Faithful, Professional, and Creative when appropriate. The Faithful version prioritizes matching the reference; Professional prioritizes polished production quality; Creative introduces controlled improvements without changing the core subject or intent. Use different labels when the task calls for another set.\n\nList only meaningful missing details and reasonable recommendations. Never turn missing information into invented facts.`, responseMimeType: "application/json", maxOutputTokens: 2600 };
-  let response; try { response = await generateWithTimeout({ client, model: PRIMARY_GEMINI_MODEL, contents, config, timeoutMs: PRIMARY_GEMINI_TIMEOUT_MS }); } catch (error) { if (!isTransientGeminiError(error)) throw error; console.warn("Primary Gemini generation unavailable; trying fallback model", { model: PRIMARY_GEMINI_MODEL, code: error?.code || error?.status || "unknown" }); response = await generateWithTimeout({ client, model: FALLBACK_GEMINI_MODEL, contents, config, timeoutMs: FALLBACK_GEMINI_TIMEOUT_MS }); }
-  const raw = response.text?.trim(); if (!raw) throw new Error("Gemini returned an empty response."); let parsed; try { parsed = JSON.parse(raw); } catch { throw new Error("Gemini returned an invalid intelligence response."); }
-  const result = normalizeIntelligence(parsed, category); if (!result.prompt || result.perspectives.length < 3) throw new Error("Gemini returned an incomplete intelligence response."); return result;
+  const formatInstruction = getOutputFormatInstruction(outputFormat);
+  const baseSystemInstruction = `You are PromptStudio's reference-aware prompt architect. You can analyze an attached reference image. Treat the image as source evidence, not as permission to invent facts. Identify the user's actual goal, distinguish visible facts from assumptions, and create a useful prompt for the selected target AI.\n\nWhen a reference image is present, analyze relevant subject, composition, framing, camera/visual characteristics, lighting, colors, materials, typography, spatial relationships, and other visible details only when they matter to the user's goal. Preserve identity-sensitive details as descriptions rather than guessing identity. Do not claim hidden information.\n\nReturn valid JSON only with this exact shape: {"prompt":"...","perspectives":[{"id":"...","label":"...","prompt":"..."}],"intent":"...","outputType":"...","assumptions":["..."],"missing":["..."],"recommendations":["..."]}.\n\nThe main prompt must be ready to paste. It should translate the user's request and reference image into explicit instructions for the target AI. Do not mechanically add sections that do not help.\n\nCreate exactly three genuinely different perspectives. For image/reference tasks prefer labels such as Faithful, Professional, and Creative when appropriate. The Faithful version prioritizes matching the reference; Professional prioritizes polished production quality; Creative introduces controlled improvements without changing the core subject or intent. Use different labels when the task calls for another set.\n\nList only meaningful missing details and reasonable recommendations. Never turn missing information into invented facts.`;
+  const configForAttempt = (retry) => ({ systemInstruction: `${baseSystemInstruction}${formatInstruction ? `\n\n${formatInstruction}` : ""}${retry ? "\n\nFORMAT VALIDATION FAILED ON THE PREVIOUS RESPONSE. Rewrite the main prompt and all three perspectives so the explicit output-format contract is satisfied. Do not mention this validation step." : ""}`, responseMimeType: "application/json", maxOutputTokens: 2600 });
+  const generateAttempt = async (config) => {
+    let response; try { response = await generateWithTimeout({ client, model: PRIMARY_GEMINI_MODEL, contents, config, timeoutMs: PRIMARY_GEMINI_TIMEOUT_MS }); } catch (error) { if (!isTransientGeminiError(error)) throw error; console.warn("Primary Gemini generation unavailable; trying fallback model", { model: PRIMARY_GEMINI_MODEL, code: error?.code || error?.status || "unknown" }); response = await generateWithTimeout({ client, model: FALLBACK_GEMINI_MODEL, contents, config, timeoutMs: FALLBACK_GEMINI_TIMEOUT_MS }); }
+    const raw = response.text?.trim(); if (!raw) throw new Error("Gemini returned an empty response."); let parsed; try { parsed = JSON.parse(raw); } catch { throw new Error("Gemini returned an invalid intelligence response."); }
+    const result = normalizeIntelligence(parsed, category); if (!result.prompt || result.perspectives.length < 3) throw new Error("Gemini returned an incomplete intelligence response."); return result;
+  };
+  let result = await generateAttempt(configForAttempt(false));
+  if (!satisfiesOutputFormat(result, outputFormat)) result = await generateAttempt(configForAttempt(true));
+  if (!satisfiesOutputFormat(result, outputFormat)) throw new Error(`Gemini returned a prompt that did not satisfy the selected output format: ${outputFormat}.`);
+  return result;
 };
 export default async function handler(request, response) {
   if (request.method !== "POST") return sendJson(response, 405, { code: "method_not_allowed", message: "Use POST to generate a prompt." });
@@ -90,7 +136,7 @@ export default async function handler(request, response) {
     const body = parseBody(request.body); const input = validateInput(body); const authorization = request.headers?.authorization || request.headers?.Authorization; const idToken = authorization?.startsWith("Bearer ") ? authorization.slice("Bearer ".length) : ""; if (!idToken) throw new ApiError(401, "unauthenticated", "Please sign in to generate a prompt.");
     const services = getServices(); const client = getGeminiClient(); const decodedToken = await services.auth.verifyIdToken(idToken); const now = new Date(); const productConfig = await getRuntimeProductConfig(services.db);
     const reservation = await reserveGeneration({ db: services.db, uid: decodedToken.uid, requestId: body.requestId, now, productConfig }); if (reservation.status === "succeeded") return sendJson(response, 200, reservation);
-    let result; try { result = await createOptimizedPrompt({ client, idea: input.idea, aiModel: body.aiModel, category: body.category, image: input.image }); } catch (error) { const quota = await rollbackReservation({ db: services.db, uid: decodedToken.uid, requestId: body.requestId, now: new Date(), failureCode: "gemini_failed", productConfig }); console.error("Gemini generation failed", { code: error?.code || "unknown" }); throw new ApiError(502, "generation_failed", "The AI service could not generate a prompt. Your quota was restored.", quota); }
+    let result; try { result = await createOptimizedPrompt({ client, idea: input.idea, aiModel: body.aiModel, category: body.category, image: input.image, outputFormat: body.outputFormat }); } catch (error) { const quota = await rollbackReservation({ db: services.db, uid: decodedToken.uid, requestId: body.requestId, now: new Date(), failureCode: "gemini_failed", productConfig }); console.error("Gemini generation failed", { code: error?.code || "unknown" }); throw new ApiError(502, "generation_failed", "The AI service could not generate a prompt. Your quota was restored.", quota); }
     try { const saved = await saveSuccessfulGeneration({ db: services.db, uid: decodedToken.uid, requestId: body.requestId, result, aiModel: body.aiModel, category: body.category, image: input.image }); return sendJson(response, 200, saved); } catch (error) { const quota = await rollbackReservation({ db: services.db, uid: decodedToken.uid, requestId: body.requestId, now: new Date(), failureCode: "history_write_failed", productConfig }); console.error("Prompt history save failed", { code: error?.code || "unknown" }); throw new ApiError(500, "history_save_failed", "We could not save this prompt. Your quota was restored.", quota); }
   } catch (error) { if (!(error instanceof ApiError)) console.error("Prompt generation endpoint failed", { code: error?.code || "unknown" }); const status = error instanceof ApiError ? error.status : 500; return sendJson(response, status, toErrorPayload(error)); }
 }
