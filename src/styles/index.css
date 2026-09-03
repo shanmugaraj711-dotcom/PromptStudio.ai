@@ -49,107 +49,107 @@ input:focus {
   scroll-margin-top: 6.5rem;
 }
 
-/* Reference Coding: soft-light workspace — readable without the glare of pure white. */
+/* Reference Coding: calm light workspace with softer contrast and no pure-white glare. */
 div[class*="bg-[#070A11]"] {
-  background: #eef2f6 !important;
-  color: #1e293b !important;
+  background: #e7ecf1 !important;
+  color: #243244 !important;
 }
 
 div[class*="bg-[#070A11]"] main [class*="bg-[#0E1322]"] {
-  background: #f7f9fc !important;
-  border-color: #d8e0e8 !important;
-  box-shadow: 0 18px 48px -34px rgba(15, 23, 42, 0.22) !important;
+  background: #f1f4f7 !important;
+  border-color: #cfd8e1 !important;
+  box-shadow: 0 18px 48px -34px rgba(15, 23, 42, 0.2) !important;
 }
 
 div[class*="bg-[#070A11]"] main [class*="bg-[#0B0F19]"] {
-  background: #f5f7fa !important;
-  border-color: #d8e0e8 !important;
-  box-shadow: 0 14px 40px -34px rgba(15, 23, 42, 0.2) !important;
+  background: #eef2f5 !important;
+  border-color: #cfd8e1 !important;
+  box-shadow: 0 14px 40px -34px rgba(15, 23, 42, 0.18) !important;
 }
 
 div[class*="bg-[#070A11]"] main [class*="bg-zinc-950/70"] {
-  background: #f8fafc !important;
-  color: #1e293b !important;
-  border-color: #cbd5e1 !important;
+  background: #f3f6f8 !important;
+  color: #243244 !important;
+  border-color: #c4ced8 !important;
 }
 
 div[class*="bg-[#070A11]"] main [class*="bg-white/5"] {
-  background: #eef2f6 !important;
-  border-color: #d8e0e8 !important;
+  background: #e9eef2 !important;
+  border-color: #cfd8e1 !important;
 }
 
 div[class*="bg-[#070A11]"] main [class*="bg-white/[0.02]"] {
-  background: #f7f9fc !important;
-  border-color: #cbd5e1 !important;
+  background: #f1f4f7 !important;
+  border-color: #c4ced8 !important;
 }
 
 div[class*="bg-[#070A11]"] main [class*="bg-white/[0.03]"] {
-  background: #eef2f6 !important;
-  border-color: #d8e0e8 !important;
+  background: #e9eef2 !important;
+  border-color: #cfd8e1 !important;
 }
 
 div[class*="bg-[#070A11]"] main [class*="border-white/10"],
 div[class*="bg-[#070A11]"] main [class*="border-white/5"] {
-  border-color: #d8e0e8 !important;
+  border-color: #cfd8e1 !important;
 }
 
 div[class*="bg-[#070A11]"] main [class*="bg-teal-950/60"] {
-  background: #e5f7f5 !important;
-  border-color: #a7ddd7 !important;
+  background: #dcefed !important;
+  border-color: #9ecdc8 !important;
   color: #176b66 !important;
 }
 
 div[class*="bg-[#070A11]"] main [class*="bg-zinc-900/90"] {
-  background: #f7fbfb !important;
-  border-color: #a7ddd7 !important;
+  background: #eef5f4 !important;
+  border-color: #9ecdc8 !important;
   color: #176b66 !important;
 }
 
 div[class*="bg-[#070A11]"] main [class~="text-zinc-100"] {
-  color: #1e293b !important;
+  color: #243244 !important;
 }
 
 div[class*="bg-[#070A11]"] main [class~="text-zinc-200"] {
-  color: #334155 !important;
+  color: #344457 !important;
 }
 
 div[class*="bg-[#070A11]"] main [class~="text-zinc-300"] {
-  color: #475569 !important;
+  color: #506176 !important;
 }
 
 div[class*="bg-[#070A11]"] main [class~="text-zinc-400"] {
-  color: #64748b !important;
+  color: #68798d !important;
 }
 
 div[class*="bg-[#070A11]"] main [class~="text-zinc-500"] {
-  color: #64748b !important;
+  color: #68798d !important;
 }
 
 div[class*="bg-[#070A11]"] main [class~="text-white"]:not(button *) {
-  color: #1e293b !important;
+  color: #243244 !important;
 }
 
 div[class*="bg-[#070A11]"] main textarea,
 div[class*="bg-[#070A11]"] main select {
-  background: #f8fafc !important;
-  color: #1e293b !important;
-  border-color: #cbd5e1 !important;
+  background: #f3f6f8 !important;
+  color: #243244 !important;
+  border-color: #c4ced8 !important;
 }
 
 div[class*="bg-[#070A11]"] main select option {
-  background: #f8fafc;
-  color: #1e293b;
+  background: #f3f6f8;
+  color: #243244;
 }
 
 div[class*="bg-[#070A11]"] main [class*="bg-red-950/30"] {
-  background: #fff1f2 !important;
-  border-color: #fecdd3 !important;
-  color: #be123c !important;
+  background: #f9e9ec !important;
+  border-color: #e9b9c3 !important;
+  color: #9f1239 !important;
 }
 
 div[class*="bg-[#070A11]"] main [class*="bg-emerald-950/30"] {
-  background: #ecfdf5 !important;
-  border-color: #a7f3d0 !important;
+  background: #e5f5ee !important;
+  border-color: #a8d7c2 !important;
   color: #047857 !important;
 }
 
@@ -157,18 +157,18 @@ div[class*="bg-[#070A11]"] main [class*="bg-emerald-950/30"] {
 div[class*="bg-[#070A11]"] main .builder-result-anchor,
 div[class*="bg-[#070A11]"] main .builder-result-anchor > div,
 div[class*="bg-[#070A11]"] main .builder-result-anchor textarea {
-  background: #f7f9fc !important;
+  background: #eef2f5 !important;
 }
 
 div[class*="bg-[#070A11]"] main .builder-result-anchor {
-  border-color: #d8e0e8 !important;
+  border-color: #cfd8e1 !important;
 }
 
 div[class*="bg-[#070A11]"] main .builder-result-anchor textarea {
-  border-color: #cbd5e1 !important;
+  border-color: #c4ced8 !important;
 }
 
 div[class*="bg-[#070A11]"] main [class*="bg-teal-950/30"] {
-  background: #e6f2f1 !important;
-  border-color: #b8d8d5 !important;
+  background: #e0efed !important;
+  border-color: #afd3cf !important;
 }
