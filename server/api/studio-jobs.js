@@ -1,7 +1,7 @@
-import { GoogleGenAI } from "@google/genai";
 import { requireUser, adminDb } from "./_firebaseAdmin.js";
-import { LANDING_PAGE_SPEC_SCHEMA, renderStudioSpec, validateStudioSpec } from "../studio/templateRenderer.js";
-import { PRODUCT_MENU_SPEC_SCHEMA, renderProductMenuSpec, validateProductMenuSpec } from "../studio/productMenuRenderer.js";
+import { createAIProvider } from "../studio/aiProvider.js";
+import { renderStudioSpec, validateStudioSpec } from "../studio/templateRenderer.js";
+import { renderProductMenuSpec, validateProductMenuSpec } from "../studio/productMenuRenderer.js";
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.7-flash";
 const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash-lite";
@@ -13,6 +13,7 @@ const JOB_LEASE_MS = 60000;
 const JOB_TTL_MS = 30 * 60 * 1000;
 const MAX_PROMPT_CHARS = 12000;
 const MAX_FILE_CHARS = 50000;
+const aiProvider = createAIProvider();
 
 const send = (res, status, payload) => { res.setHeader("Cache-Control", "no-store"); return res.status(status).json(payload); };
 const fail = (message, status = 422, code = "invalid_spec") => Object.assign(new Error(message), { status, code });
@@ -25,21 +26,14 @@ const parseJson = (text, code = "invalid_ai_response") => {
   if (first >= 0 && last > first) { try { return JSON.parse(raw.slice(first, last + 1)); } catch {} }
   throw fail("The Studio AI returned an invalid structured specification.", 502, code);
 };
-const getClient = () => {
-  if (!process.env.GEMINI_API_KEY) throw fail("Studio AI is not configured yet.", 503, "server_configuration_error");
-  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-};
 const errorStatus = (error) => Number(error?.status || error?.statusCode || error?.httpStatus || 0);
 const isQuotaError = (error) => {
-  const status = errorStatus(error);
-  const code = String(error?.code || "").toLowerCase();
-  const message = String(error?.message || "").toLowerCase();
+  const status = errorStatus(error); const code = String(error?.code || "").toLowerCase(); const message = String(error?.message || "").toLowerCase();
   return status === 429 || code === "resource_exhausted" || /quota|exceeded your current quota|rate limit/.test(message);
 };
 const isTransient = (error) => {
   if (isQuotaError(error)) return false;
-  const status = errorStatus(error);
-  const code = String(error?.code || "").toLowerCase();
+  const status = errorStatus(error); const code = String(error?.code || "").toLowerCase();
   if (["invalid_spec", "validation_failed", "renderer_failed", "studio_ai_quota_exceeded"].includes(code)) return false;
   if (status >= 400 && status < 500 && status !== 408) return false;
   const message = String(error?.message || "").toLowerCase();
@@ -73,7 +67,7 @@ const STUDIO_SPEC_SCHEMA = {
 
 const generateWithTimeout = async (model, contents) => {
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), GENERATION_TIMEOUT_MS);
-  try { return await getClient().models.generateContent({ model, contents, config: { responseMimeType: "application/json", responseJsonSchema: STUDIO_SPEC_SCHEMA, maxOutputTokens: 2200, thinkingConfig: { thinkingLevel: "low" }, abortSignal: controller.signal } }); }
+  try { return await aiProvider.generateStructuredSpec({ model, contents, config: { responseMimeType: "application/json", responseJsonSchema: STUDIO_SPEC_SCHEMA, maxOutputTokens: 2200, thinkingConfig: { thinkingLevel: "low" }, abortSignal: controller.signal } }); }
   finally { clearTimeout(timer); }
 };
 
@@ -90,29 +84,12 @@ const normalizeProductMenuSpec = (raw) => {
   const catalog = content.catalog && typeof content.catalog === "object" ? content.catalog : {};
   const categories = Array.isArray(catalog.categories) ? catalog.categories.filter(Boolean).slice(0, 6) : [];
   const items = Array.isArray(catalog.items) ? [...catalog.items].slice(0, 8) : [];
-  const originalItemCount = items.length;
-  const fallbackCategory = categories[0] || "Featured";
-  let fillerIndex = 0;
-  while (items.length < 4) {
-    const filler = PRODUCT_MENU_FILLERS[fillerIndex % PRODUCT_MENU_FILLERS.length];
-    const category = categories.length ? categories[items.length % categories.length] : fallbackCategory;
-    items.push({ ...filler, price: "Ask us", category });
-    fillerIndex += 1;
-  }
+  const originalItemCount = items.length; const fallbackCategory = categories[0] || "Featured"; let fillerIndex = 0;
+  while (items.length < 4) { const filler = PRODUCT_MENU_FILLERS[fillerIndex % PRODUCT_MENU_FILLERS.length]; const category = categories.length ? categories[items.length % categories.length] : fallbackCategory; items.push({ ...filler, price: "Ask us", category }); fillerIndex += 1; }
   const normalizedCategories = categories.length ? categories : [fallbackCategory];
-  const normalized = {
-    ...raw,
-    version: "1.0",
-    layout: "product-menu-showcase",
-    sections: [
-      { id: "hero", type: "hero", variant: "spotlight" },
-      { id: "catalog", type: "catalog", variant: "grid" },
-      { id: "cart", type: "cart", variant: "drawer" }
-    ],
-    components: ["navbar", "hero", "category-filter", "product-card", "cart-panel", "footer"],
-    content: { ...content, catalog: { ...catalog, categories: normalizedCategories, items } },
-    responsive: { breakpoint: "768px", hero: "stack", productColumns: { desktop: 3, mobile: 1 }, navigation: "collapse" }
-  };
+  const normalized = { ...raw, version: "1.0", layout: "product-menu-showcase", sections: [
+    { id: "hero", type: "hero", variant: "spotlight" }, { id: "catalog", type: "catalog", variant: "grid" }, { id: "cart", type: "cart", variant: "drawer" }
+  ], components: ["navbar", "hero", "category-filter", "product-card", "cart-panel", "footer"], content: { ...content, catalog: { ...catalog, categories: normalizedCategories, items } }, responsive: { breakpoint: "768px", hero: "stack", productColumns: { desktop: 3, mobile: 1 }, navigation: "collapse" } };
   console.info("Studio product menu spec normalized", { originalItemCount, normalizedItemCount: items.length, sectionsCanonicalized: true, responsiveCanonicalized: true });
   return normalized;
 };
@@ -123,15 +100,10 @@ const generateSpec = async (prompt) => {
   for (const model of MODEL_SEQUENCE) {
     const startedAt = Date.now();
     try {
-      const result = await generateWithTimeout(model, contents);
-      const raw = parseJson(result.text, "invalid_spec_response");
-      const normalized = normalizeProductMenuSpec(raw);
-      const spec = validateSpec(normalized);
-      console.info("Studio spec stage completed", { model, layout: spec.layout, durationMs: Date.now() - startedAt });
-      return { spec, model };
+      const result = await generateWithTimeout(model, contents); const raw = parseJson(result.text, "invalid_spec_response"); const normalized = normalizeProductMenuSpec(raw); const spec = validateSpec(normalized);
+      console.info("Studio spec stage completed", { model, layout: spec.layout, durationMs: Date.now() - startedAt }); return { spec, model };
     } catch (error) {
-      lastError = error;
-      console.warn("Studio spec model failed", { model, durationMs: Date.now() - startedAt, transient: isTransient(error), quota: isQuotaError(error), error: safeErrorDetails(error) });
+      lastError = error; console.warn("Studio spec model failed", { model, durationMs: Date.now() - startedAt, transient: isTransient(error), quota: isQuotaError(error), error: safeErrorDetails(error) });
       if (isQuotaError(error)) throw fail("Studio AI quota is currently exhausted. Please wait for the quota window to reset, then try again.", 429, "studio_ai_quota_exceeded");
       if (!isTransient(error)) throw error;
     }
@@ -142,10 +114,7 @@ const generateSpec = async (prompt) => {
 const normalizeRenderedFiles = (files) => {
   if (!files || typeof files !== "object" || Array.isArray(files)) throw fail("Studio renderer returned no project files.", 500, "renderer_failed");
   const normalized = {};
-  for (const path of ["/App.js", "/styles.css"]) {
-    if (typeof files[path] !== "string" || !files[path].trim() || files[path].length > MAX_FILE_CHARS) throw fail(`Studio renderer did not produce ${path}.`, 500, "renderer_failed");
-    normalized[path] = files[path];
-  }
+  for (const path of ["/App.js", "/styles.css"]) { if (typeof files[path] !== "string" || !files[path].trim() || files[path].length > MAX_FILE_CHARS) throw fail(`Studio renderer did not produce ${path}.`, 500, "renderer_failed"); normalized[path] = files[path]; }
   return normalized;
 };
 const deterministicValidate = (files, renderer) => {
@@ -158,7 +127,6 @@ const deterministicValidate = (files, renderer) => {
   if (renderer === "product-menu-showcase-v1" && !/product-grid|product-card/.test(app)) throw fail("Studio product template failed its artifact marker check.", 422, "validation_failed");
   return { valid: true, fileCount: 2, appPath: "/App.js", renderer, checkedAt: Date.now() };
 };
-
 const currentStage = (data) => { if (data.status === "queued" || data.stage === "spec") return "spec"; if (data.stage === "render" || data.status === "rendering") return "render"; if (data.stage === "validation" || data.status === "validating") return "validation"; return data.stage || "spec"; };
 const publicJob = (data) => ({ jobId: data.jobId, status: data.status, stage: currentStage(data), attempt: Number(data.attempt || 0), message: data.status === "failed" ? (data.error || null) : (data.message || null), retryAt: data.nextAttemptAt || null, files: data.status === "ready" ? data.files : null, error: data.status === "failed" ? data.error : null, artifacts: { spec: data.spec || null, validation: data.validation || null } });
 const getJob = async (uid, jobId) => { const snap = await adminDb().collection("studioJobs").doc(jobId).get(); if (!snap.exists || snap.data()?.uid !== uid) throw fail("Studio job not found.", 404, "job_not_found"); return { ref: snap.ref, data: snap.data() }; };
@@ -171,40 +139,29 @@ const claimJob = async (uid, jobId) => {
     if (data.processing === true && Number(data.processingAt || 0) > now - JOB_LEASE_MS) return { claimed: false, busy: true, data };
     if (Number(data.nextAttemptAt || 0) > now) return { claimed: false, retrying: true, data };
     if (Number(data.createdAt || now) < now - JOB_TTL_MS) { const error = "This Studio job expired. Please start again."; tx.update(ref, { status: "failed", processing: false, error, updatedAt: now }); return { claimed: false, data: { ...data, status: "failed", processing: false, error } }; }
-    const stage = currentStage(data); const attempt = Number(data.attempt || 0) + 1;
-    tx.update(ref, { processing: true, processingAt: now, attempt, stage, nextAttemptAt: null, updatedAt: now });
+    const stage = currentStage(data); const attempt = Number(data.attempt || 0) + 1; tx.update(ref, { processing: true, processingAt: now, attempt, stage, nextAttemptAt: null, updatedAt: now });
     return { claimed: true, data: { ...data, processing: true, processingAt: now, attempt, stage, nextAttemptAt: null } };
   });
 };
-
 const processJob = async (uid, jobId) => {
   const claim = await claimJob(uid, jobId); if (!claim.claimed) return { ...claim.data, busy: Boolean(claim.busy), retrying: Boolean(claim.retrying) };
   const { data } = claim; const ref = adminDb().collection("studioJobs").doc(jobId);
   try {
     if (data.stage === "spec") {
-      const { spec, model } = await generateSpec(data.prompt);
-      await ref.update({ stage: "render", status: "rendering", processing: false, attempt: 0, spec, specModel: model, message: `Studio Spec ready (${spec.layout}). Rendering the interface from PromptStudio templates.`, nextAttemptAt: null, updatedAt: Date.now() });
-      return { ...data, stage: "render", status: "rendering", processing: false, attempt: 0, spec, specModel: model, message: `Studio Spec ready (${spec.layout}). Rendering the interface from PromptStudio templates.` };
+      const { spec, model } = await generateSpec(data.prompt); const message = `Studio Spec ready (${spec.layout}). Rendering the interface from PromptStudio templates.`;
+      await ref.update({ stage: "render", status: "rendering", processing: false, attempt: 0, spec, specModel: model, message, nextAttemptAt: null, updatedAt: Date.now() }); return { ...data, stage: "render", status: "rendering", processing: false, attempt: 0, spec, specModel: model, message };
     }
     if (data.stage === "render") {
-      const spec = validateSpec(data.spec); const renderer = rendererName(spec); const files = normalizeRenderedFiles(renderSpec(spec));
-      await ref.update({ stage: "validation", status: "validating", processing: false, attempt: 0, files, renderer, message: "Template render complete. Validating the preview now.", nextAttemptAt: null, updatedAt: Date.now() });
-      return { ...data, stage: "validation", status: "validating", processing: false, attempt: 0, files, renderer, message: "Template render complete. Validating the preview now." };
+      const spec = validateSpec(data.spec); const renderer = rendererName(spec); const files = normalizeRenderedFiles(renderSpec(spec)); const message = "Template render complete. Validating the preview now.";
+      await ref.update({ stage: "validation", status: "validating", processing: false, attempt: 0, files, renderer, message, nextAttemptAt: null, updatedAt: Date.now() }); return { ...data, stage: "validation", status: "validating", processing: false, attempt: 0, files, renderer, message };
     }
     if (data.stage === "validation") {
-      const validation = deterministicValidate(data.files, data.renderer || "landing-page-v1");
-      await ref.update({ stage: "ready", status: "ready", processing: false, attempt: 0, validation, message: "Preview ready.", nextAttemptAt: null, updatedAt: Date.now() });
-      return { ...data, stage: "ready", status: "ready", processing: false, attempt: 0, validation, message: "Preview ready." };
+      const validation = deterministicValidate(data.files, data.renderer || "landing-page-v1"); await ref.update({ stage: "ready", status: "ready", processing: false, attempt: 0, validation, message: "Preview ready.", nextAttemptAt: null, updatedAt: Date.now() }); return { ...data, stage: "ready", status: "ready", processing: false, attempt: 0, validation, message: "Preview ready." };
     }
     throw fail("Studio job reached an invalid stage.", 500, "invalid_job_stage");
   } catch (error) {
-    if (data.stage === "spec" && isTransient(error) && Number(data.attempt || 0) < MAX_AI_ATTEMPTS) {
-      console.warn("Studio spec transient failure; no automatic job retry configured", { attempt: data.attempt, error: safeErrorDetails(error) });
-    }
-    console.error("Studio job failed", { stage: data.stage, attempt: data.attempt, error: safeErrorDetails(error) });
-    const message = data.stage === "validation" ? "Studio preview failed deterministic validation." : publicGenerationError(error);
-    await ref.update({ status: "failed", processing: false, error: message, nextAttemptAt: null, updatedAt: Date.now(), lastError: safeErrorDetails(error) });
-    return { ...data, status: "failed", processing: false, error: message };
+    console.error("Studio job failed", { stage: data.stage, attempt: data.attempt, error: safeErrorDetails(error) }); const message = data.stage === "validation" ? "Studio preview failed deterministic validation." : publicGenerationError(error);
+    await ref.update({ status: "failed", processing: false, error: message, nextAttemptAt: null, updatedAt: Date.now(), lastError: safeErrorDetails(error) }); return { ...data, status: "failed", processing: false, error: message };
   }
 };
 
