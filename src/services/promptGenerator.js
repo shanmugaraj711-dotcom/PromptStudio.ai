@@ -9,6 +9,23 @@ export class PromptGenerationError extends Error {
   }
 }
 
+const sanitizeServiceMessage = (message) => {
+  const text = String(message || "").trim();
+  if (!text) return "Unable to generate a prompt right now. Please try again.";
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed?.error?.message || parsed?.error?.code || parsed?.error?.status) {
+      return "Studio AI is busy right now. Please try again in a moment.";
+    }
+  } catch {
+    // Keep normal server messages; only provider-shaped JSON is hidden.
+  }
+  if (/high demand|temporarily unavailable|service unavailable|overloaded/i.test(text)) {
+    return "Studio AI is busy right now. Please try again in a moment.";
+  }
+  return text;
+};
+
 export async function generatePrompt({
   idea,
   aiModel,
@@ -30,7 +47,7 @@ export async function generatePrompt({
     throw new PromptGenerationError("We could not reach the generation service. Please check your connection and try again.", { code: "network_error" });
   }
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new PromptGenerationError(payload.message || "Unable to generate a prompt right now. Please try again.", { code: payload.code, quota: payload.quota, creditsRemaining: payload.creditsRemaining, creditCost: payload.creditCost });
+  if (!response.ok) throw new PromptGenerationError(sanitizeServiceMessage(payload.message), { code: payload.code, quota: payload.quota, creditsRemaining: payload.creditsRemaining, creditCost: payload.creditCost });
   if (!payload.prompt || !Array.isArray(payload.perspectives) || payload.perspectives.length < 3 || !payload.quota) throw new PromptGenerationError("The generation service returned an incomplete intelligence response.", { code: "invalid_response", quota: payload.quota });
   return payload;
 }
