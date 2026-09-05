@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@codesandbox/sandpack-react": "^2.20.0",
     "@google/genai": "^2.16.0",
     "firebase": "^11.10.0",
     "firebase-admin": "^13.10.0",
