@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { createGroqProvider } from "./groqProvider.js";
 import { logAIUsage } from "./aiUsage.js";
 
 // TEMPORARY OVERRIDE: use 3.5-Lite while 3.7/3.6 daily quotas are exhausted.
@@ -16,7 +17,7 @@ const getGeminiClient = () => {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 };
 
-export const createAIProvider = () => ({
+const createGeminiProvider = () => ({
   name: "gemini",
   async generateStructuredSpec({ model, contents, config }) {
     const activeModel = TEMPORARY_GEMINI_MODEL;
@@ -27,7 +28,17 @@ export const createAIProvider = () => ({
       reason: TEMPORARY_OVERRIDE_REASON,
     });
     const response = await getGeminiClient().models.generateContent({ model: activeModel, contents, config });
-    logAIUsage(response, activeModel, { stage: "spec", requestedModel: model });
+    logAIUsage(response, activeModel, { provider: "gemini", stage: "spec", requestedModel: model });
     return response;
   },
 });
+
+export const createAIProvider = () => {
+  const providerName = String(process.env.STUDIO_AI_PROVIDER || "gemini").trim().toLowerCase();
+  if (providerName === "groq") {
+    console.info("Studio AI provider selected", { provider: "groq" });
+    return createGroqProvider();
+  }
+  console.info("Studio AI provider selected", { provider: "gemini" });
+  return createGeminiProvider();
+};
