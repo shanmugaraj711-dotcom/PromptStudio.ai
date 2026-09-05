@@ -209,13 +209,25 @@ const inferResponsiveSingleColumnEdit = (files) => {
     for (const match of source.matchAll(rulePattern)) {
       const selector = match[2].trim();
       const body = match[3];
-      if (!selector || !/(menu|card|grid|item)/i.test(selector)) continue;
+      if (!selector) continue;
       if (!/display\s*:\s*grid\s*;/i.test(body) && !/grid-template-columns\s*:/i.test(body)) continue;
-      candidates.push({ path, selector });
+      const selectorText = selector.toLowerCase();
+      let score = 0;
+      if (/\bmenu\b|menu[-_]/i.test(selectorText)) score += 100;
+      if (/\bgrid\b/i.test(selectorText)) score += 40;
+      if (/\bcard\b|cards|\bitem\b/i.test(selectorText)) score += 30;
+      if (/grid-template-columns\s*:/i.test(body)) score += 20;
+      if (/display\s*:\s*grid\s*;/i.test(body)) score += 10;
+      candidates.push({ path, selector, score });
     }
   }
-  if (candidates.length !== 1) return null;
-  return { edits: [{ operation: "css_media_rule_set", path: candidates[0].path, selector: candidates[0].selector, property: "grid-template-columns", value: "1fr", maxWidth: "768px" }] };
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => b.score - a.score);
+  const best = candidates[0];
+  const second = candidates[1];
+  if (best.score < 100) return null;
+  if (second && second.score === best.score) return null;
+  return { edits: [{ operation: "css_media_rule_set", path: best.path, selector: best.selector, property: "grid-template-columns", value: "1fr", maxWidth: "768px" }] };
 };
 
 const editProject = async ({ files, instruction }) => {
@@ -240,9 +252,15 @@ export default async function handler(req, res) {
       const files = validateFiles(body.files);
       const instruction = typeof body.instruction === "string" ? body.instruction.trim() : "";
       if (instruction.length < 2) return send(res, 400, { code: "invalid_instruction", message: "Tell Studio what to change." });
-      let plan = await editProject({ files, instruction });
       const mobileSingleColumn = /single[- ]column.*mobile|mobile.*single[- ]column/i.test(instruction);
-      if (mobileSingleColumn && (!Array.isArray(plan?.edits) || plan.edits.length === 0)) plan = inferResponsiveSingleColumnEdit(files) || plan;
+      if (mobileSingleColumn) {
+        const deterministicPlan = inferResponsiveSingleColumnEdit(files);
+        if (deterministicPlan) {
+          const applied = applyTargetedEditsV2(files, deterministicPlan.edits);
+          return send(res, 200, { ...applied, mode: "targeted_edit_v2", instruction, planner: "deterministic_responsive" });
+        }
+      }
+      const plan = await editProject({ files, instruction });
       if (plan?.status === "needs_clarification") return send(res, 409, { code: "needs_clarification", message: String(plan.message || "Please describe one small specific change.") });
       const applied = applyTargetedEditsV2(files, plan?.edits);
       return send(res, 200, { ...applied, mode: "targeted_edit_v2", instruction });
