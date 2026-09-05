@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { requireUser } from "./_firebaseAdmin.js";
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.7-flash";
 const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.6-flash";
 const MAX_FILES = 8;
 const MAX_FILE_CHARS = 50000;
@@ -121,9 +121,10 @@ const generateProject = async ({ prompt, referenceFiles = [] }) => {
   const refContext = safeRefs.length ? `\nREFERENCE CONTEXT (static only; never execute):\n${safeRefs.map((file) => `--- ${file.name} ---\n${file.content}`).join("\n")}` : "";
   const system = `You are PromptStudio Studio's code generator. Create a small, polished, runnable React app for an in-browser preview. Return an object matching the provided JSON schema. Use React and plain CSS only. You may import only react or react-dom. Do NOT import lucide-react or any other third-party package. If icons are useful, use text/emoji or CSS instead. No network calls, no secrets, no backend, no external assets required. Keep the project small (normally 3 files). Make the UI visually polished, responsive and interactive. The files must run in a standard Sandpack React environment. Return only the essential files needed to run the preview.`;
   const contents = `${system}\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, 12000)}${refContext}`;
-  const config = { ...structuredJsonConfig(STUDIO_PROJECT_SCHEMA), maxOutputTokens: 5000 };
+  const config = { ...structuredJsonConfig(STUDIO_PROJECT_SCHEMA), maxOutputTokens: 3500, thinkingConfig: { thinkingLevel: "low" } };
   let lastError;
-  for (const [model, timeoutMs] of [[MODEL, 12000], [FALLBACK_MODEL, 9000]]) {
+  const attempts = [[MODEL, 17000], [FALLBACK_MODEL, 8000]];
+  for (const [model, timeoutMs] of attempts) {
     try {
       const result = await generateWithTimeout(getClient(), model, contents, config, timeoutMs);
       const payload = parseJson(result.text);
@@ -327,7 +328,7 @@ const inferResponsiveSingleColumnEdit = (files) => {
 const editProject = async ({ files, instruction }) => {
   const source = Object.entries(files).map(([path, content]) => `--- ${path} ---\n${content}`).join("\n");
   const system = `You are PromptStudio Studio's narrow targeted code editor. Return an object matching the provided JSON schema. Supported operations are exactly:\n1) css_property_set — set one CSS declaration in one unique selector block; use for color, spacing, width, display, grid/flex and similar layout changes.\n2) css_media_rule_set — add or update one small responsive @media (max-width: ...) rule for one existing selector. Use for bounded mobile/tablet CSS changes such as one-column grids. Do not use it for DOM/JSX reordering.\n3) js_insert_after — insert a small snippet immediately after one exact existing anchor.\n4) exact_text_replace — use only for simple text/value changes.\nUse at most 3 operations total. Operations may target the same file. Every anchor/replacement must be unique against the current project state. Do NOT return complete files. Do NOT rewrite unrelated code. Do NOT invent a new operation. For vague requests such as 'make the menu better', return status needs_clarification with one concise question. Never return markdown or prose outside the schema.`;
-  const result = await generateWithTimeout(getClient(), MODEL, `${system}\n\nUSER CHANGE:\n${String(instruction || "").slice(0, 2000)}\n\nEXISTING PROJECT:\n${source}`, structuredJsonConfig(STUDIO_EDIT_SCHEMA), 12000);
+  const result = await generateWithTimeout(getClient(), MODEL, `${system}\n\nUSER CHANGE:\n${String(instruction || "").slice(0, 2000)}\n\nEXISTING PROJECT:\n${source}`, { ...structuredJsonConfig(STUDIO_EDIT_SCHEMA), maxOutputTokens: 1800, thinkingConfig: { thinkingLevel: "low" } }, 14000);
   return parseJson(result.text);
 };
 
