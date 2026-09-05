@@ -12,7 +12,6 @@ const send = (res, status, payload) => {
   res.setHeader("Cache-Control", "no-store");
   return res.status(status).json(payload);
 };
-
 const fail = (message, status, code) => Object.assign(new Error(message), { status, code });
 
 const parseJson = (text) => {
@@ -46,6 +45,8 @@ const generateProject = async ({ prompt, referenceFiles = [] }) => {
 
 const countOccurrences = (source, needle) => source.split(needle).length - 1;
 
+// Measure one localized replacement/insertion by its changed span. This avoids the old
+// positional character comparison, where an insertion made every later character look changed.
 const editSpan = (before, after) => {
   let prefix = 0;
   const maxPrefix = Math.min(before.length, after.length);
@@ -69,21 +70,22 @@ const applyCssProperty = (files, edit) => {
   if (!path || !selector || !/^[a-z-]+$/i.test(property) || !value) throw fail("Studio produced an invalid CSS property edit.", 502, "invalid_edit");
   if (!files[path]) throw fail(`Studio could not find ${path}.`, 409, "edit_target_missing");
   const source = files[path];
-  const selectorPattern = new RegExp(`(^|\\n)([ \\t]*)${selector.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\s*\\{([\\s\\S]*?)\\n?\\2\\}`, "g");
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const selectorPattern = new RegExp(`(^|\n)([ \t]*)${escapedSelector}\s*\{([\s\S]*?)\n?\2\}`, "g");
   const matches = [...source.matchAll(selectorPattern)];
   if (matches.length !== 1) throw fail(`Studio could not safely locate a unique CSS selector in ${path}.`, 409, "edit_not_unique");
   const match = matches[0];
   const block = match[0];
   if (/[{}]/.test(match[3])) throw fail(`Studio could not safely edit a nested CSS block in ${path}.`, 409, "edit_target_unsupported");
-  const declarationPattern = new RegExp(`(^|\\n)([ \\t]*)${property.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\s*:\\s*[^;]+;`, "g");
+  const escapedProperty = property.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const declarationPattern = new RegExp(`(^|\n)([ \t]*)${escapedProperty}\s*:\s*[^;]+;`, "g");
   const declarations = [...match[3].matchAll(declarationPattern)];
   let updatedBlock;
   if (declarations.length === 1) {
     const declaration = declarations[0][0];
-    const replacement = declaration.replace(/(:\\s*)[^;]+;/, `$1${value};`);
-    updatedBlock = block.replace(declaration, replacement);
+    updatedBlock = block.replace(declaration, declaration.replace(/(:\s*)[^;]+;/, `$1${value};`));
   } else if (declarations.length === 0) {
-    const closing = /\n?([ \\t]*)\}$/.exec(block);
+    const closing = /\n?([ \t]*)\}$/.exec(block);
     if (!closing) throw fail("Studio could not safely insert the CSS property.", 409, "edit_target_unsupported");
     updatedBlock = block.slice(0, block.length - closing[0].length) + `\n${closing[1]}  ${property}: ${value};` + closing[0];
   } else {
@@ -121,29 +123,28 @@ const applyTargetedEditsV2 = (files, edits) => {
   if (!Array.isArray(edits) || edits.length < 1 || edits.length > MAX_EDIT_OPS) throw fail("Studio did not return a supported targeted edit plan.", 502, "invalid_edit");
   const next = { ...files };
   const changed = [];
-  const touched = new Set();
+  const changedByFile = new Map();
   for (const edit of edits) {
     const op = String(edit?.operation || "");
     const path = String(edit?.path || "");
-    if (touched.has(path)) throw fail(`Studio returned multiple operations for ${path}; combine them into one safe edit where possible.`, 409, "edit_overlap");
     let result;
     if (op === "css_property_set") result = applyCssProperty(next, edit);
     else if (op === "js_insert_after") result = applyJsInsertAfter(next, edit);
     else if (op === "exact_text_replace") result = applyTextReplace(next, edit);
     else throw fail(`Studio returned unsupported edit operation: ${op || "unknown"}.`, 502, "unsupported_edit_operation");
-    const source = next[path];
-    const ratio = result.changedChars / Math.max(source.length, 1);
-    if (ratio > MAX_EDIT_RATIO) throw fail(`The requested edit would change too much of ${path}; Studio refused a broad regeneration.`, 409, "edit_too_broad");
+    const originalLength = Math.max(files[path]?.length || 0, 1);
+    const cumulative = (changedByFile.get(path) || 0) + result.changedChars;
+    if (cumulative / originalLength > MAX_EDIT_RATIO) throw fail(`The requested edit would change too much of ${path}; Studio refused a broad regeneration.`, 409, "edit_too_broad");
+    changedByFile.set(path, cumulative);
     next[path] = result.updated;
-    touched.add(path);
-    changed.push({ path, operation: result.operation, beforeChars: source.length, afterChars: result.updated.length, changedChars: result.changedChars });
+    changed.push({ path, operation: result.operation, beforeChars: next[path].length - (result.updated.length - result.changedChars), afterChars: result.updated.length, changedChars: result.changedChars });
   }
   return { files: validateFiles(next), changed };
 };
 
 const editProject = async ({ files, instruction }) => {
   const source = Object.entries(files).map(([path, content]) => `--- ${path} ---\n${content}`).join("\n");
-  const system = `You are PromptStudio Studio's narrow targeted code editor. Return JSON only. Supported operations are exactly:\n1) css_property_set: {"operation":"css_property_set","path":"/styles.css","selector":".site-header","property":"background","value":"#2563eb"} — set one CSS declaration in one unique selector block; use for color, spacing, width, display, grid/flex and similar layout changes.\n2) js_insert_after: {"operation":"js_insert_after","path":"/App.js","anchor":"exact existing text","code":"small new JavaScript/JSX snippet"} — insert a small snippet immediately after one exact existing anchor. Use at most 3 operations total and keep each insertion small.\n3) exact_text_replace: {"operation":"exact_text_replace","path":"/App.js","oldText":"exact existing text","newText":"small replacement"} — use only for simple text/value changes.\nFor JavaScript behavior, compose a few small js_insert_after/exact_text_replace operations only when each operation has a precise unique target. Do NOT return complete files. Do NOT rewrite unrelated code. Do NOT invent a new operation. If the instruction is vague or underspecified (for example, 'make the menu better'), return {"status":"needs_clarification","message":"Ask the user one concise question describing what they want changed."} instead of making a broad guess. If the requested change cannot be expressed safely with these three operations, return {"status":"needs_clarification","message":"Ask the user to describe one small specific change."}. Never use markdown fences.`;
+  const system = `You are PromptStudio Studio's narrow targeted code editor. Return JSON only. Supported operations are exactly:\n1) css_property_set: {"operation":"css_property_set","path":"/styles.css","selector":".site-header","property":"background","value":"#2563eb"} — set one CSS declaration in one unique selector block; use for color, spacing, width, display, grid/flex and similar layout changes.\n2) js_insert_after: {"operation":"js_insert_after","path":"/App.js","anchor":"exact existing text","code":"small new JavaScript/JSX snippet"} — insert a small snippet immediately after one exact existing anchor. Use at most 3 operations total and keep each insertion small.\n3) exact_text_replace: {"operation":"exact_text_replace","path":"/App.js","oldText":"exact existing text","newText":"small replacement"} — use only for simple text/value changes.\nFor JavaScript behavior, compose up to 3 small operations if needed (for example, insert a state declaration, insert a handler after it, then make one exact JSX attribute replacement). Operations may target the same file. Every anchor/replacement must be unique against the current project state. Do NOT return complete files. Do NOT rewrite unrelated code. Do NOT invent a new operation. If the instruction is vague or underspecified (for example, 'make the menu better'), return {"status":"needs_clarification","message":"Ask the user one concise question describing what they want changed."} instead of making a broad guess. If the requested change cannot be expressed safely with these three operations, return {"status":"needs_clarification","message":"Ask the user to describe one small specific change."}. Never use markdown fences.`;
   const result = await getClient().models.generateContent({ model: MODEL, contents: `${system}\n\nUSER CHANGE:\n${String(instruction || "").slice(0, 2000)}\n\nEXISTING PROJECT:\n${source}` });
   return parseJson(result.text);
 };
