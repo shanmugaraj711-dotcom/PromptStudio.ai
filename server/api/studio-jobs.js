@@ -71,12 +71,31 @@ const generateWithTimeout = async (model, contents) => {
   finally { clearTimeout(timer); }
 };
 
+const LANDING_MENU_FILLERS = [
+  { name: "Signature Favorite", description: "A standout choice from the menu.", price: "Ask us", tag: "Featured" },
+  { name: "House Special", description: "A popular option selected with care.", price: "Ask us", tag: "Popular" },
+  { name: "Classic Choice", description: "A dependable favourite for any occasion.", price: "Ask us", tag: "Classic" }
+];
 const PRODUCT_MENU_FILLERS = [
   { name: "Signature Favorite", description: "A standout choice from the collection.", tag: "Featured" },
   { name: "House Special", description: "A popular option selected with care.", tag: "Popular" },
   { name: "Classic Choice", description: "A dependable favourite for any occasion.", tag: "Classic" },
   { name: "Customer Pick", description: "A well-loved choice worth trying.", tag: "Favourite" }
 ];
+
+const normalizeLandingPageSpec = (raw) => {
+  if (!raw || raw.layout !== "landing-page") return raw;
+  const content = raw.content && typeof raw.content === "object" ? raw.content : {};
+  const menu = content.menu && typeof content.menu === "object" ? content.menu : {};
+  const items = Array.isArray(menu.items) ? [...menu.items].slice(0, 6) : [];
+  const originalItemCount = items.length; let fillerIndex = 0;
+  while (items.length < 3) { items.push(LANDING_MENU_FILLERS[fillerIndex % LANDING_MENU_FILLERS.length]); fillerIndex += 1; }
+  const normalized = { ...raw, version: "1.0", layout: "landing-page", sections: [
+    { id: "hero", type: "hero", variant: "split" }, { id: "menu", type: "menu", variant: "cards" }, { id: "booking", type: "booking", variant: "form" }
+  ], components: ["navbar", "hero", "menu-card", "booking-form", "footer"], content: { ...content, menu: { ...menu, items } }, responsive: { breakpoint: "768px", hero: "stack", menuColumns: { desktop: 3, mobile: 1 }, navigation: "collapse" } };
+  console.info("Studio landing page spec normalized", { originalItemCount, normalizedItemCount: items.length, sectionsCanonicalized: true, responsiveCanonicalized: true });
+  return normalized;
+};
 
 const normalizeProductMenuSpec = (raw) => {
   if (!raw || raw.layout !== "product-menu-showcase") return raw;
@@ -100,7 +119,7 @@ const generateSpec = async (prompt) => {
   for (const model of MODEL_SEQUENCE) {
     const startedAt = Date.now();
     try {
-      const result = await generateWithTimeout(model, contents); const raw = parseJson(result.text, "invalid_spec_response"); const normalized = normalizeProductMenuSpec(raw); const spec = validateSpec(normalized);
+      const result = await generateWithTimeout(model, contents); const raw = parseJson(result.text, "invalid_spec_response"); const normalized = raw?.layout === "product-menu-showcase" ? normalizeProductMenuSpec(raw) : normalizeLandingPageSpec(raw); const spec = validateSpec(normalized);
       console.info("Studio spec stage completed", { model, layout: spec.layout, durationMs: Date.now() - startedAt }); return { spec, model };
     } catch (error) {
       lastError = error; console.warn("Studio spec model failed", { model, durationMs: Date.now() - startedAt, transient: isTransient(error), quota: isQuotaError(error), error: safeErrorDetails(error) });
