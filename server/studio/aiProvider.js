@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { logAIUsage } from "./aiUsage.js";
 
 // TEMPORARY OVERRIDE: use 3.5-Lite while 3.7/3.6 daily quotas are exhausted.
 // Revisit after the daily quota reset; do not treat this as the permanent model choice.
@@ -25,6 +26,8 @@ export const createAIProvider = () => ({
       temporaryOverride: true,
       reason: TEMPORARY_OVERRIDE_REASON,
     });
-    return getGeminiClient().models.generateContent({ model: activeModel, contents, config });
+    const response = await getGeminiClient().models.generateContent({ model: activeModel, contents, config });
+    logAIUsage(response, activeModel, { stage: "spec", requestedModel: model });
+    return response;
   },
 });
