@@ -2,7 +2,8 @@ import { GoogleGenAI } from "@google/genai";
 import { requireUser, adminDb } from "./_firebaseAdmin.js";
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.7-flash";
-const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.6-flash";
+const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash-lite";
+const SECOND_FALLBACK_MODEL = process.env.GEMINI_SECOND_FALLBACK_MODEL || "gemini-3.6-flash";
 const MAX_FILES = 8;
 const MAX_FILE_CHARS = 50000;
 const MAX_ATTEMPTS = 3;
@@ -55,6 +56,18 @@ const isTransient = (error) => {
   return [408, 429, 500, 502, 503, 504].includes(status) || /high demand|temporar|unavailable|overload|timeout|aborted|deadline/.test(message);
 };
 
+const publicGenerationError = (error) => {
+  const message = String(error?.message || "").trim();
+  try {
+    const parsed = JSON.parse(message);
+    if (parsed?.error?.message || parsed?.error?.code || parsed?.error?.status) return "Studio AI is busy right now. Please try again in a moment.";
+  } catch {
+    // Keep Studio's own structured error messages; only hide provider-shaped JSON.
+  }
+  if (isTransient(error)) return "Studio AI is busy right now. Please try again in a moment.";
+  return message || "Studio could not generate the preview.";
+};
+
 const generateWithTimeout = async (model, contents) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), GENERATION_TIMEOUT_MS);
@@ -70,7 +83,7 @@ const generateWithTimeout = async (model, contents) => {
 };
 
 const generateProjectAttempt = async (prompt, attempt) => {
-  const model = attempt === 1 ? MODEL : FALLBACK_MODEL;
+  const model = [MODEL, FALLBACK_MODEL, SECOND_FALLBACK_MODEL][Math.max(0, Math.min(attempt, 3) - 1)];
   const system = "You are PromptStudio Studio's code generator. Create a small, polished, runnable React app for an in-browser preview. Return only JSON matching the schema. Use React and plain CSS only. You may import only react or react-dom. Do NOT import lucide-react or any other third-party package. No network calls, secrets, backend, or external assets. Keep the project small, normally 3 files. Make it visually polished, responsive and interactive. It must run in a standard Sandpack React environment. Return only essential files.";
   const contents = `${system}\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, 12000)}`;
   const result = await generateWithTimeout(model, contents);
@@ -131,10 +144,11 @@ const processJob = async (uid, jobId) => {
   } catch (error) {
     const retryable = isTransient(error) && data.attempt < MAX_ATTEMPTS;
     if (retryable) {
-      await ref.update({ status: "building", stage: "layout", processing: false, message: "The generator is retrying with a faster model.", lastError: error?.code || "generation_retry", updatedAt: Date.now() });
-      return { ...data, status: "building", stage: "layout", processing: false, message: "The generator is retrying with a faster model." };
+      const retryMessage = "Studio is busy right now. Retrying automatically…";
+      await ref.update({ status: "building", stage: "layout", processing: false, message: retryMessage, lastError: error?.code || "generation_retry", updatedAt: Date.now() });
+      return { ...data, status: "building", stage: "layout", processing: false, message: retryMessage };
     }
-    const message = error?.message || "Studio could not generate the preview.";
+    const message = publicGenerationError(error);
     await ref.update({ status: "failed", processing: false, error: message, updatedAt: Date.now() });
     return { ...data, status: "failed", processing: false, error: message };
   }
