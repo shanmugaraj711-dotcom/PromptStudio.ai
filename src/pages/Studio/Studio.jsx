@@ -5,12 +5,12 @@ import StudioPreview from "../../components/studio/StudioPreview";
 import { generatePrompt } from "../../services/promptGenerator";
 import { createStudioJob, getStudioJob, processStudioJob, editStudioProject } from "../../services/studioService";
 
-const STAGE_ORDER = ["planning", "layout", "validation", "ready"];
+const STAGE_ORDER = ["architecture", "implementation", "validation", "ready"];
 const stageIndex = (stage) => Math.max(0, STAGE_ORDER.indexOf(stage));
 
 function GenerationProgress({ stage, message }) {
   const current = stageIndex(stage);
-  const steps = [["planning", "Structure planned"], ["layout", "Building the interface"], ["validation", "Validating preview"], ["ready", "Preview ready"]];
+  const steps = [["architecture", "Architecture planned"], ["implementation", "Building the interface"], ["validation", "Validating preview"], ["ready", "Preview ready"]];
   return <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur sm:p-8"><div className="flex items-center gap-3 text-white"><span className="h-3 w-3 animate-pulse rounded-full bg-indigo-400" /><h2 className="text-xl font-black">Building your website</h2></div><p className="mt-2 text-sm text-slate-400">{message || "Studio is working through the build."}</p><div className="mt-6 space-y-3">{steps.map(([key, label], index) => { const done = current > index || (key === "ready" && stage === "ready"); const active = current === index && stage !== "ready"; return <div key={key} className="flex items-center gap-3 rounded-2xl border border-white/5 bg-slate-950/30 px-4 py-3"><span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-black ${done ? "bg-emerald-400/20 text-emerald-300" : active ? "bg-indigo-400/20 text-indigo-300" : "bg-white/5 text-slate-600"}`}>{done ? "✓" : active ? "•" : "○"}</span><span className={done || active ? "font-semibold text-white" : "text-slate-500"}>{label}</span>{active && <span className="ml-auto text-xs font-bold text-indigo-300">In progress</span>}</div>; })}</div></div>;
 }
 
@@ -21,7 +21,7 @@ export default function Studio() {
   const [changed, setChanged] = useState([]);
   const [edit, setEdit] = useState("");
   const [status, setStatus] = useState("ready");
-  const [jobStage, setJobStage] = useState("planning");
+  const [jobStage, setJobStage] = useState("architecture");
   const [jobMessage, setJobMessage] = useState("");
   const [error, setError] = useState("");
   const [lastPrompt, setLastPrompt] = useState("");
@@ -31,7 +31,7 @@ export default function Studio() {
   const handleGenerate = async (event) => {
     event.preventDefault();
     if (!idea.trim()) return;
-    setError(""); setChanged([]); setFiles(null); setStatus("building"); setJobStage("planning"); setJobMessage("Creating your Studio build job…");
+    setError(""); setChanged([]); setFiles(null); setStatus("building"); setJobStage("architecture"); setJobMessage("Creating your Studio build job…");
     try {
       const authenticatedUser = await getUser();
       const idToken = await authenticatedUser.getIdToken();
@@ -39,17 +39,17 @@ export default function Studio() {
       setLastPrompt(generated.prompt);
       const created = await createStudioJob({ prompt: generated.prompt, idToken });
       let job = created;
-      setJobStage(job.stage || "planning"); setJobMessage(job.message || "Structure planned. Preparing the build.");
+      setJobStage(job.stage || "architecture"); setJobMessage(job.message || "Preparing the architecture job.");
 
-      for (let i = 0; i < 8 && job.status !== "ready"; i += 1) {
+      for (let i = 0; i < 24 && job.status !== "ready"; i += 1) {
         if (job.status === "failed") throw Object.assign(new Error(job.error || "Studio could not build the preview."), { code: "studio_job_failed" });
-        setJobStage(job.stage || "planning"); setJobMessage(job.message || "Studio is working on your preview…");
+        setJobStage(job.stage || "architecture"); setJobMessage(job.message || "Studio is working on your preview…");
         await processStudioJob({ jobId: created.jobId, idToken });
         job = await getStudioJob({ jobId: created.jobId, idToken });
-        setJobStage(job.stage || "planning"); setJobMessage(job.message || "Studio is working on your preview…");
+        setJobStage(job.stage || "architecture"); setJobMessage(job.message || "Studio is working on your preview…");
         if (job.status === "ready") { setFiles(job.files); break; }
         if (job.status === "failed") throw Object.assign(new Error(job.error || "Studio could not build the preview."), { code: "studio_job_failed" });
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        await new Promise((resolve) => setTimeout(resolve, job.retryAt ? Math.max(800, Math.min(5000, Number(job.retryAt) - Date.now())) : 800));
       }
       if (job.status !== "ready") throw new Error("Studio could not finish the preview in the available build attempts. Please try again.");
     } catch (err) {
