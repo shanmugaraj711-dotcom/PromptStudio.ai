@@ -1,17 +1,18 @@
 import { GoogleGenAI } from "@google/genai";
 import { requireUser, adminDb } from "./_firebaseAdmin.js";
+import { LANDING_PAGE_SPEC_SCHEMA, renderStudioSpec, validateStudioSpec } from "../studio/templateRenderer.js";
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.7-flash";
 const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.6-flash";
 const SECOND_FALLBACK_MODEL = process.env.GEMINI_SECOND_FALLBACK_MODEL || "gemini-3.8-flash";
 const MODEL_SEQUENCE = [...new Set([MODEL, FALLBACK_MODEL, SECOND_FALLBACK_MODEL])];
-const MAX_FILES = 8;
-const MAX_FILE_CHARS = 50000;
 const MAX_AI_ATTEMPTS = 3;
-const GENERATION_TIMEOUT_MS = 24000;
+const GENERATION_TIMEOUT_MS = 18000;
 const JOB_LEASE_MS = 60000;
 const JOB_TTL_MS = 30 * 60 * 1000;
 const RETRY_DELAYS_MS = [1500, 4000];
+const MAX_PROMPT_CHARS = 12000;
+const MAX_FILE_CHARS = 50000;
 
 const send = (res, status, payload) => { res.setHeader("Cache-Control", "no-store"); return res.status(status).json(payload); };
 const fail = (message, status, code) => Object.assign(new Error(message), { status, code });
@@ -21,59 +22,9 @@ const parseJson = (text, code = "invalid_ai_response") => {
   try { return JSON.parse(raw); } catch {}
   const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
   if (fenced) { try { return JSON.parse(fenced[1]); } catch {} }
-  const first = raw.indexOf("{");
-  const last = raw.lastIndexOf("}");
+  const first = raw.indexOf("{"); const last = raw.lastIndexOf("}");
   if (first >= 0 && last > first) { try { return JSON.parse(raw.slice(first, last + 1)); } catch {} }
-  throw fail("The Studio AI returned an invalid response.", 502, code);
-};
-
-const ARCHITECTURE_SCHEMA = {
-  type: "object",
-  properties: {
-    app: { type: "object", properties: { name: { type: "string" }, purpose: { type: "string" } }, required: ["name", "purpose"], additionalProperties: false },
-    pages: { type: "array", items: { type: "object", properties: { id: { type: "string" }, purpose: { type: "string" } }, required: ["id", "purpose"], additionalProperties: false } },
-    sections: { type: "array", items: { type: "object", properties: { id: { type: "string" }, purpose: { type: "string" } }, required: ["id", "purpose"], additionalProperties: false } },
-    components: { type: "array", items: { type: "string" } },
-    responsiveRules: { type: "array", items: { type: "string" } }
-  },
-  required: ["app", "pages", "sections", "components", "responsiveRules"],
-  additionalProperties: false
-};
-
-const APP_SCHEMA = { type: "object", properties: { files: { type: "object", properties: { "/App.js": { type: "string" } }, required: ["/App.js"], additionalProperties: false } }, required: ["files"], additionalProperties: false };
-const CSS_SCHEMA = { type: "object", properties: { files: { type: "object", properties: { "/styles.css": { type: "string" } }, required: ["/styles.css"], additionalProperties: false } }, required: ["files"], additionalProperties: false };
-const structuredJsonConfig = (schema) => ({ responseMimeType: "application/json", responseJsonSchema: schema });
-
-const normalizeFiles = (files) => {
-  if (!files || typeof files !== "object" || Array.isArray(files)) throw fail("Studio returned no project files.", 502, "invalid_project");
-  const normalized = {};
-  for (const [rawPath, content] of Object.entries(files)) {
-    if (typeof rawPath !== "string" || typeof content !== "string") continue;
-    const path = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
-    if (!/^\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+$/.test(path) || path.includes("..") || path.includes("\\") || content.length > MAX_FILE_CHARS) throw fail("Studio returned an invalid project file.", 502, "invalid_project");
-    normalized[path] = content;
-  }
-  const entries = Object.entries(normalized);
-  if (!entries.length || entries.length > MAX_FILES) throw fail("Studio returned an invalid number of project files.", 502, "invalid_project");
-  return Object.fromEntries(entries);
-};
-
-const deterministicValidate = (files) => {
-  const normalized = normalizeFiles(files);
-  const paths = Object.keys(normalized);
-  const appPath = ["/App.js", "/App.jsx", "/src/App.js", "/src/App.jsx"].find((p) => normalized[p]?.trim());
-  if (!appPath) throw fail("Studio preview is missing its React App entry.", 422, "validation_failed");
-  const source = Object.values(normalized).join("\n");
-  if (!/\bReact\b|\breact\b/.test(source)) throw fail("Studio preview does not contain a React application.", 422, "validation_failed");
-  if (/\b(?:fetch|XMLHttpRequest|WebSocket|eval|Function)\s*\(/.test(source) || /document\.cookie|localStorage|sessionStorage/.test(source)) throw fail("Studio preview contains a prohibited browser or network operation.", 422, "validation_failed");
-  const imports = source.match(/import\s+(?:[^;\n]+\s+from\s+)?["']([^"']+)["']/g) || [];
-  for (const line of imports) {
-    const specifier = /["']([^"']+)["']/.exec(line)?.[1] || "";
-    if (specifier.startsWith(".") || ["react", "react-dom", "react-dom/client"].includes(specifier)) continue;
-    throw fail(`Studio preview uses an unsupported dependency: ${specifier}.`, 422, "validation_failed");
-  }
-  if (!paths.some((p) => /(?:^|\/)(?:styles|App)\.css$/i.test(p))) throw fail("Studio preview is missing its stylesheet.", 422, "validation_failed");
-  return { valid: true, appPath, fileCount: paths.length, checkedAt: Date.now() };
+  throw fail("The Studio AI returned an invalid structured specification.", 502, code);
 };
 
 const getClient = () => {
@@ -90,64 +41,77 @@ const isTransient = (error) => {
 const safeErrorDetails = (error) => ({ code: error?.code || null, status: Number(error?.status || error?.statusCode || error?.httpStatus || 0) || null, message: String(error?.message || "unknown").slice(0, 240) });
 const publicGenerationError = (error) => isTransient(error) ? "Studio AI is busy right now. Retrying automatically…" : (String(error?.message || "").trim() || "Studio could not generate the preview.");
 
-const generateWithTimeout = async (model, contents, schema, maxOutputTokens) => {
+const generateWithTimeout = async (model, contents) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), GENERATION_TIMEOUT_MS);
   try {
-    return await getClient().models.generateContent({ model, contents, config: { ...structuredJsonConfig(schema), maxOutputTokens, thinkingConfig: { thinkingLevel: "low" }, abortSignal: controller.signal } });
+    return await getClient().models.generateContent({ model, contents, config: { responseMimeType: "application/json", responseJsonSchema: LANDING_PAGE_SPEC_SCHEMA, maxOutputTokens: 2200, thinkingConfig: { thinkingLevel: "low" }, abortSignal: controller.signal } });
   } finally { clearTimeout(timer); }
 };
 
-const runModelFailover = async ({ contents, schema, maxOutputTokens, parse }) => {
+const generateSpec = async (prompt) => {
+  const contents = `You are PromptStudio Studio's structured design intelligence. Convert the user's generated app brief into ONE compact Studio Spec. Do not write React, JSX, CSS, HTML or source code. Return only JSON matching the supplied schema.\n\nSUPPORTED V0 PATH ONLY:\n- layout must be landing-page.\n- sections must be exactly hero, menu, booking in that order.\n- components must be exactly navbar, hero, menu-card, booking-form, footer.\n- responsive rules are fixed to 768px, hero stacks, menu is 3 columns on desktop and 1 on mobile, navigation collapses.\n- Preserve useful brand, copy, menu items, prices, calls to action and visual direction from the brief.\n- Choose a coherent palette and mood that fits the business.\n- Never invent unsupported capabilities or return source code.\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, MAX_PROMPT_CHARS)}`;
   let lastError;
   for (const model of MODEL_SEQUENCE) {
     const startedAt = Date.now();
     try {
-      const result = await generateWithTimeout(model, contents, schema, maxOutputTokens);
-      const value = parse(result.text);
-      console.info("Studio AI stage completed", { model, durationMs: Date.now() - startedAt });
-      return { value, model };
+      const result = await generateWithTimeout(model, contents);
+      const raw = parseJson(result.text, "invalid_spec_response");
+      const spec = validateStudioSpec(raw);
+      console.info("Studio spec stage completed", { model, durationMs: Date.now() - startedAt });
+      return { spec, model };
     } catch (error) {
       lastError = error;
-      console.warn("Studio AI model failed", { model, durationMs: Date.now() - startedAt, transient: isTransient(error), error: safeErrorDetails(error) });
+      console.warn("Studio spec model failed", { model, durationMs: Date.now() - startedAt, transient: isTransient(error), error: safeErrorDetails(error) });
       if (!isTransient(error)) throw error;
     }
   }
-  throw lastError || fail("Studio AI could not generate the requested stage.", 502, "studio_ai_failed");
+  throw lastError || fail("Studio AI could not produce a structured specification.", 502, "studio_ai_failed");
 };
 
-const generateArchitecture = async (prompt) => {
-  const contents = `You are PromptStudio Studio's architecture planner. Convert the user's generated app brief into a compact implementation blueprint. Do not write source code. Return only JSON matching the schema. Define the app purpose, pages, sections, reusable components and responsive rules. Keep it small enough for an in-browser React preview.\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, 12000)}`;
-  const { value, model } = await runModelFailover({ contents, schema: ARCHITECTURE_SCHEMA, maxOutputTokens: 1600, parse: (text) => parseJson(text, "invalid_architecture") });
-  return { architecture: value, model };
+const normalizeRenderedFiles = (files) => {
+  if (!files || typeof files !== "object" || Array.isArray(files)) throw fail("Studio renderer returned no project files.", 500, "renderer_failed");
+  const allowed = ["/App.js", "/styles.css"];
+  const normalized = {};
+  for (const path of allowed) {
+    if (typeof files[path] !== "string" || !files[path].trim() || files[path].length > MAX_FILE_CHARS) throw fail(`Studio renderer did not produce ${path}.`, 500, "renderer_failed");
+    normalized[path] = files[path];
+  }
+  return normalized;
 };
 
-const generateApp = async (prompt, architecture) => {
-  const contents = `You are PromptStudio Studio's React UI implementation generator. Build ONLY the React application code from the approved architecture and user brief. Return only JSON matching the schema. Create exactly one file named /App.js. Use React only; imports may be only react. Do not import any third-party package. No network calls, secrets, backend, external assets, or CSS in this response. The App.js must be polished, semantic, interactive where appropriate, and reference classes that the styling job can style.\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, 12000)}\n\nAPPROVED ARCHITECTURE:\n${JSON.stringify(architecture)}`;
-  const { value, model } = await runModelFailover({ contents, schema: APP_SCHEMA, maxOutputTokens: 2800, parse: (text) => parseJson(text, "invalid_app_response") });
-  const files = normalizeFiles(value.files);
-  if (!files["/App.js"] || Object.keys(files).length !== 1) throw fail("Studio returned an invalid React UI artifact.", 502, "invalid_project");
-  return { files, model };
-};
-
-const generateStyles = async (prompt, architecture, appFiles) => {
-  const app = appFiles["/App.js"] || "";
-  const contents = `You are PromptStudio Studio's visual styling generator. Style the already-generated React app. Return only JSON matching the schema. Create exactly one file named /styles.css. Do not change or regenerate App.js. Use plain CSS only. Make the result premium, cohesive, responsive, mobile-friendly, accessible, and visually impressive. Include desktop and mobile behavior, spacing, typography, buttons, cards, sections, states, and tasteful transitions where useful. Do not use external assets, @import, URLs, or third-party dependencies.\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, 12000)}\n\nAPPROVED ARCHITECTURE:\n${JSON.stringify(architecture)}\n\nGENERATED APP.JS:\n${app.slice(0, MAX_FILE_CHARS)}`;
-  const { value, model } = await runModelFailover({ contents, schema: CSS_SCHEMA, maxOutputTokens: 2600, parse: (text) => parseJson(text, "invalid_css_response") });
-  const files = normalizeFiles(value.files);
-  if (!files["/styles.css"] || Object.keys(files).length !== 1) throw fail("Studio returned an invalid stylesheet artifact.", 502, "invalid_project");
-  return { files, model };
+const deterministicValidate = (files) => {
+  const normalized = normalizeRenderedFiles(files);
+  const app = normalized["/App.js"]; const css = normalized["/styles.css"];
+  if (!/from\s+["']react["']/.test(app) || !/export\s+default\s+function\s+App/.test(app)) throw fail("Studio preview failed its React artifact check.", 422, "validation_failed");
+  if (!/\.site-shell\b/.test(css) || !/@media\s*\(max-width:\s*768px\)/.test(css)) throw fail("Studio preview failed its responsive stylesheet check.", 422, "validation_failed");
+  if (/\b(?:fetch|XMLHttpRequest|WebSocket|eval|Function)\s*\(/.test(app) || /document\.cookie|localStorage|sessionStorage/.test(app)) throw fail("Studio preview contains a prohibited browser or network operation.", 422, "validation_failed");
+  const imports = app.match(/import\s+(?:[^;\n]+\s+from\s+)?["']([^"']+)["']/g) || [];
+  for (const line of imports) {
+    const specifier = /["']([^"']+)["']/.exec(line)?.[1] || "";
+    if (specifier !== "react") throw fail(`Studio preview uses an unsupported dependency: ${specifier}.`, 422, "validation_failed");
+  }
+  return { valid: true, fileCount: 2, appPath: "/App.js", renderer: "landing-page-v1", checkedAt: Date.now() };
 };
 
 const currentStage = (data) => {
-  if (data.status === "queued" || data.stage === "architecture") return "architecture";
-  if (data.stage === "app" || data.stage === "implementation" || data.status === "building") return "app";
-  if (data.stage === "styling" || data.status === "styling") return "styling";
+  if (data.status === "queued" || data.stage === "spec") return "spec";
+  if (data.stage === "render" || data.status === "rendering") return "render";
   if (data.stage === "validation" || data.status === "validating") return "validation";
-  return data.stage || "architecture";
+  return data.stage || "spec";
 };
 
-const publicJob = (data) => ({ jobId: data.jobId, status: data.status, stage: currentStage(data), attempt: Number(data.attempt || 0), message: data.message || null, retryAt: data.nextAttemptAt || null, files: data.status === "ready" ? data.files : null, error: data.status === "failed" ? data.error : null, artifacts: { architecture: data.architecture || null, validation: data.validation || null } });
+const publicJob = (data) => ({
+  jobId: data.jobId,
+  status: data.status,
+  stage: currentStage(data),
+  attempt: Number(data.attempt || 0),
+  message: data.message || null,
+  retryAt: data.nextAttemptAt || null,
+  files: data.status === "ready" ? data.files : null,
+  error: data.status === "failed" ? data.error : null,
+  artifacts: { spec: data.spec || null, validation: data.validation || null }
+});
 
 const getJob = async (uid, jobId) => {
   const snap = await adminDb().collection("studioJobs").doc(jobId).get();
@@ -156,8 +120,7 @@ const getJob = async (uid, jobId) => {
 };
 
 const claimJob = async (uid, jobId) => {
-  const db = adminDb();
-  const ref = db.collection("studioJobs").doc(jobId);
+  const db = adminDb(); const ref = db.collection("studioJobs").doc(jobId);
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists || snap.data()?.uid !== uid) throw fail("Studio job not found.", 404, "job_not_found");
@@ -171,8 +134,7 @@ const claimJob = async (uid, jobId) => {
       tx.update(ref, { status: "failed", processing: false, error, updatedAt: now });
       return { claimed: false, data: { ...data, status: "failed", processing: false, error } };
     }
-    const stage = currentStage(data);
-    const attempt = Number(data.attempt || 0) + 1;
+    const stage = currentStage(data); const attempt = Number(data.attempt || 0) + 1;
     tx.update(ref, { processing: true, processingAt: now, attempt, stage, nextAttemptAt: null, updatedAt: now });
     return { claimed: true, data: { ...data, processing: true, processingAt: now, attempt, stage, nextAttemptAt: null } };
   });
@@ -181,8 +143,8 @@ const claimJob = async (uid, jobId) => {
 const scheduleRetry = async (ref, data, error) => {
   const delay = RETRY_DELAYS_MS[Math.min(Number(data.attempt || 1) - 1, RETRY_DELAYS_MS.length - 1)];
   const nextAttemptAt = Date.now() + delay + Math.floor(Math.random() * 400);
-  console.warn("Studio job retry scheduled", { stage: data.stage, attempt: data.attempt, nextAttemptAt, error: safeErrorDetails(error) });
   const message = "Studio AI is busy right now. Retrying automatically…";
+  console.warn("Studio spec retry scheduled", { attempt: data.attempt, nextAttemptAt, error: safeErrorDetails(error) });
   await ref.update({ processing: false, message, nextAttemptAt, updatedAt: Date.now(), lastError: safeErrorDetails(error) });
   return { ...data, processing: false, message, nextAttemptAt };
 };
@@ -190,24 +152,18 @@ const scheduleRetry = async (ref, data, error) => {
 const processJob = async (uid, jobId) => {
   const claim = await claimJob(uid, jobId);
   if (!claim.claimed) return { ...claim.data, busy: Boolean(claim.busy), retrying: Boolean(claim.retrying) };
-  const { data } = claim;
-  const ref = adminDb().collection("studioJobs").doc(jobId);
+  const { data } = claim; const ref = adminDb().collection("studioJobs").doc(jobId);
   try {
-    if (data.stage === "architecture") {
-      const { architecture, model } = await generateArchitecture(data.prompt);
-      await ref.update({ stage: "app", status: "building", processing: false, attempt: 0, architecture, architectureModel: model, message: "Architecture complete. Building the React interface now.", nextAttemptAt: null, updatedAt: Date.now() });
-      return { ...data, stage: "app", status: "building", processing: false, attempt: 0, architecture, architectureModel: model, message: "Architecture complete. Building the React interface now." };
+    if (data.stage === "spec") {
+      const { spec, model } = await generateSpec(data.prompt);
+      await ref.update({ stage: "render", status: "rendering", processing: false, attempt: 0, spec, specModel: model, message: "Studio Spec ready. Rendering the interface from PromptStudio templates.", nextAttemptAt: null, updatedAt: Date.now() });
+      return { ...data, stage: "render", status: "rendering", processing: false, attempt: 0, spec, specModel: model, message: "Studio Spec ready. Rendering the interface from PromptStudio templates." };
     }
-    if (data.stage === "app") {
-      const { files, model } = await generateApp(data.prompt, data.architecture);
-      await ref.update({ stage: "styling", status: "styling", processing: false, attempt: 0, appFiles: files, implementationModel: model, message: "React interface complete. Styling it now.", nextAttemptAt: null, updatedAt: Date.now() });
-      return { ...data, stage: "styling", status: "styling", processing: false, attempt: 0, appFiles: files, implementationModel: model, message: "React interface complete. Styling it now." };
-    }
-    if (data.stage === "styling") {
-      const { files: cssFiles, model } = await generateStyles(data.prompt, data.architecture, data.appFiles);
-      const files = { ...(data.appFiles || {}), ...cssFiles };
-      await ref.update({ stage: "validation", status: "validating", processing: false, attempt: 0, files, stylingModel: model, message: "Styling complete. Validating the preview now.", nextAttemptAt: null, updatedAt: Date.now() });
-      return { ...data, stage: "validation", status: "validating", processing: false, attempt: 0, files, stylingModel: model, message: "Styling complete. Validating the preview now." };
+    if (data.stage === "render") {
+      const spec = validateStudioSpec(data.spec);
+      const files = normalizeRenderedFiles(renderStudioSpec(spec));
+      await ref.update({ stage: "validation", status: "validating", processing: false, attempt: 0, files, renderer: "landing-page-v1", message: "Template render complete. Validating the preview now.", nextAttemptAt: null, updatedAt: Date.now() });
+      return { ...data, stage: "validation", status: "validating", processing: false, attempt: 0, files, renderer: "landing-page-v1", message: "Template render complete. Validating the preview now." };
     }
     if (data.stage === "validation") {
       const validation = deterministicValidate(data.files);
@@ -216,8 +172,7 @@ const processJob = async (uid, jobId) => {
     }
     throw fail("Studio job reached an invalid stage.", 500, "invalid_job_stage");
   } catch (error) {
-    const aiStage = ["architecture", "app", "styling"].includes(data.stage);
-    if (aiStage && isTransient(error) && Number(data.attempt || 0) < MAX_AI_ATTEMPTS) return scheduleRetry(ref, data, error);
+    if (data.stage === "spec" && isTransient(error) && Number(data.attempt || 0) < MAX_AI_ATTEMPTS) return scheduleRetry(ref, data, error);
     console.error("Studio job failed", { stage: data.stage, attempt: data.attempt, error: safeErrorDetails(error) });
     const message = data.stage === "validation" ? "Studio preview failed deterministic validation." : publicGenerationError(error);
     await ref.update({ status: "failed", processing: false, error: message, nextAttemptAt: null, updatedAt: Date.now(), lastError: safeErrorDetails(error) });
@@ -227,8 +182,7 @@ const processJob = async (uid, jobId) => {
 
 export default async function handler(req, res) {
   try {
-    const user = await requireUser(req);
-    const uid = user.uid;
+    const user = await requireUser(req); const uid = user.uid;
     if (req.method === "GET") {
       const jobId = String(req.query?.jobId || "");
       if (!jobId) return send(res, 400, { code: "invalid_job", message: "A Studio job id is required." });
@@ -242,7 +196,7 @@ export default async function handler(req, res) {
       if (prompt.length < 3) return send(res, 400, { code: "invalid_prompt", message: "A generated prompt is required." });
       const jobId = globalThis.crypto?.randomUUID?.() || `studio-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const now = Date.now();
-      const data = { uid, prompt: prompt.slice(0, 12000), status: "queued", stage: "architecture", attempt: 0, processing: false, createdAt: now, updatedAt: now, message: "Preparing the architecture job." };
+      const data = { uid, prompt: prompt.slice(0, MAX_PROMPT_CHARS), status: "queued", stage: "spec", attempt: 0, processing: false, createdAt: now, updatedAt: now, message: "Preparing the structured Studio Spec." };
       await adminDb().collection("studioJobs").doc(jobId).set(data);
       return send(res, 201, publicJob({ jobId, ...data }));
     }
