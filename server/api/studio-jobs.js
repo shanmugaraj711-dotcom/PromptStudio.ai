@@ -2,47 +2,100 @@ import { GoogleGenAI } from "@google/genai";
 import { requireUser, adminDb } from "./_firebaseAdmin.js";
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.7-flash";
-const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash-lite";
-const SECOND_FALLBACK_MODEL = process.env.GEMINI_SECOND_FALLBACK_MODEL || "gemini-3.6-flash";
 const MAX_FILES = 8;
 const MAX_FILE_CHARS = 50000;
-const MAX_ATTEMPTS = 3;
-const GENERATION_TIMEOUT_MS = 12000;
+const MAX_AI_ATTEMPTS = 3;
+const GENERATION_TIMEOUT_MS = 25000;
+const JOB_LEASE_MS = 90000;
 const JOB_TTL_MS = 30 * 60 * 1000;
+const RETRY_DELAYS_MS = [1500, 4000];
 
 const send = (res, status, payload) => {
   res.setHeader("Cache-Control", "no-store");
   return res.status(status).json(payload);
 };
 const fail = (message, status, code) => Object.assign(new Error(message), { status, code });
-const parseJson = (text) => {
+const parseJson = (text, code = "invalid_ai_response") => {
   try { return JSON.parse(String(text || "").trim()); }
-  catch { throw fail("The Studio AI returned an invalid project response.", 502, "invalid_ai_response"); }
+  catch { throw fail("The Studio AI returned an invalid response.", 502, code); }
 };
 
-const STUDIO_PROJECT_SCHEMA = {
+const ARCHITECTURE_SCHEMA = {
   type: "object",
   properties: {
-    files: { type: "object", additionalProperties: { type: "string" } }
+    app: {
+      type: "object",
+      properties: { name: { type: "string" }, purpose: { type: "string" } },
+      required: ["name", "purpose"],
+      additionalProperties: false
+    },
+    pages: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { id: { type: "string" }, purpose: { type: "string" } },
+        required: ["id", "purpose"],
+        additionalProperties: false
+      }
+    },
+    sections: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { id: { type: "string" }, purpose: { type: "string" } },
+        required: ["id", "purpose"],
+        additionalProperties: false
+      }
+    },
+    components: { type: "array", items: { type: "string" } },
+    responsiveRules: { type: "array", items: { type: "string" } }
   },
+  required: ["app", "pages", "sections", "components", "responsiveRules"],
+  additionalProperties: false
+};
+
+const PROJECT_SCHEMA = {
+  type: "object",
+  properties: { files: { type: "object", additionalProperties: { type: "string" } } },
   required: ["files"],
   additionalProperties: false
 };
 
 const structuredJsonConfig = (schema) => ({ responseMimeType: "application/json", responseJsonSchema: schema });
 
-const validateFiles = (files) => {
+const normalizeFiles = (files) => {
   if (!files || typeof files !== "object" || Array.isArray(files)) throw fail("Studio returned no project files.", 502, "invalid_project");
   const normalized = {};
   for (const [rawPath, content] of Object.entries(files)) {
     if (typeof rawPath !== "string" || typeof content !== "string") continue;
     const path = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
-    if (!/^\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+$/.test(path) || path.includes("..") || path.includes("\\") || content.length > MAX_FILE_CHARS) throw fail("Studio returned an invalid project file.", 502, "invalid_project");
+    if (!/^\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+$/.test(path) || path.includes("..") || path.includes("\\") || content.length > MAX_FILE_CHARS) {
+      throw fail("Studio returned an invalid project file.", 502, "invalid_project");
+    }
     normalized[path] = content;
   }
   const entries = Object.entries(normalized);
   if (!entries.length || entries.length > MAX_FILES) throw fail("Studio returned an invalid number of project files.", 502, "invalid_project");
   return Object.fromEntries(entries);
+};
+
+const deterministicValidate = (files) => {
+  const normalized = normalizeFiles(files);
+  const paths = Object.keys(normalized);
+  const appPath = ["/App.js", "/App.jsx", "/src/App.js", "/src/App.jsx"].find((path) => typeof normalized[path] === "string" && normalized[path].trim());
+  if (!appPath) throw fail("Studio preview is missing its React App entry.", 422, "validation_failed");
+  const source = Object.values(normalized).join("\n");
+  if (!source.includes("React") && !source.includes("react")) throw fail("Studio preview does not contain a React application.", 422, "validation_failed");
+  if (/\b(?:fetch|XMLHttpRequest|WebSocket|eval|Function)\s*\(/.test(source) || /document\.cookie|localStorage|sessionStorage/.test(source)) throw fail("Studio preview contains a prohibited browser or network operation.", 422, "validation_failed");
+  const importLines = source.match(/import\s+(?:[^;\n]+\s+from\s+)?["']([^"']+)["']/g) || [];
+  for (const line of importLines) {
+    const match = /["']([^"']+)["']/.exec(line);
+    const specifier = match?.[1] || "";
+    if (specifier.startsWith(".") || specifier === "react" || specifier === "react-dom" || specifier === "react-dom/client") continue;
+    throw fail(`Studio preview uses an unsupported dependency: ${specifier}.`, 422, "validation_failed");
+  }
+  if (!paths.some((path) => /(?:^|\/)(?:styles|App)\.css$/i.test(path))) throw fail("Studio preview is missing its stylesheet.", 422, "validation_failed");
+  return { valid: true, appPath, fileCount: paths.length, checkedAt: Date.now() };
 };
 
 const getClient = () => {
@@ -56,64 +109,61 @@ const isTransient = (error) => {
   return [408, 429, 500, 502, 503, 504].includes(status) || /high demand|temporar|unavailable|overload|timeout|aborted|deadline/.test(message);
 };
 
-const generationModelForAttempt = (attempt) => [MODEL, FALLBACK_MODEL, SECOND_FALLBACK_MODEL][Math.max(0, Math.min(attempt, 3) - 1)];
-
-const classifyGenerationError = (error) => {
-  const status = Number(error?.status || error?.statusCode || 0);
-  const code = String(error?.code || "").toLowerCase();
-  const message = String(error?.message || "").toLowerCase();
-  if (code === "invalid_ai_response" || message.includes("invalid project response")) return "invalid_ai_response";
-  if (code === "invalid_project" || message.includes("invalid project")) return "invalid_project";
-  if (status === 429 || code.includes("rate") || message.includes("rate limit") || message.includes("too many requests")) return "rate_limited";
-  if (status === 408 || status === 504 || message.includes("timeout") || message.includes("aborted") || message.includes("deadline")) return "timeout";
-  if (status === 503 || message.includes("high demand")) return "high_demand";
-  if (status === 500 || status === 502 || message.includes("temporar") || message.includes("unavailable") || message.includes("overload")) return "provider_unavailable";
-  return "unknown";
-};
-
 const publicGenerationError = (error) => {
+  if (isTransient(error)) return "Studio AI is busy right now. Retrying automatically…";
   const message = String(error?.message || "").trim();
-  try {
-    const parsed = JSON.parse(message);
-    if (parsed?.error?.message || parsed?.error?.code || parsed?.error?.status) return "Studio AI is busy right now. Please try again in a moment.";
-  } catch {
-    // Keep Studio's own structured error messages; only hide provider-shaped JSON.
-  }
-  if (isTransient(error)) return "Studio AI is busy right now. Please try again in a moment.";
   return message || "Studio could not generate the preview.";
 };
 
-const generateWithTimeout = async (model, contents) => {
+const generateWithTimeout = async (model, contents, schema, maxOutputTokens) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), GENERATION_TIMEOUT_MS);
   try {
     return await getClient().models.generateContent({
       model,
       contents,
-      config: { ...structuredJsonConfig(STUDIO_PROJECT_SCHEMA), maxOutputTokens: 3200, thinkingConfig: { thinkingLevel: "low" }, abortSignal: controller.signal }
+      config: { ...structuredJsonConfig(schema), maxOutputTokens, thinkingConfig: { thinkingLevel: "low" }, abortSignal: controller.signal }
     });
   } finally {
     clearTimeout(timer);
   }
 };
 
-const generateProjectAttempt = async (prompt, attempt) => {
-  const model = generationModelForAttempt(attempt);
-  const system = "You are PromptStudio Studio's code generator. Create a small, polished, runnable React app for an in-browser preview. Return only JSON matching the schema. Use React and plain CSS only. You may import only react or react-dom. Do NOT import lucide-react or any other third-party package. No network calls, secrets, backend, or external assets. Keep the project small, normally 3 files. Make it visually polished, responsive and interactive. It must run in a standard Sandpack React environment. Return only essential files.";
+const generateArchitecture = async (prompt) => {
+  const system = "You are PromptStudio Studio's architecture planner. Convert the user's generated app brief into a compact implementation blueprint. Do not write source code. Return only JSON matching the schema. Define the app purpose, pages, sections, reusable components and responsive rules. Keep it small enough for an in-browser React preview.";
   const contents = `${system}\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, 12000)}`;
-  const result = await generateWithTimeout(model, contents);
+  const result = await generateWithTimeout(MODEL, contents, ARCHITECTURE_SCHEMA, 1800);
+  return parseJson(result.text, "invalid_architecture");
+};
+
+const generateImplementation = async (prompt, architecture) => {
+  const system = "You are PromptStudio Studio's implementation generator. Turn the approved architecture into a small, polished, runnable React app for an in-browser preview. Return only JSON matching the schema. Use React and plain CSS only. You may import only react or react-dom/react-dom/client. Do NOT import lucide-react or any other third-party package. No network calls, secrets, backend, or external assets. Keep the project small, normally 3 files. Make it visually polished, responsive and interactive. It must run in a standard Sandpack React environment. Include an App file and a stylesheet.";
+  const contents = `${system}\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, 12000)}\n\nAPPROVED ARCHITECTURE:\n${JSON.stringify(architecture)}`;
+  const result = await generateWithTimeout(MODEL, contents, PROJECT_SCHEMA, 3200);
   const payload = parseJson(result.text);
-  return validateFiles(payload.files);
+  return normalizeFiles(payload.files);
+};
+
+const currentStage = (data) => {
+  if (data.status === "queued" || data.stage === "architecture") return "architecture";
+  if (data.status === "building" || data.stage === "implementation") return "implementation";
+  if (data.status === "validating" || data.stage === "validation") return "validation";
+  return data.stage || "architecture";
 };
 
 const publicJob = (data) => ({
   jobId: data.jobId,
   status: data.status,
-  stage: data.stage,
-  attempt: data.attempt || 0,
+  stage: currentStage(data),
+  attempt: Number(data.attempt || 0),
   message: data.message || null,
+  retryAt: data.nextAttemptAt || null,
   files: data.status === "ready" ? data.files : null,
-  error: data.status === "failed" ? data.error : null
+  error: data.status === "failed" ? data.error : null,
+  artifacts: {
+    architecture: data.architecture || null,
+    validation: data.validation || null
+  }
 });
 
 const getJob = async (uid, jobId) => {
@@ -131,44 +181,61 @@ const claimJob = async (uid, jobId) => {
     const data = snap.data();
     if (data.status === "ready" || data.status === "failed") return { claimed: false, data };
     const now = Date.now();
-    if (data.processing === true && Number(data.processingAt || 0) > now - 45000) return { claimed: false, busy: true, data };
+    if (data.processing === true && Number(data.processingAt || 0) > now - JOB_LEASE_MS) return { claimed: false, busy: true, data };
+    if (Number(data.nextAttemptAt || 0) > now) return { claimed: false, retrying: true, data };
     if (Number(data.createdAt || now) < now - JOB_TTL_MS) {
-      tx.update(ref, { status: "failed", processing: false, error: "This Studio job expired. Please start again.", updatedAt: now });
-      return { claimed: false, data: { ...data, status: "failed", error: "This Studio job expired. Please start again." } };
+      const expired = { ...data, status: "failed", processing: false, error: "This Studio job expired. Please start again." };
+      tx.update(ref, { status: "failed", processing: false, error: expired.error, updatedAt: now });
+      return { claimed: false, data: expired };
     }
+    const stage = currentStage(data);
     const attempt = Number(data.attempt || 0) + 1;
-    tx.update(ref, { processing: true, processingAt: now, attempt, updatedAt: now, status: data.status === "queued" ? "building" : data.status, stage: data.status === "queued" ? "layout" : data.stage });
-    return { claimed: true, data: { ...data, processing: true, processingAt: now, attempt, status: data.status === "queued" ? "building" : data.status, stage: data.status === "queued" ? "layout" : data.stage, attempt } };
+    tx.update(ref, { processing: true, processingAt: now, attempt, updatedAt: now, stage, nextAttemptAt: null });
+    return { claimed: true, data: { ...data, processing: true, processingAt: now, attempt, stage, nextAttemptAt: null } };
   });
+};
+
+const retryJob = async (ref, data, model, error) => {
+  const delay = RETRY_DELAYS_MS[Math.min(data.attempt - 1, RETRY_DELAYS_MS.length - 1)];
+  const nextAttemptAt = Date.now() + delay + Math.floor(Math.random() * 400);
+  console.warn("Studio generation retry", { stage: data.stage, attempt: data.attempt, model, reason: isTransient(error) ? "transient" : "non_transient", nextAttemptAt });
+  const message = "Studio AI is busy right now. Retrying automatically…";
+  await ref.update({ processing: false, message, nextAttemptAt, updatedAt: Date.now(), lastError: error?.code || "generation_retry" });
+  return { ...data, processing: false, message, nextAttemptAt };
 };
 
 const processJob = async (uid, jobId) => {
   const claim = await claimJob(uid, jobId);
-  if (!claim.claimed) return { ...claim.data, busy: Boolean(claim.busy) };
+  if (!claim.claimed) return { ...claim.data, busy: Boolean(claim.busy), retrying: Boolean(claim.retrying) };
   const { data } = claim;
   const ref = adminDb().collection("studioJobs").doc(jobId);
-  const model = generationModelForAttempt(data.attempt);
   try {
-    if (data.status === "validating") {
-      const files = validateFiles(data.files);
-      await ref.update({ status: "ready", stage: "ready", processing: false, message: "Preview ready.", files, updatedAt: Date.now() });
-      return { ...data, status: "ready", stage: "ready", processing: false, files, message: "Preview ready." };
+    if (data.stage === "architecture") {
+      const architecture = await generateArchitecture(data.prompt);
+      await ref.update({ stage: "implementation", status: "building", processing: false, attempt: 0, architecture, message: "Architecture complete. Building the interface now.", nextAttemptAt: null, updatedAt: Date.now() });
+      return { ...data, stage: "implementation", status: "building", processing: false, attempt: 0, architecture, message: "Architecture complete. Building the interface now." };
     }
-    const files = await generateProjectAttempt(data.prompt, data.attempt);
-    await ref.update({ status: "validating", stage: "validation", processing: false, message: "Preview generated. Validating it now.", files, updatedAt: Date.now() });
-    return { ...data, status: "validating", stage: "validation", processing: false, files, message: "Preview generated. Validating it now." };
+
+    if (data.stage === "implementation") {
+      const files = await generateImplementation(data.prompt, data.architecture);
+      await ref.update({ stage: "validation", status: "validating", processing: false, attempt: 0, files, message: "Interface generated. Validating the preview now.", nextAttemptAt: null, updatedAt: Date.now() });
+      return { ...data, stage: "validation", status: "validating", processing: false, attempt: 0, files, message: "Interface generated. Validating the preview now." };
+    }
+
+    if (data.stage === "validation") {
+      const validation = deterministicValidate(data.files);
+      await ref.update({ stage: "ready", status: "ready", processing: false, validation, message: "Preview ready.", nextAttemptAt: null, updatedAt: Date.now() });
+      return { ...data, stage: "ready", status: "ready", processing: false, validation, message: "Preview ready." };
+    }
+
+    throw fail("Studio job reached an invalid stage.", 500, "invalid_job_stage");
   } catch (error) {
-    const reason = classifyGenerationError(error);
-    const retryable = isTransient(error) && data.attempt < MAX_ATTEMPTS;
-    if (retryable) {
-      console.warn("Studio generation retry", { attempt: data.attempt, model, reason });
-      const retryMessage = "Studio is busy right now. Retrying automatically…";
-      await ref.update({ status: "building", stage: "layout", processing: false, message: retryMessage, lastError: error?.code || "generation_retry", updatedAt: Date.now() });
-      return { ...data, status: "building", stage: "layout", processing: false, message: retryMessage };
-    }
-    console.error("Studio generation failed", { attempt: data.attempt, model, reason });
-    const message = publicGenerationError(error);
-    await ref.update({ status: "failed", processing: false, error: message, updatedAt: Date.now() });
+    const aiStage = data.stage === "architecture" || data.stage === "implementation";
+    const retryable = aiStage && isTransient(error) && data.attempt < MAX_AI_ATTEMPTS;
+    if (retryable) return retryJob(ref, data, MODEL, error);
+    console.error("Studio job failed", { stage: data.stage, attempt: data.attempt, reason: error?.code || "unknown" });
+    const message = data.stage === "validation" ? "Studio preview failed deterministic validation." : publicGenerationError(error);
+    await ref.update({ status: "failed", processing: false, error: message, nextAttemptAt: null, updatedAt: Date.now() });
     return { ...data, status: "failed", processing: false, error: message };
   }
 };
@@ -190,7 +257,7 @@ export default async function handler(req, res) {
       if (prompt.length < 3) return send(res, 400, { code: "invalid_prompt", message: "A generated prompt is required." });
       const jobId = globalThis.crypto?.randomUUID?.() || `studio-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const now = Date.now();
-      const data = { uid, prompt: prompt.slice(0, 12000), status: "queued", stage: "planning", attempt: 0, processing: false, createdAt: now, updatedAt: now, message: "Structure planned. Preparing the build." };
+      const data = { uid, prompt: prompt.slice(0, 12000), status: "queued", stage: "architecture", attempt: 0, processing: false, createdAt: now, updatedAt: now, message: "Preparing the architecture job." };
       await adminDb().collection("studioJobs").doc(jobId).set(data);
       return send(res, 201, publicJob({ jobId, ...data }));
     }
@@ -198,7 +265,7 @@ export default async function handler(req, res) {
       const jobId = String(body.jobId || "");
       if (!jobId) return send(res, 400, { code: "invalid_job", message: "A Studio job id is required." });
       const result = await processJob(uid, jobId);
-      return send(res, result.busy ? 202 : 200, publicJob({ jobId, ...result }));
+      return send(res, result.busy || result.retrying ? 202 : 200, publicJob({ jobId, ...result }));
     }
     return send(res, 400, { code: "invalid_action", message: "Studio job action must be create or process." });
   } catch (error) {
