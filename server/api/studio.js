@@ -24,7 +24,7 @@ const STUDIO_PROJECT_SCHEMA = {
   properties: {
     files: {
       type: "object",
-      description: "Project files keyed by absolute project path. Every value is the complete UTF-8 source text.",
+      description: "Project files keyed by project path. Every value is the complete UTF-8 source text.",
       additionalProperties: { type: "string" }
     }
   },
@@ -82,11 +82,15 @@ const structuredJsonConfig = (schema) => ({
 
 const validateFiles = (files) => {
   if (!files || typeof files !== "object" || Array.isArray(files)) throw fail("Studio returned no project files.", 502, "invalid_project");
-  const entries = Object.entries(files).filter(([path, content]) => typeof path === "string" && typeof content === "string");
-  if (!entries.length || entries.length > MAX_FILES) throw fail("Studio returned an invalid number of project files.", 502, "invalid_project");
-  for (const [path, content] of entries) {
-    if (!/^\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+$/.test(path) || path.includes("..") || content.length > MAX_FILE_CHARS) throw fail("Studio returned an invalid project file.", 502, "invalid_project");
+  const normalized = {};
+  for (const [rawPath, content] of Object.entries(files)) {
+    if (typeof rawPath !== "string" || typeof content !== "string") continue;
+    const path = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
+    if (!/^\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+$/.test(path) || path.includes("..") || path.includes("\\") || content.length > MAX_FILE_CHARS) throw fail("Studio returned an invalid project file.", 502, "invalid_project");
+    normalized[path] = content;
   }
+  const entries = Object.entries(normalized);
+  if (!entries.length || entries.length > MAX_FILES) throw fail("Studio returned an invalid number of project files.", 502, "invalid_project");
   return Object.fromEntries(entries);
 };
 
