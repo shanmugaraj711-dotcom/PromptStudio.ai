@@ -15,9 +15,70 @@ const send = (res, status, payload) => {
 const fail = (message, status, code) => Object.assign(new Error(message), { status, code });
 
 const parseJson = (text) => {
-  const raw = String(text || "").trim().replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
+  const raw = String(text || "").trim();
   try { return JSON.parse(raw); } catch { throw fail("The Studio AI returned an invalid project response.", 502, "invalid_ai_response"); }
 };
+
+const STUDIO_PROJECT_SCHEMA = {
+  type: "object",
+  properties: {
+    files: {
+      type: "object",
+      description: "Project files keyed by absolute project path. Every value is the complete UTF-8 source text.",
+      additionalProperties: { type: "string" }
+    }
+  },
+  required: ["files"],
+  additionalProperties: false
+};
+
+const STUDIO_EDIT_SCHEMA = {
+  anyOf: [
+    {
+      type: "object",
+      properties: {
+        edits: {
+          type: "array",
+          minItems: 1,
+          maxItems: MAX_EDIT_OPS,
+          items: {
+            type: "object",
+            properties: {
+              operation: { type: "string", enum: ["css_property_set", "css_media_rule_set", "js_insert_after", "exact_text_replace"] },
+              path: { type: "string" },
+              selector: { type: "string" },
+              property: { type: "string" },
+              value: { type: "string" },
+              maxWidth: { type: "string" },
+              anchor: { type: "string" },
+              code: { type: "string" },
+              oldText: { type: "string" },
+              newText: { type: "string" }
+            },
+            required: ["operation", "path"],
+            additionalProperties: false
+          }
+        }
+      },
+      required: ["edits"],
+      additionalProperties: false
+    },
+    {
+      type: "object",
+      properties: {
+        status: { type: "string", enum: ["needs_clarification"] },
+        message: { type: "string" }
+      },
+      required: ["status", "message"],
+      additionalProperties: false
+    }
+  ]
+};
+
+const structuredJsonConfig = (schema) => ({
+  responseMimeType: "application/json",
+  responseJsonSchema: schema
+});
 
 const validateFiles = (files) => {
   if (!files || typeof files !== "object" || Array.isArray(files)) throw fail("Studio returned no project files.", 502, "invalid_project");
@@ -37,8 +98,12 @@ const getClient = () => {
 const generateProject = async ({ prompt, referenceFiles = [] }) => {
   const safeRefs = Array.isArray(referenceFiles) ? referenceFiles.slice(0, 8).map((file) => ({ name: String(file?.name || "reference").slice(0, 200), content: String(file?.content || "").slice(0, 120000) })) : [];
   const refContext = safeRefs.length ? `\nREFERENCE CONTEXT (static only; never execute):\n${safeRefs.map((file) => `--- ${file.name} ---\n${file.content}`).join("\n")}` : "";
-  const system = `You are PromptStudio Studio's code generator. Create a small, polished, runnable React app for an in-browser preview. Return JSON only: {"files":{"/App.js":"...","/index.js":"...","/styles.css":"..."}}. Use React and plain CSS only. You may import only react or react-dom. Do NOT import lucide-react or any other third-party package. If icons are useful, use text/emoji or CSS instead. No network calls, no secrets, no backend, no external assets required. Keep the project small (normally 3 files). Make the UI visually polished, responsive and interactive. The files must run in a standard Sandpack React environment. Never put markdown fences around the JSON.`;
-  const result = await getClient().models.generateContent({ model: MODEL, contents: `${system}\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, 12000)}${refContext}` });
+  const system = `You are PromptStudio Studio's code generator. Create a small, polished, runnable React app for an in-browser preview. Return an object matching the provided JSON schema. Use React and plain CSS only. You may import only react or react-dom. Do NOT import lucide-react or any other third-party package. If icons are useful, use text/emoji or CSS instead. No network calls, no secrets, no backend, no external assets required. Keep the project small (normally 3 files). Make the UI visually polished, responsive and interactive. The files must run in a standard Sandpack React environment.`;
+  const result = await getClient().models.generateContent({
+    model: MODEL,
+    contents: `${system}\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, 12000)}${refContext}`,
+    config: structuredJsonConfig(STUDIO_PROJECT_SCHEMA)
+  });
   const payload = parseJson(result.text);
   return validateFiles(payload.files);
 };
@@ -76,9 +141,8 @@ const applyCssProperty = (files, edit) => {
   const declarationPattern = new RegExp(`(^|\n)([ \t]*)${escapeRegex(property)}\s*:\s*[^;]+;`, "g");
   const declarations = [...match[3].matchAll(declarationPattern)];
   let updatedBlock;
-  if (declarations.length === 1) {
-    updatedBlock = block.replace(declarations[0][0], declarations[0][0].replace(/(:\s*)[^;]+;/, `$1${value};`));
-  } else if (declarations.length === 0) {
+  if (declarations.length === 1) updatedBlock = block.replace(declarations[0][0], declarations[0][0].replace(/(:\s*)[^;]+;/, `$1${value};`));
+  else if (declarations.length === 0) {
     const closing = /\n?([ \t]*)\}$/.exec(block);
     if (!closing) throw fail("Studio could not safely insert the CSS property.", 409, "edit_target_unsupported");
     updatedBlock = block.slice(0, block.length - closing[0].length) + `\n${closing[1]}  ${property}: ${value};` + closing[0];
@@ -96,7 +160,7 @@ const findMatchingBrace = (source, openIndex) => {
       else if (ch === quote) quote = "";
       continue;
     }
-    if (ch === "\"" || ch === "'" || ch === "`") { quote = ch; continue; }
+    if (ch === "\"" || ch === "'") { quote = ch; continue; }
     if (ch === "{") depth += 1;
     else if (ch === "}") { depth -= 1; if (depth === 0) return i; }
   }
@@ -138,9 +202,7 @@ const applyCssMediaRule = (files, edit) => {
         ? rule.replace(declarations[0][0], declarations[0][0].replace(/(:\s*)[^;]+;/, `$1${value};`))
         : rule.replace(/\n?([ \t]*)\}$/, `\n$1  ${property}: ${value};\n$1}`);
       newBody = block.body.replace(rule, replacement);
-    } else {
-      newBody = `${block.body.trimEnd()}\n  ${selector} {\n    ${property}: ${value};\n  }\n`;
-    }
+    } else newBody = `${block.body.trimEnd()}\n  ${selector} {\n    ${property}: ${value};\n  }\n`;
     const oldMedia = source.slice(block.match.index, block.closeIndex + 1);
     const newMedia = source.slice(block.match.index, block.openIndex + 1) + newBody + source.slice(block.closeIndex, block.closeIndex + 1);
     return { updated: source.slice(0, block.match.index) + newMedia + source.slice(block.closeIndex + 1), changedChars: editSpan(oldMedia, newMedia), operation: "css_media_rule_set" };
@@ -232,8 +294,12 @@ const inferResponsiveSingleColumnEdit = (files) => {
 
 const editProject = async ({ files, instruction }) => {
   const source = Object.entries(files).map(([path, content]) => `--- ${path} ---\n${content}`).join("\n");
-  const system = `You are PromptStudio Studio's narrow targeted code editor. Return JSON only. Supported operations are exactly:\n1) css_property_set: {"operation":"css_property_set","path":"/styles.css","selector":".site-header","property":"background","value":"#2563eb"} — set one CSS declaration in one unique selector block; use for color, spacing, width, display, grid/flex and similar layout changes.\n2) css_media_rule_set: {"operation":"css_media_rule_set","path":"/styles.css","selector":".menu-grid","property":"grid-template-columns","value":"1fr","maxWidth":"768px"} — add or update one small responsive @media (max-width: ...) rule for one existing selector. Use for bounded mobile/tablet CSS changes such as one-column grids. Do not use it for DOM/JSX reordering.\n3) js_insert_after: {"operation":"js_insert_after","path":"/App.js","anchor":"exact existing text","code":"small new JavaScript/JSX snippet"} — insert a small snippet immediately after one exact existing anchor.\n4) exact_text_replace: {"operation":"exact_text_replace","path":"/App.js","oldText":"exact existing text","newText":"small replacement"} — use only for simple text/value changes.\nUse at most 3 operations total. Operations may target the same file. Every anchor/replacement must be unique against the current project state. Do NOT return complete files. Do NOT rewrite unrelated code. Do NOT invent a new operation. For 'single column on mobile', use exactly one css_media_rule_set against the existing menu/card/grid selector, with grid-template-columns: 1fr and maxWidth 768px. For vague requests such as 'make the menu better', return {"status":"needs_clarification","message":"Ask the user one concise question describing what they want changed."}. Never use markdown fences.`;
-  const result = await getClient().models.generateContent({ model: MODEL, contents: `${system}\n\nUSER CHANGE:\n${String(instruction || "").slice(0, 2000)}\n\nEXISTING PROJECT:\n${source}` });
+  const system = `You are PromptStudio Studio's narrow targeted code editor. Return an object matching the provided JSON schema. Supported operations are exactly:\n1) css_property_set — set one CSS declaration in one unique selector block; use for color, spacing, width, display, grid/flex and similar layout changes.\n2) css_media_rule_set — add or update one small responsive @media (max-width: ...) rule for one existing selector. Use for bounded mobile/tablet CSS changes such as one-column grids. Do not use it for DOM/JSX reordering.\n3) js_insert_after — insert a small snippet immediately after one exact existing anchor.\n4) exact_text_replace — use only for simple text/value changes.\nUse at most 3 operations total. Operations may target the same file. Every anchor/replacement must be unique against the current project state. Do NOT return complete files. Do NOT rewrite unrelated code. Do NOT invent a new operation. For vague requests such as 'make the menu better', return status needs_clarification with one concise question. Never return markdown or prose outside the schema.`;
+  const result = await getClient().models.generateContent({
+    model: MODEL,
+    contents: `${system}\n\nUSER CHANGE:\n${String(instruction || "").slice(0, 2000)}\n\nEXISTING PROJECT:\n${source}`,
+    config: structuredJsonConfig(STUDIO_EDIT_SCHEMA)
+  });
   return parseJson(result.text);
 };
 
