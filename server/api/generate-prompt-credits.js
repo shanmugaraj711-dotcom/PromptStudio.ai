@@ -90,8 +90,7 @@ const generate = async ({ client, idea, aiModel, category, images, referenceFile
   const contents = images.length ? [{ text }, ...images.map((image) => ({ inlineData: { mimeType: image.mimeType, data: image.data } }))] : text;
   const isCoding = category === "coding";
   const config = { systemInstruction: isCoding ? codingInstruction : imageInstruction, responseMimeType: "application/json", maxOutputTokens: 3200, ...(isCoding ? { thinkingConfig: { thinkingLevel: "medium" } } : {}) };
-  // Studio uses this exact same generation endpoint and its configured model pair.
-  // Do not introduce a Studio-only model fork: the environment's proven models are authoritative.
+  // Prompt generation keeps the environment-driven model pair; no Studio-only fork.
   const primaryModel = PRIMARY_MODEL;
   const fallbackModel = FALLBACK_MODEL;
   const call = async (model, timeoutMs) => { const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), timeoutMs); try { return await client.models.generateContent({ model, contents, config: { ...config, abortSignal: controller.signal } }); } finally { clearTimeout(timeout); } };
