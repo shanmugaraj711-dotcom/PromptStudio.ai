@@ -77,7 +77,7 @@ const normalizeProductMenuSpec = (raw) => {
   const catalog = content.catalog && typeof content.catalog === "object" ? content.catalog : {};
   const categories = Array.isArray(catalog.categories) ? catalog.categories.filter(Boolean).slice(0, 6) : [];
   const items = Array.isArray(catalog.items) ? [...catalog.items].slice(0, 8) : [];
-  if (items.length >= 4) return raw;
+  const originalItemCount = items.length;
   const fallbackCategory = categories[0] || "Featured";
   let fillerIndex = 0;
   while (items.length < 4) {
@@ -86,8 +86,23 @@ const normalizeProductMenuSpec = (raw) => {
     items.push({ ...filler, price: "Ask us", category });
     fillerIndex += 1;
   }
-  console.info("Studio product menu spec normalized", { originalItemCount: Array.isArray(catalog.items) ? catalog.items.length : 0, normalizedItemCount: items.length });
-  return { ...raw, content: { ...content, catalog: { ...catalog, categories: categories.length ? categories : [fallbackCategory], items } } };
+  const responsive = {
+    ...(raw.responsive && typeof raw.responsive === "object" ? raw.responsive : {}),
+    breakpoint: "768px",
+    hero: "stack",
+    navigation: "collapse",
+    productColumns: { desktop: 3, mobile: 1 }
+  };
+  console.info("Studio product menu spec normalized", {
+    originalItemCount,
+    normalizedItemCount: items.length,
+    responsive: { breakpoint: responsive.breakpoint, hero: responsive.hero, navigation: responsive.navigation, productColumns: responsive.productColumns }
+  });
+  return {
+    ...raw,
+    content: { ...content, catalog: { ...catalog, categories: categories.length ? categories : [fallbackCategory], items } },
+    responsive
+  };
 };
 
 const generateSpec = async (prompt) => {
