@@ -11,6 +11,7 @@ import razorpayWebhookHandler from "../server/api/razorpay-webhook.js";
 import referenceCodingHandler from "../server/api/reference-coding.js";
 import sharePromptHandler from "../server/api/share-prompt.js";
 import studioHandler from "../server/api/studio.js";
+import studioJobsHandler from "../server/api/studio-jobs.js";
 import supportMessageHandler from "../server/api/support-message.js";
 import v1PromptHandler from "../server/api/v1/prompt.js";
 import v1SupportHandler from "../server/api/v1/support.js";
@@ -32,6 +33,7 @@ const STATIC_HANDLERS = {
   "/api/reference-coding": referenceCodingHandler,
   "/api/share-prompt": sharePromptHandler,
   "/api/studio": studioHandler,
+  "/api/studio-jobs": studioJobsHandler,
   "/api/support-message": supportMessageHandler,
   "/api/v1/prompt": v1PromptHandler,
   "/api/v1/support": v1SupportHandler,
