@@ -45,8 +45,6 @@ const generateProject = async ({ prompt, referenceFiles = [] }) => {
 
 const countOccurrences = (source, needle) => source.split(needle).length - 1;
 
-// Measure one localized replacement/insertion by its changed span. This avoids the old
-// positional character comparison, where an insertion made every later character look changed.
 const editSpan = (before, after) => {
   let prefix = 0;
   const maxPrefix = Math.min(before.length, after.length);
@@ -137,10 +135,12 @@ const applyTargetedEditsV2 = (files, edits) => {
     if (cumulative / originalLength > MAX_EDIT_RATIO) throw fail(`The requested edit would change too much of ${path}; Studio refused a broad regeneration.`, 409, "edit_too_broad");
     changedByFile.set(path, cumulative);
     next[path] = result.updated;
-    changed.push({ path, operation: result.operation, beforeChars: next[path].length - (result.updated.length - result.changedChars), afterChars: result.updated.length, changedChars: result.changedChars });
+    changed.push({ path, operation: result.operation, beforeChars: sourceLength(files, path), afterChars: result.updated.length, changedChars: result.changedChars });
   }
   return { files: validateFiles(next), changed };
 };
+
+const sourceLength = (files, path) => files[path]?.length || 0;
 
 const editProject = async ({ files, instruction }) => {
   const source = Object.entries(files).map(([path, content]) => `--- ${path} ---\n${content}`).join("\n");
