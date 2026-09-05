@@ -40,7 +40,8 @@ const ARCHITECTURE_SCHEMA = {
   additionalProperties: false
 };
 
-const PROJECT_SCHEMA = { type: "object", properties: { files: { type: "object", additionalProperties: { type: "string" } } }, required: ["files"], additionalProperties: false };
+const APP_SCHEMA = { type: "object", properties: { files: { type: "object", properties: { "/App.js": { type: "string" } }, required: ["/App.js"], additionalProperties: false } }, required: ["files"], additionalProperties: false };
+const CSS_SCHEMA = { type: "object", properties: { files: { type: "object", properties: { "/styles.css": { type: "string" } }, required: ["/styles.css"], additionalProperties: false } }, required: ["files"], additionalProperties: false };
 const structuredJsonConfig = (schema) => ({ responseMimeType: "application/json", responseJsonSchema: schema });
 
 const normalizeFiles = (files) => {
@@ -87,7 +88,7 @@ const isTransient = (error) => {
 };
 
 const safeErrorDetails = (error) => ({ code: error?.code || null, status: Number(error?.status || error?.statusCode || error?.httpStatus || 0) || null, message: String(error?.message || "unknown").slice(0, 240) });
-const publicGenerationError = (error) => isTransient(error) ? "Studio AI is busy right now. We are retrying automatically…" : (String(error?.message || "").trim() || "Studio could not generate the preview.");
+const publicGenerationError = (error) => isTransient(error) ? "Studio AI is busy right now. Retrying automatically…" : (String(error?.message || "").trim() || "Studio could not generate the preview.");
 
 const generateWithTimeout = async (model, contents, schema, maxOutputTokens) => {
   const controller = new AbortController();
@@ -121,16 +122,28 @@ const generateArchitecture = async (prompt) => {
   return { architecture: value, model };
 };
 
-const generateImplementation = async (prompt, architecture) => {
-  const contents = `You are PromptStudio Studio's implementation generator. Turn the approved architecture into a small, polished, runnable React app for an in-browser preview. Return only JSON matching the schema. Create EXACTLY TWO FILES: /App.js and /styles.css. Do not create index.js, package files, or extra files. Use React and plain CSS only. Imports may be only react. Do NOT import lucide-react or any other third-party package. No network calls, secrets, backend, or external assets. Put all UI in App.js and all styling in styles.css. Make it visually polished, responsive, interactive, and mobile-friendly.\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, 12000)}\n\nAPPROVED ARCHITECTURE:\n${JSON.stringify(architecture)}`;
-  const { value, model } = await runModelFailover({ contents, schema: PROJECT_SCHEMA, maxOutputTokens: 3600, parse: (text) => normalizeFiles(parseJson(text).files) });
-  return { files: value, model };
+const generateApp = async (prompt, architecture) => {
+  const contents = `You are PromptStudio Studio's React UI implementation generator. Build ONLY the React application code from the approved architecture and user brief. Return only JSON matching the schema. Create exactly one file named /App.js. Use React only; imports may be only react. Do not import any third-party package. No network calls, secrets, backend, external assets, or CSS in this response. The App.js must be polished, semantic, interactive where appropriate, and reference classes that the styling job can style.\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, 12000)}\n\nAPPROVED ARCHITECTURE:\n${JSON.stringify(architecture)}`;
+  const { value, model } = await runModelFailover({ contents, schema: APP_SCHEMA, maxOutputTokens: 2800, parse: (text) => parseJson(text, "invalid_app_response") });
+  const files = normalizeFiles(value.files);
+  if (!files["/App.js"] || Object.keys(files).length !== 1) throw fail("Studio returned an invalid React UI artifact.", 502, "invalid_project");
+  return { files, model };
+};
+
+const generateStyles = async (prompt, architecture, appFiles) => {
+  const app = appFiles["/App.js"] || "";
+  const contents = `You are PromptStudio Studio's visual styling generator. Style the already-generated React app. Return only JSON matching the schema. Create exactly one file named /styles.css. Do not change or regenerate App.js. Use plain CSS only. Make the result premium, cohesive, responsive, mobile-friendly, accessible, and visually impressive. Include desktop and mobile behavior, spacing, typography, buttons, cards, sections, states, and tasteful transitions where useful. Do not use external assets, @import, URLs, or third-party dependencies.\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, 12000)}\n\nAPPROVED ARCHITECTURE:\n${JSON.stringify(architecture)}\n\nGENERATED APP.JS:\n${app.slice(0, MAX_FILE_CHARS)}`;
+  const { value, model } = await runModelFailover({ contents, schema: CSS_SCHEMA, maxOutputTokens: 2600, parse: (text) => parseJson(text, "invalid_css_response") });
+  const files = normalizeFiles(value.files);
+  if (!files["/styles.css"] || Object.keys(files).length !== 1) throw fail("Studio returned an invalid stylesheet artifact.", 502, "invalid_project");
+  return { files, model };
 };
 
 const currentStage = (data) => {
   if (data.status === "queued" || data.stage === "architecture") return "architecture";
-  if (data.status === "building" || data.stage === "implementation") return "implementation";
-  if (data.status === "validating" || data.stage === "validation") return "validation";
+  if (data.stage === "app" || data.stage === "implementation" || data.status === "building") return "app";
+  if (data.stage === "styling" || data.status === "styling") return "styling";
+  if (data.stage === "validation" || data.status === "validating") return "validation";
   return data.stage || "architecture";
 };
 
@@ -182,13 +195,19 @@ const processJob = async (uid, jobId) => {
   try {
     if (data.stage === "architecture") {
       const { architecture, model } = await generateArchitecture(data.prompt);
-      await ref.update({ stage: "implementation", status: "building", processing: false, attempt: 0, architecture, architectureModel: model, message: "Architecture complete. Building the interface now.", nextAttemptAt: null, updatedAt: Date.now() });
-      return { ...data, stage: "implementation", status: "building", processing: false, attempt: 0, architecture, architectureModel: model, message: "Architecture complete. Building the interface now." };
+      await ref.update({ stage: "app", status: "building", processing: false, attempt: 0, architecture, architectureModel: model, message: "Architecture complete. Building the React interface now.", nextAttemptAt: null, updatedAt: Date.now() });
+      return { ...data, stage: "app", status: "building", processing: false, attempt: 0, architecture, architectureModel: model, message: "Architecture complete. Building the React interface now." };
     }
-    if (data.stage === "implementation") {
-      const { files, model } = await generateImplementation(data.prompt, data.architecture);
-      await ref.update({ stage: "validation", status: "validating", processing: false, attempt: 0, files, implementationModel: model, message: "Interface generated. Validating the preview now.", nextAttemptAt: null, updatedAt: Date.now() });
-      return { ...data, stage: "validation", status: "validating", processing: false, attempt: 0, files, implementationModel: model, message: "Interface generated. Validating the preview now." };
+    if (data.stage === "app") {
+      const { files, model } = await generateApp(data.prompt, data.architecture);
+      await ref.update({ stage: "styling", status: "styling", processing: false, attempt: 0, appFiles: files, implementationModel: model, message: "React interface complete. Styling it now.", nextAttemptAt: null, updatedAt: Date.now() });
+      return { ...data, stage: "styling", status: "styling", processing: false, attempt: 0, appFiles: files, implementationModel: model, message: "React interface complete. Styling it now." };
+    }
+    if (data.stage === "styling") {
+      const { files: cssFiles, model } = await generateStyles(data.prompt, data.architecture, data.appFiles);
+      const files = { ...(data.appFiles || {}), ...cssFiles };
+      await ref.update({ stage: "validation", status: "validating", processing: false, attempt: 0, files, stylingModel: model, message: "Styling complete. Validating the preview now.", nextAttemptAt: null, updatedAt: Date.now() });
+      return { ...data, stage: "validation", status: "validating", processing: false, attempt: 0, files, stylingModel: model, message: "Styling complete. Validating the preview now." };
     }
     if (data.stage === "validation") {
       const validation = deterministicValidate(data.files);
@@ -197,7 +216,7 @@ const processJob = async (uid, jobId) => {
     }
     throw fail("Studio job reached an invalid stage.", 500, "invalid_job_stage");
   } catch (error) {
-    const aiStage = data.stage === "architecture" || data.stage === "implementation";
+    const aiStage = ["architecture", "app", "styling"].includes(data.stage);
     if (aiStage && isTransient(error) && Number(data.attempt || 0) < MAX_AI_ATTEMPTS) return scheduleRetry(ref, data, error);
     console.error("Studio job failed", { stage: data.stage, attempt: data.attempt, error: safeErrorDetails(error) });
     const message = data.stage === "validation" ? "Studio preview failed deterministic validation." : publicGenerationError(error);
