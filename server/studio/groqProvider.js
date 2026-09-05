@@ -30,8 +30,8 @@ const createGroqResponse = (payload, model) => ({
 
 export const createGroqProvider = () => ({
   name: "groq",
-  async generateStructuredSpec({ model, contents, config = {} }) {
-    const activeModel = model || process.env.GROQ_MODEL || DEFAULT_GROQ_MODEL;
+  async generateStructuredSpec({ contents, config = {} }) {
+    const activeModel = process.env.GROQ_MODEL || DEFAULT_GROQ_MODEL;
     const controller = new AbortController();
     const abortSignal = config.abortSignal;
     const abortForwarder = () => controller.abort(abortSignal?.reason);
