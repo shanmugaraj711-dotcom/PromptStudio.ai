@@ -16,7 +16,7 @@ const MAX_PROMPT_CHARS = 12000;
 const MAX_FILE_CHARS = 50000;
 
 const send = (res, status, payload) => { res.setHeader("Cache-Control", "no-store"); return res.status(status).json(payload); };
-const fail = (message, status, code) => Object.assign(new Error(message), { status, code });
+const fail = (message, status = 422, code = "invalid_spec") => Object.assign(new Error(message), { status, code });
 const parseJson = (text, code = "invalid_ai_response") => {
   const raw = String(text || "").trim();
   try { return JSON.parse(raw); } catch {}
@@ -37,8 +37,6 @@ const isTransient = (error) => {
 };
 const safeErrorDetails = (error) => ({ code: error?.code || null, status: Number(error?.status || error?.statusCode || error?.httpStatus || 0) || null, message: String(error?.message || "unknown").slice(0, 240) });
 const publicGenerationError = (error) => isTransient(error) ? "Studio AI is busy right now. Retrying automatically…" : (String(error?.message || "").trim() || "Studio could not generate the preview.");
-
-const schemaForLayout = (layout) => layout === "product-menu-showcase" ? PRODUCT_MENU_SPEC_SCHEMA : LANDING_PAGE_SPEC_SCHEMA;
 const validateSpec = (raw) => raw?.layout === "product-menu-showcase" ? validateProductMenuSpec(raw) : validateStudioSpec(raw);
 const renderSpec = (spec) => spec.layout === "product-menu-showcase" ? renderProductMenuSpec(spec) : renderStudioSpec(spec);
 const rendererName = (spec) => spec.layout === "product-menu-showcase" ? "product-menu-showcase-v1" : "landing-page-v1";
@@ -66,15 +64,42 @@ const generateWithTimeout = async (model, contents) => {
   finally { clearTimeout(timer); }
 };
 
+const PRODUCT_MENU_FILLERS = [
+  { name: "Signature Favorite", description: "A standout choice from the collection.", tag: "Featured" },
+  { name: "House Special", description: "A popular option selected with care.", tag: "Popular" },
+  { name: "Classic Choice", description: "A dependable favourite for any occasion.", tag: "Classic" },
+  { name: "Customer Pick", description: "A well-loved choice worth trying.", tag: "Favourite" }
+];
+
+const normalizeProductMenuSpec = (raw) => {
+  if (!raw || raw.layout !== "product-menu-showcase") return raw;
+  const content = raw.content && typeof raw.content === "object" ? raw.content : {};
+  const catalog = content.catalog && typeof content.catalog === "object" ? content.catalog : {};
+  const categories = Array.isArray(catalog.categories) ? catalog.categories.filter(Boolean).slice(0, 6) : [];
+  const items = Array.isArray(catalog.items) ? [...catalog.items].slice(0, 8) : [];
+  if (items.length >= 4) return raw;
+  const fallbackCategory = categories[0] || "Featured";
+  let fillerIndex = 0;
+  while (items.length < 4) {
+    const filler = PRODUCT_MENU_FILLERS[fillerIndex % PRODUCT_MENU_FILLERS.length];
+    const category = categories.length ? categories[items.length % categories.length] : fallbackCategory;
+    items.push({ ...filler, price: "Ask us", category });
+    fillerIndex += 1;
+  }
+  console.info("Studio product menu spec normalized", { originalItemCount: Array.isArray(catalog.items) ? catalog.items.length : 0, normalizedItemCount: items.length });
+  return { ...raw, content: { ...content, catalog: { ...catalog, categories: categories.length ? categories : [fallbackCategory], items } } };
+};
+
 const generateSpec = async (prompt) => {
-  const contents = `You are PromptStudio Studio's structured design intelligence. Convert the user's generated app brief into ONE compact Studio Spec. Never write React, JSX, CSS, HTML or source code. Return only JSON matching the supplied schema.\n\nSUPPORTED V0 LAYOUTS:\n1) landing-page: exactly hero, menu, booking sections; components navbar, hero, menu-card, booking-form, footer; responsive breakpoint 768px, hero stacks, menu 3 columns desktop/1 mobile, navigation collapses.\n2) product-menu-showcase: exactly hero, catalog, cart sections; components navbar, hero, category-filter, product-card, cart-panel, footer; responsive breakpoint 768px, hero stacks, product grid 3 columns desktop/1 mobile, navigation collapses. Use this layout when the brief is primarily a product catalogue, shop, menu showcase or browse-and-add experience.\nPreserve useful brand, copy, items, prices, calls to action and visual direction. Choose a coherent palette and mood. Do not invent unsupported capabilities.\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, MAX_PROMPT_CHARS)}`;
+  const contents = `You are PromptStudio Studio's structured design intelligence. Convert the user's generated app brief into ONE compact Studio Spec. Never write React, JSX, CSS, HTML or source code. Return only JSON matching the supplied schema.\n\nSUPPORTED V0 LAYOUTS:\n1) landing-page: exactly hero, menu, booking sections; components navbar, hero, menu-card, booking-form, footer; responsive breakpoint 768px, hero stacks, menu 3 columns desktop/1 mobile, navigation collapses.\n2) product-menu-showcase: exactly hero, catalog, cart sections; components navbar, hero, category-filter, product-card, cart-panel, footer; responsive breakpoint 768px, hero stacks, product grid 3 columns desktop/1 mobile, navigation collapses. Use this layout when the brief is primarily a product catalogue, shop, menu showcase or browse-and-add experience. For this layout ALWAYS provide 4 to 8 useful catalog items, even when the source brief mentions fewer.\nPreserve useful brand, copy, items, prices, calls to action and visual direction. Choose a coherent palette and mood. Do not invent unsupported capabilities.\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, MAX_PROMPT_CHARS)}`;
   let lastError;
   for (const model of MODEL_SEQUENCE) {
     const startedAt = Date.now();
     try {
       const result = await generateWithTimeout(model, contents);
       const raw = parseJson(result.text, "invalid_spec_response");
-      const spec = validateSpec(raw);
+      const normalized = normalizeProductMenuSpec(raw);
+      const spec = validateSpec(normalized);
       console.info("Studio spec stage completed", { model, layout: spec.layout, durationMs: Date.now() - startedAt });
       return { spec, model };
     } catch (error) {
@@ -114,9 +139,13 @@ const claimJob = async (uid, jobId) => {
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref); if (!snap.exists || snap.data()?.uid !== uid) throw fail("Studio job not found.", 404, "job_not_found");
     const data = snap.data(); if (data.status === "ready" || data.status === "failed") return { claimed: false, data };
-    const now = Date.now(); if (data.processing === true && Number(data.processingAt || 0) > now - JOB_LEASE_MS) return { claimed: false, busy: true, data }; if (Number(data.nextAttemptAt || 0) > now) return { claimed: false, retrying: true, data };
+    const now = Date.now();
+    if (data.processing === true && Number(data.processingAt || 0) > now - JOB_LEASE_MS) return { claimed: false, busy: true, data };
+    if (Number(data.nextAttemptAt || 0) > now) return { claimed: false, retrying: true, data };
     if (Number(data.createdAt || now) < now - JOB_TTL_MS) { const error = "This Studio job expired. Please start again."; tx.update(ref, { status: "failed", processing: false, error, updatedAt: now }); return { claimed: false, data: { ...data, status: "failed", processing: false, error } }; }
-    const stage = currentStage(data); const attempt = Number(data.attempt || 0) + 1; tx.update(ref, { processing: true, processingAt: now, attempt, stage, nextAttemptAt: null, updatedAt: now }); return { claimed: true, data: { ...data, processing: true, processingAt: now, attempt, stage, nextAttemptAt: null } };
+    const stage = currentStage(data); const attempt = Number(data.attempt || 0) + 1;
+    tx.update(ref, { processing: true, processingAt: now, attempt, stage, nextAttemptAt: null, updatedAt: now });
+    return { claimed: true, data: { ...data, processing: true, processingAt: now, attempt, stage, nextAttemptAt: null } };
   });
 };
 const scheduleRetry = async (ref, data, error) => { const delay = RETRY_DELAYS_MS[Math.min(Number(data.attempt || 1) - 1, RETRY_DELAYS_MS.length - 1)]; const nextAttemptAt = Date.now() + delay + Math.floor(Math.random() * 400); const message = "Studio AI is busy right now. Retrying automatically…"; console.warn("Studio spec retry scheduled", { attempt: data.attempt, nextAttemptAt, error: safeErrorDetails(error) }); await ref.update({ processing: false, message, nextAttemptAt, updatedAt: Date.now(), lastError: safeErrorDetails(error) }); return { ...data, processing: false, message, nextAttemptAt }; };
@@ -138,7 +167,7 @@ const processJob = async (uid, jobId) => {
     if (data.stage === "validation") {
       const validation = deterministicValidate(data.files, data.renderer || "landing-page-v1");
       await ref.update({ stage: "ready", status: "ready", processing: false, validation, message: "Preview ready.", nextAttemptAt: null, updatedAt: Date.now() });
-      return { ...data, stage: "ready", status: "ready", processing: false, validation, message: "Preview ready." };
+      return { ...data, stage: "ready", status: "ready", processing: false, attempt: 0, validation, message: "Preview ready." };
     }
     throw fail("Studio job reached an invalid stage.", 500, "invalid_job_stage");
   } catch (error) {
