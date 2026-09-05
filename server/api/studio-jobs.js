@@ -1,14 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
 import { requireUser, adminDb } from "./_firebaseAdmin.js";
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.7-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.7-flash";
+const SECOND_FALLBACK_MODEL = process.env.GEMINI_SECOND_FALLBACK_MODEL || "gemini-3.6-flash";
+const MODEL_SEQUENCE = [...new Set([MODEL, FALLBACK_MODEL, SECOND_FALLBACK_MODEL])];
 const MAX_FILES = 8;
 const MAX_FILE_CHARS = 50000;
-const MAX_AI_ATTEMPTS = 3;
-const GENERATION_TIMEOUT_MS = 25000;
-const JOB_LEASE_MS = 90000;
+const GENERATION_TIMEOUT_MS = 24000;
+const JOB_LEASE_MS = 60000;
 const JOB_TTL_MS = 30 * 60 * 1000;
-const RETRY_DELAYS_MS = [1500, 4000];
 
 const send = (res, status, payload) => {
   res.setHeader("Cache-Control", "no-store");
@@ -104,13 +105,18 @@ const getClient = () => {
 };
 
 const isTransient = (error) => {
-  const status = Number(error?.status || error?.statusCode || 0);
+  const status = Number(error?.status || error?.statusCode || error?.httpStatus || 0);
   const message = String(error?.message || "").toLowerCase();
   return [408, 429, 500, 502, 503, 504].includes(status) || /high demand|temporar|unavailable|overload|timeout|aborted|deadline/.test(message);
 };
 
+const safeErrorDetails = (error) => ({
+  code: error?.code || null,
+  status: Number(error?.status || error?.statusCode || error?.httpStatus || 0) || null,
+  message: String(error?.message || "unknown").slice(0, 240)
+});
+
 const publicGenerationError = (error) => {
-  if (isTransient(error)) return "Studio AI is busy right now. Retrying automatically…";
   const message = String(error?.message || "").trim();
   return message || "Studio could not generate the preview.";
 };
@@ -129,19 +135,36 @@ const generateWithTimeout = async (model, contents, schema, maxOutputTokens) => 
   }
 };
 
+const runModelFailover = async ({ contents, schema, maxOutputTokens, parse }) => {
+  let lastError;
+  for (const model of MODEL_SEQUENCE) {
+    const startedAt = Date.now();
+    try {
+      const result = await generateWithTimeout(model, contents, schema, maxOutputTokens);
+      const value = parse(result.text);
+      console.info("Studio AI stage completed", { model, durationMs: Date.now() - startedAt });
+      return { value, model };
+    } catch (error) {
+      lastError = error;
+      console.warn("Studio AI model failed", { model, durationMs: Date.now() - startedAt, transient: isTransient(error), error: safeErrorDetails(error) });
+      if (!isTransient(error)) throw error;
+    }
+  }
+  throw lastError || fail("Studio AI could not generate the requested stage.", 502, "studio_ai_failed");
+};
+
 const generateArchitecture = async (prompt) => {
   const system = "You are PromptStudio Studio's architecture planner. Convert the user's generated app brief into a compact implementation blueprint. Do not write source code. Return only JSON matching the schema. Define the app purpose, pages, sections, reusable components and responsive rules. Keep it small enough for an in-browser React preview.";
   const contents = `${system}\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, 12000)}`;
-  const result = await generateWithTimeout(MODEL, contents, ARCHITECTURE_SCHEMA, 1800);
-  return parseJson(result.text, "invalid_architecture");
+  const { value: architecture, model } = await runModelFailover({ contents, schema: ARCHITECTURE_SCHEMA, maxOutputTokens: 1800, parse: (text) => parseJson(text, "invalid_architecture") });
+  return { architecture, model };
 };
 
 const generateImplementation = async (prompt, architecture) => {
   const system = "You are PromptStudio Studio's implementation generator. Turn the approved architecture into a small, polished, runnable React app for an in-browser preview. Return only JSON matching the schema. Use React and plain CSS only. You may import only react or react-dom/react-dom/client. Do NOT import lucide-react or any other third-party package. No network calls, secrets, backend, or external assets. Keep the project small, normally 3 files. Make it visually polished, responsive and interactive. It must run in a standard Sandpack React environment. Include an App file and a stylesheet.";
   const contents = `${system}\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, 12000)}\n\nAPPROVED ARCHITECTURE:\n${JSON.stringify(architecture)}`;
-  const result = await generateWithTimeout(MODEL, contents, PROJECT_SCHEMA, 3200);
-  const payload = parseJson(result.text);
-  return normalizeFiles(payload.files);
+  const { value: files, model } = await runModelFailover({ contents, schema: PROJECT_SCHEMA, maxOutputTokens: 3200, parse: (text) => normalizeFiles(parseJson(text).files) });
+  return { files, model };
 };
 
 const currentStage = (data) => {
@@ -157,7 +180,7 @@ const publicJob = (data) => ({
   stage: currentStage(data),
   attempt: Number(data.attempt || 0),
   message: data.message || null,
-  retryAt: data.nextAttemptAt || null,
+  retryAt: null,
   files: data.status === "ready" ? data.files : null,
   error: data.status === "failed" ? data.error : null,
   artifacts: {
@@ -182,7 +205,6 @@ const claimJob = async (uid, jobId) => {
     if (data.status === "ready" || data.status === "failed") return { claimed: false, data };
     const now = Date.now();
     if (data.processing === true && Number(data.processingAt || 0) > now - JOB_LEASE_MS) return { claimed: false, busy: true, data };
-    if (Number(data.nextAttemptAt || 0) > now) return { claimed: false, retrying: true, data };
     if (Number(data.createdAt || now) < now - JOB_TTL_MS) {
       const expired = { ...data, status: "failed", processing: false, error: "This Studio job expired. Please start again." };
       tx.update(ref, { status: "failed", processing: false, error: expired.error, updatedAt: now });
@@ -190,52 +212,40 @@ const claimJob = async (uid, jobId) => {
     }
     const stage = currentStage(data);
     const attempt = Number(data.attempt || 0) + 1;
-    tx.update(ref, { processing: true, processingAt: now, attempt, updatedAt: now, stage, nextAttemptAt: null });
-    return { claimed: true, data: { ...data, processing: true, processingAt: now, attempt, stage, nextAttemptAt: null } };
+    tx.update(ref, { processing: true, processingAt: now, attempt, updatedAt: now, stage });
+    return { claimed: true, data: { ...data, processing: true, processingAt: now, attempt, stage } };
   });
-};
-
-const retryJob = async (ref, data, model, error) => {
-  const delay = RETRY_DELAYS_MS[Math.min(data.attempt - 1, RETRY_DELAYS_MS.length - 1)];
-  const nextAttemptAt = Date.now() + delay + Math.floor(Math.random() * 400);
-  console.warn("Studio generation retry", { stage: data.stage, attempt: data.attempt, model, reason: isTransient(error) ? "transient" : "non_transient", nextAttemptAt });
-  const message = "Studio AI is busy right now. Retrying automatically…";
-  await ref.update({ processing: false, message, nextAttemptAt, updatedAt: Date.now(), lastError: error?.code || "generation_retry" });
-  return { ...data, processing: false, message, nextAttemptAt };
 };
 
 const processJob = async (uid, jobId) => {
   const claim = await claimJob(uid, jobId);
-  if (!claim.claimed) return { ...claim.data, busy: Boolean(claim.busy), retrying: Boolean(claim.retrying) };
+  if (!claim.claimed) return { ...claim.data, busy: Boolean(claim.busy) };
   const { data } = claim;
   const ref = adminDb().collection("studioJobs").doc(jobId);
   try {
     if (data.stage === "architecture") {
-      const architecture = await generateArchitecture(data.prompt);
-      await ref.update({ stage: "implementation", status: "building", processing: false, attempt: 0, architecture, message: "Architecture complete. Building the interface now.", nextAttemptAt: null, updatedAt: Date.now() });
-      return { ...data, stage: "implementation", status: "building", processing: false, attempt: 0, architecture, message: "Architecture complete. Building the interface now." };
+      const { architecture, model } = await generateArchitecture(data.prompt);
+      await ref.update({ stage: "implementation", status: "building", processing: false, attempt: 0, architecture, architectureModel: model, message: "Architecture complete. Building the interface now.", updatedAt: Date.now() });
+      return { ...data, stage: "implementation", status: "building", processing: false, attempt: 0, architecture, architectureModel: model, message: "Architecture complete. Building the interface now." };
     }
 
     if (data.stage === "implementation") {
-      const files = await generateImplementation(data.prompt, data.architecture);
-      await ref.update({ stage: "validation", status: "validating", processing: false, attempt: 0, files, message: "Interface generated. Validating the preview now.", nextAttemptAt: null, updatedAt: Date.now() });
-      return { ...data, stage: "validation", status: "validating", processing: false, attempt: 0, files, message: "Interface generated. Validating the preview now." };
+      const { files, model } = await generateImplementation(data.prompt, data.architecture);
+      await ref.update({ stage: "validation", status: "validating", processing: false, attempt: 0, files, implementationModel: model, message: "Interface generated. Validating the preview now.", updatedAt: Date.now() });
+      return { ...data, stage: "validation", status: "validating", processing: false, attempt: 0, files, implementationModel: model, message: "Interface generated. Validating the preview now." };
     }
 
     if (data.stage === "validation") {
       const validation = deterministicValidate(data.files);
-      await ref.update({ stage: "ready", status: "ready", processing: false, validation, message: "Preview ready.", nextAttemptAt: null, updatedAt: Date.now() });
+      await ref.update({ stage: "ready", status: "ready", processing: false, validation, message: "Preview ready.", updatedAt: Date.now() });
       return { ...data, stage: "ready", status: "ready", processing: false, validation, message: "Preview ready." };
     }
 
     throw fail("Studio job reached an invalid stage.", 500, "invalid_job_stage");
   } catch (error) {
-    const aiStage = data.stage === "architecture" || data.stage === "implementation";
-    const retryable = aiStage && isTransient(error) && data.attempt < MAX_AI_ATTEMPTS;
-    if (retryable) return retryJob(ref, data, MODEL, error);
-    console.error("Studio job failed", { stage: data.stage, attempt: data.attempt, reason: error?.code || "unknown" });
+    console.error("Studio job failed", { stage: data.stage, attempt: data.attempt, error: safeErrorDetails(error) });
     const message = data.stage === "validation" ? "Studio preview failed deterministic validation." : publicGenerationError(error);
-    await ref.update({ status: "failed", processing: false, error: message, nextAttemptAt: null, updatedAt: Date.now() });
+    await ref.update({ status: "failed", processing: false, error: message, nextAttemptAt: null, updatedAt: Date.now(), lastError: safeErrorDetails(error) });
     return { ...data, status: "failed", processing: false, error: message };
   }
 };
@@ -265,7 +275,7 @@ export default async function handler(req, res) {
       const jobId = String(body.jobId || "");
       if (!jobId) return send(res, 400, { code: "invalid_job", message: "A Studio job id is required." });
       const result = await processJob(uid, jobId);
-      return send(res, result.busy || result.retrying ? 202 : 200, publicJob({ jobId, ...result }));
+      return send(res, result.busy ? 202 : 200, publicJob({ jobId, ...result }));
     }
     return send(res, 400, { code: "invalid_action", message: "Studio job action must be create or process." });
   } catch (error) {
