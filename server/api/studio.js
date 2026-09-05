@@ -69,7 +69,7 @@ const applyCssProperty = (files, edit) => {
   if (!files[path]) throw fail(`Studio could not find ${path}.`, 409, "edit_target_missing");
   const source = files[path];
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const selectorPattern = new RegExp(`(^|\n)([ \t]*)${escapedSelector}\s*\{([\s\S]*?)\n?\2\}`, "g");
+  const selectorPattern = new RegExp(String.raw`(^|\n)([ \t]*)${escapedSelector}\s*\{([\s\S]*?)\n?\2\}`, "g");
   const matches = [...source.matchAll(selectorPattern)];
   if (matches.length !== 1) throw fail(`Studio could not safely locate a unique CSS selector in ${path}.`, 409, "edit_not_unique");
   const match = matches[0];
