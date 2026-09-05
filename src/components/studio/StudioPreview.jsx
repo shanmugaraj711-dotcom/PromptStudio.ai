@@ -18,7 +18,15 @@ export default function StudioPreview({ files, changed = [], status = "ready" })
         </div>
       </div>
       {changed.length > 0 && <div className="border-b border-indigo-100 bg-indigo-50/60 px-4 py-3 text-xs"><strong className="text-indigo-900">Targeted edit:</strong> <span className="text-indigo-800">{changed.map((item) => item.path).join(", ")}</span><span className="ml-2 text-indigo-600">~{ratio}% of affected file characters changed</span></div>}
-      <SandpackProvider template="react" files={files} options={{ activeFile: "/App.js", visibleFiles: Object.keys(files) }} customSetup={{ entry: "/index.js" }}>
+      <SandpackProvider
+        template="react"
+        files={files}
+        options={{ activeFile: "/App.js", visibleFiles: Object.keys(files) }}
+        customSetup={{
+          entry: "/index.js",
+          dependencies: { "lucide-react": "^0.468.0" },
+        }}
+      >
         <SandpackLayout>
           <SandpackCodeEditor showTabs showLineNumbers wrapContent style={{ height: 560 }} />
           <SandpackPreview showNavigator style={{ height: 560 }} />
