@@ -4,14 +4,13 @@ import { LANDING_PAGE_SPEC_SCHEMA, renderStudioSpec, validateStudioSpec } from "
 import { PRODUCT_MENU_SPEC_SCHEMA, renderProductMenuSpec, validateProductMenuSpec } from "../studio/productMenuRenderer.js";
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.7-flash";
-const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.6-flash";
-const SECOND_FALLBACK_MODEL = process.env.GEMINI_SECOND_FALLBACK_MODEL || "gemini-3.8-flash";
+const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash-lite";
+const SECOND_FALLBACK_MODEL = process.env.GEMINI_SECOND_FALLBACK_MODEL || "gemini-3.6-flash";
 const MODEL_SEQUENCE = [...new Set([MODEL, FALLBACK_MODEL, SECOND_FALLBACK_MODEL])];
-const MAX_AI_ATTEMPTS = 3;
+const MAX_AI_ATTEMPTS = 1;
 const GENERATION_TIMEOUT_MS = 18000;
 const JOB_LEASE_MS = 60000;
 const JOB_TTL_MS = 30 * 60 * 1000;
-const RETRY_DELAYS_MS = [1500, 4000];
 const MAX_PROMPT_CHARS = 12000;
 const MAX_FILE_CHARS = 50000;
 
@@ -30,13 +29,27 @@ const getClient = () => {
   if (!process.env.GEMINI_API_KEY) throw fail("Studio AI is not configured yet.", 503, "server_configuration_error");
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 };
-const isTransient = (error) => {
-  const status = Number(error?.status || error?.statusCode || error?.httpStatus || 0);
+const errorStatus = (error) => Number(error?.status || error?.statusCode || error?.httpStatus || 0);
+const isQuotaError = (error) => {
+  const status = errorStatus(error);
+  const code = String(error?.code || "").toLowerCase();
   const message = String(error?.message || "").toLowerCase();
-  return [408, 429, 500, 502, 503, 504].includes(status) || /high demand|temporar|unavailable|overload|timeout|aborted|deadline/.test(message);
+  return status === 429 || code === "resource_exhausted" || /quota|exceeded your current quota|rate limit/.test(message);
 };
-const safeErrorDetails = (error) => ({ code: error?.code || null, status: Number(error?.status || error?.statusCode || error?.httpStatus || 0) || null, message: String(error?.message || "unknown").slice(0, 240) });
-const publicGenerationError = (error) => isTransient(error) ? "Studio AI is busy right now. Retrying automatically…" : (String(error?.message || "").trim() || "Studio could not generate the preview.");
+const isTransient = (error) => {
+  if (isQuotaError(error)) return false;
+  const status = errorStatus(error);
+  const code = String(error?.code || "").toLowerCase();
+  if (["invalid_spec", "validation_failed", "renderer_failed", "studio_ai_quota_exceeded"].includes(code)) return false;
+  if (status >= 400 && status < 500 && status !== 408) return false;
+  const message = String(error?.message || "").toLowerCase();
+  return [408, 500, 502, 503, 504].includes(status) || /high demand|temporar|unavailable|overload|timeout|aborted|deadline/.test(message);
+};
+const safeErrorDetails = (error) => ({ code: error?.code || null, status: errorStatus(error) || null, message: String(error?.message || "unknown").slice(0, 240) });
+const publicGenerationError = (error) => {
+  if (isQuotaError(error)) return "Studio AI quota is currently exhausted. Please wait for the quota window to reset, then try again.";
+  return isTransient(error) ? "Studio AI is temporarily unavailable. Please try again shortly." : (String(error?.message || "").trim() || "Studio could not generate the preview.");
+};
 const validateSpec = (raw) => raw?.layout === "product-menu-showcase" ? validateProductMenuSpec(raw) : validateStudioSpec(raw);
 const renderSpec = (spec) => spec.layout === "product-menu-showcase" ? renderProductMenuSpec(spec) : renderStudioSpec(spec);
 const rendererName = (spec) => spec.layout === "product-menu-showcase" ? "product-menu-showcase-v1" : "landing-page-v1";
@@ -118,7 +131,8 @@ const generateSpec = async (prompt) => {
       return { spec, model };
     } catch (error) {
       lastError = error;
-      console.warn("Studio spec model failed", { model, durationMs: Date.now() - startedAt, transient: isTransient(error), error: safeErrorDetails(error) });
+      console.warn("Studio spec model failed", { model, durationMs: Date.now() - startedAt, transient: isTransient(error), quota: isQuotaError(error), error: safeErrorDetails(error) });
+      if (isQuotaError(error)) throw fail("Studio AI quota is currently exhausted. Please wait for the quota window to reset, then try again.", 429, "studio_ai_quota_exceeded");
       if (!isTransient(error)) throw error;
     }
   }
@@ -146,7 +160,7 @@ const deterministicValidate = (files, renderer) => {
 };
 
 const currentStage = (data) => { if (data.status === "queued" || data.stage === "spec") return "spec"; if (data.stage === "render" || data.status === "rendering") return "render"; if (data.stage === "validation" || data.status === "validating") return "validation"; return data.stage || "spec"; };
-const publicJob = (data) => ({ jobId: data.jobId, status: data.status, stage: currentStage(data), attempt: Number(data.attempt || 0), message: data.message || null, retryAt: data.nextAttemptAt || null, files: data.status === "ready" ? data.files : null, error: data.status === "failed" ? data.error : null, artifacts: { spec: data.spec || null, validation: data.validation || null } });
+const publicJob = (data) => ({ jobId: data.jobId, status: data.status, stage: currentStage(data), attempt: Number(data.attempt || 0), message: data.status === "failed" ? (data.error || null) : (data.message || null), retryAt: data.nextAttemptAt || null, files: data.status === "ready" ? data.files : null, error: data.status === "failed" ? data.error : null, artifacts: { spec: data.spec || null, validation: data.validation || null } });
 const getJob = async (uid, jobId) => { const snap = await adminDb().collection("studioJobs").doc(jobId).get(); if (!snap.exists || snap.data()?.uid !== uid) throw fail("Studio job not found.", 404, "job_not_found"); return { ref: snap.ref, data: snap.data() }; };
 const claimJob = async (uid, jobId) => {
   const db = adminDb(); const ref = db.collection("studioJobs").doc(jobId);
@@ -162,7 +176,6 @@ const claimJob = async (uid, jobId) => {
     return { claimed: true, data: { ...data, processing: true, processingAt: now, attempt, stage, nextAttemptAt: null } };
   });
 };
-const scheduleRetry = async (ref, data, error) => { const delay = RETRY_DELAYS_MS[Math.min(Number(data.attempt || 1) - 1, RETRY_DELAYS_MS.length - 1)]; const nextAttemptAt = Date.now() + delay + Math.floor(Math.random() * 400); const message = "Studio AI is busy right now. Retrying automatically…"; console.warn("Studio spec retry scheduled", { attempt: data.attempt, nextAttemptAt, error: safeErrorDetails(error) }); await ref.update({ processing: false, message, nextAttemptAt, updatedAt: Date.now(), lastError: safeErrorDetails(error) }); return { ...data, processing: false, message, nextAttemptAt }; };
 
 const processJob = async (uid, jobId) => {
   const claim = await claimJob(uid, jobId); if (!claim.claimed) return { ...claim.data, busy: Boolean(claim.busy), retrying: Boolean(claim.retrying) };
@@ -185,7 +198,9 @@ const processJob = async (uid, jobId) => {
     }
     throw fail("Studio job reached an invalid stage.", 500, "invalid_job_stage");
   } catch (error) {
-    if (data.stage === "spec" && isTransient(error) && Number(data.attempt || 0) < MAX_AI_ATTEMPTS) return scheduleRetry(ref, data, error);
+    if (data.stage === "spec" && isTransient(error) && Number(data.attempt || 0) < MAX_AI_ATTEMPTS) {
+      console.warn("Studio spec transient failure; no automatic job retry configured", { attempt: data.attempt, error: safeErrorDetails(error) });
+    }
     console.error("Studio job failed", { stage: data.stage, attempt: data.attempt, error: safeErrorDetails(error) });
     const message = data.stage === "validation" ? "Studio preview failed deterministic validation." : publicGenerationError(error);
     await ref.update({ status: "failed", processing: false, error: message, nextAttemptAt: null, updatedAt: Date.now(), lastError: safeErrorDetails(error) });
@@ -200,7 +215,7 @@ export default async function handler(req, res) {
     if (req.method !== "POST") return send(res, 405, { code: "method_not_allowed", message: "GET or POST required." });
     const body = req.body && typeof req.body === "object" ? req.body : {};
     if (body.action === "create") { const prompt = typeof body.prompt === "string" ? body.prompt.trim() : ""; if (prompt.length < 3) return send(res, 400, { code: "invalid_prompt", message: "A generated prompt is required." }); const jobId = globalThis.crypto?.randomUUID?.() || `studio-${Date.now()}-${Math.random().toString(36).slice(2)}`; const now = Date.now(); const data = { uid, prompt: prompt.slice(0, MAX_PROMPT_CHARS), status: "queued", stage: "spec", attempt: 0, processing: false, createdAt: now, updatedAt: now, message: "Preparing the structured Studio Spec." }; await adminDb().collection("studioJobs").doc(jobId).set(data); return send(res, 201, publicJob({ jobId, ...data })); }
-    if (body.action === "process") { const jobId = String(body.jobId || ""); if (!jobId) return send(res, 400, { code: "invalid_job", message: "A Studio job id is required." }); const result = await processJob(uid, jobId); return send(res, result.busy || result.retrying ? 202 : 200, publicJob({ jobId, ...result })); }
+    if (body.action === "process") { const jobId = String(body.jobId || ""); if (!jobId) return send(res, 400, { code: "invalid_job", message: "A Studio job id is required." }); const result = await processJob(uid, jobId); return send(res, 200, publicJob({ jobId, ...result })); }
     return send(res, 400, { code: "invalid_action", message: "Studio job action must be create or process." });
   } catch (error) { console.error("Studio job API failed", { code: error?.code || "unknown", message: error?.message || "unknown" }); return send(res, error?.status || 500, { code: error?.code || "studio_job_failed", message: error?.message || "Studio job could not complete." }); }
 }
