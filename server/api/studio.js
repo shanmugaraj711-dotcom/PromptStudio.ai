@@ -60,6 +60,8 @@ const assertSafeSnippet = (text) => {
   if (/\b(?:fetch|XMLHttpRequest|WebSocket|eval|Function)\s*\(/.test(text) || /document\.cookie|localStorage|sessionStorage/.test(text)) throw fail("Studio refused an unsafe edit snippet.", 409, "unsafe_edit");
 };
 
+const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const applyCssProperty = (files, edit) => {
   const path = String(edit?.path || "");
   const selector = String(edit?.selector || "").trim();
@@ -68,14 +70,14 @@ const applyCssProperty = (files, edit) => {
   if (!path || !selector || !/^[a-z-]+$/i.test(property) || !value) throw fail("Studio produced an invalid CSS property edit.", 502, "invalid_edit");
   if (!files[path]) throw fail(`Studio could not find ${path}.`, 409, "edit_target_missing");
   const source = files[path];
-  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedSelector = escapeRegex(selector);
   const selectorPattern = new RegExp(String.raw`(^|\n)([ \t]*)${escapedSelector}\s*\{([\s\S]*?)\n?\2\}`, "g");
   const matches = [...source.matchAll(selectorPattern)];
   if (matches.length !== 1) throw fail(`Studio could not safely locate a unique CSS selector in ${path}.`, 409, "edit_not_unique");
   const match = matches[0];
   const block = match[0];
   if (/[{}]/.test(match[3])) throw fail(`Studio could not safely edit a nested CSS block in ${path}.`, 409, "edit_target_unsupported");
-  const escapedProperty = property.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedProperty = escapeRegex(property);
   const declarationPattern = new RegExp(`(^|\n)([ \t]*)${escapedProperty}\s*:\s*[^;]+;`, "g");
   const declarations = [...match[3].matchAll(declarationPattern)];
   let updatedBlock;
@@ -90,6 +92,83 @@ const applyCssProperty = (files, edit) => {
     throw fail(`Studio found multiple ${property} declarations in ${path}.`, 409, "edit_not_unique");
   }
   return { updated: source.replace(block, updatedBlock), changedChars: editSpan(block, updatedBlock), operation: "css_property_set" };
+};
+
+const findMatchingBrace = (source, openIndex) => {
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let i = openIndex; i < source.length; i += 1) {
+    const ch = source[i];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === quote) quote = "";
+      continue;
+    }
+    if (ch === "\"" || ch === "'" || ch === "`") { quote = ch; continue; }
+    if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+};
+
+const applyCssMediaRule = (files, edit) => {
+  const path = String(edit?.path || "");
+  const selector = String(edit?.selector || "").trim();
+  const property = String(edit?.property || "").trim().toLowerCase();
+  const value = String(edit?.value || "").trim();
+  const maxWidth = String(edit?.maxWidth || "").trim();
+  if (!path || !selector || !/^[a-z-]+$/i.test(property) || !value || !/^\d+(?:\.\d+)?(?:px|rem|em)$/.test(maxWidth)) throw fail("Studio produced an invalid responsive CSS edit.", 502, "invalid_edit");
+  if (!files[path]) throw fail(`Studio could not find ${path}.`, 409, "edit_target_missing");
+  const source = files[path];
+  if (countOccurrences(source, selector) < 1) throw fail(`Studio could not find the requested CSS selector in ${path}.`, 409, "edit_target_missing");
+  const mediaPattern = /@media\s*\(\s*max-width\s*:\s*([^\)]+)\)\s*\{/gi;
+  const mediaBlocks = [];
+  for (const match of source.matchAll(mediaPattern)) {
+    const openIndex = match.index + match[0].length - 1;
+    const closeIndex = findMatchingBrace(source, openIndex);
+    if (closeIndex < 0) throw fail(`Studio could not safely parse a responsive CSS block in ${path}.`, 409, "edit_target_unsupported");
+    mediaBlocks.push({ match, openIndex, closeIndex, body: source.slice(openIndex + 1, closeIndex), width: match[1].trim() });
+  }
+  const targetWidth = maxWidth.toLowerCase();
+  const matchingBlocks = mediaBlocks.filter((block) => block.width.toLowerCase() === targetWidth);
+  if (matchingBlocks.length > 1) throw fail(`Studio found multiple matching responsive blocks in ${path}.`, 409, "edit_not_unique");
+  const escapedSelector = escapeRegex(selector);
+  let updated;
+  if (matchingBlocks.length === 1) {
+    const block = matchingBlocks[0];
+    const selectorPattern = new RegExp(String.raw`(^|\n)([ \t]*)${escapedSelector}\s*\{([\s\S]*?)\n?\2\}`, "g");
+    const selectorMatches = [...block.body.matchAll(selectorPattern)];
+    if (selectorMatches.length > 1) throw fail(`Studio found multiple ${selector} rules in the responsive block.`, 409, "edit_not_unique");
+    let newBody;
+    if (selectorMatches.length === 1) {
+      const rule = selectorMatches[0][0];
+      const inner = selectorMatches[0][3];
+      if (/[{}]/.test(inner)) throw fail("Studio could not safely edit a nested responsive CSS rule.", 409, "edit_target_unsupported");
+      const escapedProperty = escapeRegex(property);
+      const declarationPattern = new RegExp(`(^|\n)([ \t]*)${escapedProperty}\s*:\s*[^;]+;`, "g");
+      const declarations = [...inner.matchAll(declarationPattern)];
+      if (declarations.length > 1) throw fail(`Studio found multiple ${property} declarations in the responsive rule.`, 409, "edit_not_unique");
+      const replacement = declarations.length === 1
+        ? rule.replace(declarations[0][0], declarations[0][0].replace(/(:\s*)[^;]+;/, `$1${value};`))
+        : rule.replace(/\n?([ \t]*)\}$/, `\n$1  ${property}: ${value};\n$1}`);
+      newBody = block.body.replace(rule, replacement);
+    } else {
+      const indent = "  ";
+      newBody = `${block.body.trimEnd()}\n${indent}${selector} {\n${indent}  ${property}: ${value};\n${indent}}\n`;
+    }
+    const oldMedia = source.slice(block.match.index, block.closeIndex + 1);
+    const newMedia = source.slice(block.match.index, block.openIndex + 1) + newBody + source.slice(block.closeIndex, block.closeIndex + 1);
+    updated = source.slice(0, block.match.index) + newMedia + source.slice(block.closeIndex + 1);
+    return { updated, changedChars: editSpan(oldMedia, newMedia), operation: "css_media_rule_set" };
+  }
+  const mediaRule = `\n\n@media (max-width: ${maxWidth}) {\n  ${selector} {\n    ${property}: ${value};\n  }\n}\n`;
+  updated = source.trimEnd() + mediaRule;
+  return { updated, changedChars: editSpan(source, updated), operation: "css_media_rule_set" };
 };
 
 const applyJsInsertAfter = (files, edit) => {
@@ -127,6 +206,7 @@ const applyTargetedEditsV2 = (files, edits) => {
     const path = String(edit?.path || "");
     let result;
     if (op === "css_property_set") result = applyCssProperty(next, edit);
+    else if (op === "css_media_rule_set") result = applyCssMediaRule(next, edit);
     else if (op === "js_insert_after") result = applyJsInsertAfter(next, edit);
     else if (op === "exact_text_replace") result = applyTextReplace(next, edit);
     else throw fail(`Studio returned unsupported edit operation: ${op || "unknown"}.`, 502, "unsupported_edit_operation");
@@ -144,7 +224,7 @@ const sourceLength = (files, path) => files[path]?.length || 0;
 
 const editProject = async ({ files, instruction }) => {
   const source = Object.entries(files).map(([path, content]) => `--- ${path} ---\n${content}`).join("\n");
-  const system = `You are PromptStudio Studio's narrow targeted code editor. Return JSON only. Supported operations are exactly:\n1) css_property_set: {"operation":"css_property_set","path":"/styles.css","selector":".site-header","property":"background","value":"#2563eb"} — set one CSS declaration in one unique selector block; use for color, spacing, width, display, grid/flex and similar layout changes.\n2) js_insert_after: {"operation":"js_insert_after","path":"/App.js","anchor":"exact existing text","code":"small new JavaScript/JSX snippet"} — insert a small snippet immediately after one exact existing anchor. Use at most 3 operations total and keep each insertion small.\n3) exact_text_replace: {"operation":"exact_text_replace","path":"/App.js","oldText":"exact existing text","newText":"small replacement"} — use only for simple text/value changes.\nFor JavaScript behavior, compose up to 3 small operations if needed (for example, insert a state declaration, insert a handler after it, then make one exact JSX attribute replacement). Operations may target the same file. Every anchor/replacement must be unique against the current project state. Do NOT return complete files. Do NOT rewrite unrelated code. Do NOT invent a new operation. If the instruction is vague or underspecified (for example, 'make the menu better'), return {"status":"needs_clarification","message":"Ask the user one concise question describing what they want changed."} instead of making a broad guess. If the requested change cannot be expressed safely with these three operations, return {"status":"needs_clarification","message":"Ask the user to describe one small specific change."}. Never use markdown fences.`;
+  const system = `You are PromptStudio Studio's narrow targeted code editor. Return JSON only. Supported operations are exactly:\n1) css_property_set: {"operation":"css_property_set","path":"/styles.css","selector":".site-header","property":"background","value":"#2563eb"} — set one CSS declaration in one unique selector block; use for color, spacing, width, display, grid/flex and similar layout changes.\n2) css_media_rule_set: {"operation":"css_media_rule_set","path":"/styles.css","selector":".menu-grid","property":"grid-template-columns","value":"1fr","maxWidth":"768px"} — add or update one small responsive @media (max-width: ...) rule for one existing selector. Use for bounded mobile/tablet CSS changes such as one-column grids. Do not use it for DOM/JSX reordering.\n3) js_insert_after: {"operation":"js_insert_after","path":"/App.js","anchor":"exact existing text","code":"small new JavaScript/JSX snippet"} — insert a small snippet immediately after one exact existing anchor. Use at most 3 operations total and keep each insertion small.\n4) exact_text_replace: {"operation":"exact_text_replace","path":"/App.js","oldText":"exact existing text","newText":"small replacement"} — use only for simple text/value changes.\nFor JavaScript behavior, compose up to 3 small operations if needed (for example, insert a state declaration, insert a handler after it, then make one exact JSX attribute replacement). Operations may target the same file. Every anchor/replacement must be unique against the current project state. Do NOT return complete files. Do NOT rewrite unrelated code. Do NOT invent a new operation. If the instruction is vague or underspecified (for example, 'make the menu better'), return {"status":"needs_clarification","message":"Ask the user one concise question describing what they want changed."} instead of making a broad guess. If the requested change cannot be expressed safely with these four operations, return {"status":"needs_clarification","message":"Ask the user to describe one small specific change."}. Never use markdown fences.`;
   const result = await getClient().models.generateContent({ model: MODEL, contents: `${system}\n\nUSER CHANGE:\n${String(instruction || "").slice(0, 2000)}\n\nEXISTING PROJECT:\n${source}` });
   return parseJson(result.text);
 };
