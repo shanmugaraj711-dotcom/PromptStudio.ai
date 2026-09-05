@@ -56,6 +56,21 @@ const isTransient = (error) => {
   return [408, 429, 500, 502, 503, 504].includes(status) || /high demand|temporar|unavailable|overload|timeout|aborted|deadline/.test(message);
 };
 
+const generationModelForAttempt = (attempt) => [MODEL, FALLBACK_MODEL, SECOND_FALLBACK_MODEL][Math.max(0, Math.min(attempt, 3) - 1)];
+
+const classifyGenerationError = (error) => {
+  const status = Number(error?.status || error?.statusCode || 0);
+  const code = String(error?.code || "").toLowerCase();
+  const message = String(error?.message || "").toLowerCase();
+  if (code === "invalid_ai_response" || message.includes("invalid project response")) return "invalid_ai_response";
+  if (code === "invalid_project" || message.includes("invalid project")) return "invalid_project";
+  if (status === 429 || code.includes("rate") || message.includes("rate limit") || message.includes("too many requests")) return "rate_limited";
+  if (status === 408 || status === 504 || message.includes("timeout") || message.includes("aborted") || message.includes("deadline")) return "timeout";
+  if (status === 503 || message.includes("high demand")) return "high_demand";
+  if (status === 500 || status === 502 || message.includes("temporar") || message.includes("unavailable") || message.includes("overload")) return "provider_unavailable";
+  return "unknown";
+};
+
 const publicGenerationError = (error) => {
   const message = String(error?.message || "").trim();
   try {
@@ -83,7 +98,7 @@ const generateWithTimeout = async (model, contents) => {
 };
 
 const generateProjectAttempt = async (prompt, attempt) => {
-  const model = [MODEL, FALLBACK_MODEL, SECOND_FALLBACK_MODEL][Math.max(0, Math.min(attempt, 3) - 1)];
+  const model = generationModelForAttempt(attempt);
   const system = "You are PromptStudio Studio's code generator. Create a small, polished, runnable React app for an in-browser preview. Return only JSON matching the schema. Use React and plain CSS only. You may import only react or react-dom. Do NOT import lucide-react or any other third-party package. No network calls, secrets, backend, or external assets. Keep the project small, normally 3 files. Make it visually polished, responsive and interactive. It must run in a standard Sandpack React environment. Return only essential files.";
   const contents = `${system}\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, 12000)}`;
   const result = await generateWithTimeout(model, contents);
@@ -132,6 +147,7 @@ const processJob = async (uid, jobId) => {
   if (!claim.claimed) return { ...claim.data, busy: Boolean(claim.busy) };
   const { data } = claim;
   const ref = adminDb().collection("studioJobs").doc(jobId);
+  const model = generationModelForAttempt(data.attempt);
   try {
     if (data.status === "validating") {
       const files = validateFiles(data.files);
@@ -142,12 +158,15 @@ const processJob = async (uid, jobId) => {
     await ref.update({ status: "validating", stage: "validation", processing: false, message: "Preview generated. Validating it now.", files, updatedAt: Date.now() });
     return { ...data, status: "validating", stage: "validation", processing: false, files, message: "Preview generated. Validating it now." };
   } catch (error) {
+    const reason = classifyGenerationError(error);
     const retryable = isTransient(error) && data.attempt < MAX_ATTEMPTS;
     if (retryable) {
+      console.warn("Studio generation retry", { attempt: data.attempt, model, reason });
       const retryMessage = "Studio is busy right now. Retrying automatically…";
       await ref.update({ status: "building", stage: "layout", processing: false, message: retryMessage, lastError: error?.code || "generation_retry", updatedAt: Date.now() });
       return { ...data, status: "building", stage: "layout", processing: false, message: retryMessage };
     }
+    console.error("Studio generation failed", { attempt: data.attempt, model, reason });
     const message = publicGenerationError(error);
     await ref.update({ status: "failed", processing: false, error: message, updatedAt: Date.now() });
     return { ...data, status: "failed", processing: false, error: message };
