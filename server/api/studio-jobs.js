@@ -31,7 +31,10 @@ const getClient = () => {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 };
 const isTransient = (error) => {
+  const code = String(error?.code || "").toLowerCase();
   const status = Number(error?.status || error?.statusCode || error?.httpStatus || 0);
+  if (["invalid_spec", "validation_failed", "renderer_failed"].includes(code)) return false;
+  if (status >= 400 && status < 500 && ![408, 429].includes(status)) return false;
   const message = String(error?.message || "").toLowerCase();
   return [408, 429, 500, 502, 503, 504].includes(status) || /high demand|temporar|unavailable|overload|timeout|aborted|deadline/.test(message);
 };
@@ -93,16 +96,8 @@ const normalizeProductMenuSpec = (raw) => {
     navigation: "collapse",
     productColumns: { desktop: 3, mobile: 1 }
   };
-  console.info("Studio product menu spec normalized", {
-    originalItemCount,
-    normalizedItemCount: items.length,
-    responsive: { breakpoint: responsive.breakpoint, hero: responsive.hero, navigation: responsive.navigation, productColumns: responsive.productColumns }
-  });
-  return {
-    ...raw,
-    content: { ...content, catalog: { ...catalog, categories: categories.length ? categories : [fallbackCategory], items } },
-    responsive
-  };
+  console.info("Studio product menu spec normalized", { originalItemCount, normalizedItemCount: items.length, responsive: { breakpoint: responsive.breakpoint, hero: responsive.hero, navigation: responsive.navigation, productColumns: responsive.productColumns } });
+  return { ...raw, content: { ...content, catalog: { ...catalog, categories: categories.length ? categories : [fallbackCategory], items } }, responsive };
 };
 
 const generateSpec = async (prompt) => {
@@ -147,7 +142,7 @@ const deterministicValidate = (files, renderer) => {
 };
 
 const currentStage = (data) => { if (data.status === "queued" || data.stage === "spec") return "spec"; if (data.stage === "render" || data.status === "rendering") return "render"; if (data.stage === "validation" || data.status === "validating") return "validation"; return data.stage || "spec"; };
-const publicJob = (data) => ({ jobId: data.jobId, status: data.status, stage: currentStage(data), attempt: Number(data.attempt || 0), message: data.message || null, retryAt: data.nextAttemptAt || null, files: data.status === "ready" ? data.files : null, error: data.status === "failed" ? data.error : null, artifacts: { spec: data.spec || null, validation: data.validation || null } });
+const publicJob = (data) => ({ jobId: data.jobId, status: data.status, stage: currentStage(data), attempt: Number(data.attempt || 0), message: data.status === "failed" ? (data.error || null) : (data.message || null), retryAt: data.nextAttemptAt || null, files: data.status === "ready" ? data.files : null, error: data.status === "failed" ? data.error : null, artifacts: { spec: data.spec || null, validation: data.validation || null } });
 const getJob = async (uid, jobId) => { const snap = await adminDb().collection("studioJobs").doc(jobId).get(); if (!snap.exists || snap.data()?.uid !== uid) throw fail("Studio job not found.", 404, "job_not_found"); return { ref: snap.ref, data: snap.data() }; };
 const claimJob = async (uid, jobId) => {
   const db = adminDb(); const ref = db.collection("studioJobs").doc(jobId);
