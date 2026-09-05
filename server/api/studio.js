@@ -160,7 +160,7 @@ const findMatchingBrace = (source, openIndex) => {
       else if (ch === quote) quote = "";
       continue;
     }
-    if (ch === "\"" || ch === "'") { quote = ch; continue; }
+    if (ch === "\"" || ch === "'" || ch === "`") { quote = ch; continue; }
     if (ch === "{") depth += 1;
     else if (ch === "}") { depth -= 1; if (depth === 0) return i; }
   }
@@ -272,7 +272,9 @@ const inferResponsiveSingleColumnEdit = (files) => {
       const selector = match[2].trim();
       const body = match[3];
       if (!selector) continue;
-      if (!/display\s*:\s*grid\s*;/i.test(body) && !/grid-template-columns\s*:/i.test(body)) continue;
+      const isGrid = /display\s*:\s*grid\s*;/i.test(body) || /grid-template-columns\s*:/i.test(body);
+      const isFlex = /display\s*:\s*flex\s*;/i.test(body) || /flex-wrap\s*:/i.test(body);
+      if (!isGrid && !isFlex) continue;
       const selectorText = selector.toLowerCase();
       let score = 0;
       if (/\bmenu\b|menu[-_]/i.test(selectorText)) score += 100;
@@ -280,7 +282,9 @@ const inferResponsiveSingleColumnEdit = (files) => {
       if (/\bcard\b|cards|\bitem\b/i.test(selectorText)) score += 30;
       if (/grid-template-columns\s*:/i.test(body)) score += 20;
       if (/display\s*:\s*grid\s*;/i.test(body)) score += 10;
-      candidates.push({ path, selector, score });
+      if (/flex-wrap\s*:/i.test(body)) score += 20;
+      if (/display\s*:\s*flex\s*;/i.test(body)) score += 10;
+      candidates.push({ path, selector, score, property: isGrid ? "grid-template-columns" : "flex-direction", value: isGrid ? "1fr" : "column" });
     }
   }
   if (!candidates.length) return null;
@@ -289,7 +293,7 @@ const inferResponsiveSingleColumnEdit = (files) => {
   const second = candidates[1];
   if (best.score < 100) return null;
   if (second && second.score === best.score) return null;
-  return { edits: [{ operation: "css_media_rule_set", path: best.path, selector: best.selector, property: "grid-template-columns", value: "1fr", maxWidth: "768px" }] };
+  return { edits: [{ operation: "css_media_rule_set", path: best.path, selector: best.selector, property: best.property, value: best.value, maxWidth: "768px" }] };
 };
 
 const editProject = async ({ files, instruction }) => {
