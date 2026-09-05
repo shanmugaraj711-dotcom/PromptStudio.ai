@@ -5,29 +5,33 @@ const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 const MAX_FILES = 8;
 const MAX_FILE_CHARS = 50000;
 const MAX_EDIT_RATIO = 0.45;
+const MAX_EDIT_OPS = 3;
+const MAX_INSERT_CHARS = 5000;
 
 const send = (res, status, payload) => {
   res.setHeader("Cache-Control", "no-store");
   return res.status(status).json(payload);
 };
 
+const fail = (message, status, code) => Object.assign(new Error(message), { status, code });
+
 const parseJson = (text) => {
   const raw = String(text || "").trim().replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
-  try { return JSON.parse(raw); } catch { throw Object.assign(new Error("The Studio AI returned an invalid project response."), { status: 502, code: "invalid_ai_response" }); }
+  try { return JSON.parse(raw); } catch { throw fail("The Studio AI returned an invalid project response.", 502, "invalid_ai_response"); }
 };
 
 const validateFiles = (files) => {
-  if (!files || typeof files !== "object" || Array.isArray(files)) throw Object.assign(new Error("Studio returned no project files."), { status: 502, code: "invalid_project" });
+  if (!files || typeof files !== "object" || Array.isArray(files)) throw fail("Studio returned no project files.", 502, "invalid_project");
   const entries = Object.entries(files).filter(([path, content]) => typeof path === "string" && typeof content === "string");
-  if (!entries.length || entries.length > MAX_FILES) throw Object.assign(new Error("Studio returned an invalid number of project files."), { status: 502, code: "invalid_project" });
+  if (!entries.length || entries.length > MAX_FILES) throw fail("Studio returned an invalid number of project files.", 502, "invalid_project");
   for (const [path, content] of entries) {
-    if (!/^\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+$/.test(path) || path.includes("..") || content.length > MAX_FILE_CHARS) throw Object.assign(new Error("Studio returned an invalid project file."), { status: 502, code: "invalid_project" });
+    if (!/^\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+$/.test(path) || path.includes("..") || content.length > MAX_FILE_CHARS) throw fail("Studio returned an invalid project file.", 502, "invalid_project");
   }
   return Object.fromEntries(entries);
 };
 
 const getClient = () => {
-  if (!process.env.GEMINI_API_KEY) throw Object.assign(new Error("Studio AI is not configured yet."), { status: 503, code: "server_configuration_error" });
+  if (!process.env.GEMINI_API_KEY) throw fail("Studio AI is not configured yet.", 503, "server_configuration_error");
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 };
 
@@ -40,33 +44,108 @@ const generateProject = async ({ prompt, referenceFiles = [] }) => {
   return validateFiles(payload.files);
 };
 
-const applyTargetedEdits = (files, edits) => {
-  if (!Array.isArray(edits) || edits.length < 1 || edits.length > 3) throw Object.assign(new Error("Studio did not return targeted edits."), { status: 502, code: "invalid_edit" });
+const countOccurrences = (source, needle) => source.split(needle).length - 1;
+
+const editSpan = (before, after) => {
+  let prefix = 0;
+  const maxPrefix = Math.min(before.length, after.length);
+  while (prefix < maxPrefix && before[prefix] === after[prefix]) prefix += 1;
+  let suffix = 0;
+  const maxSuffix = Math.min(before.length - prefix, after.length - prefix);
+  while (suffix < maxSuffix && before[before.length - 1 - suffix] === after[after.length - 1 - suffix]) suffix += 1;
+  return Math.max(before.length - prefix - suffix, after.length - prefix - suffix);
+};
+
+const assertSafeSnippet = (text) => {
+  if (text.length > MAX_INSERT_CHARS) throw fail("Studio edit snippet is too large.", 409, "edit_too_broad");
+  if (/\b(?:fetch|XMLHttpRequest|WebSocket|eval|Function)\s*\(/.test(text) || /document\.cookie|localStorage|sessionStorage/.test(text)) throw fail("Studio refused an unsafe edit snippet.", 409, "unsafe_edit");
+};
+
+const applyCssProperty = (files, edit) => {
+  const path = String(edit?.path || "");
+  const selector = String(edit?.selector || "").trim();
+  const property = String(edit?.property || "").trim().toLowerCase();
+  const value = String(edit?.value || "").trim();
+  if (!path || !selector || !/^[a-z-]+$/i.test(property) || !value) throw fail("Studio produced an invalid CSS property edit.", 502, "invalid_edit");
+  if (!files[path]) throw fail(`Studio could not find ${path}.`, 409, "edit_target_missing");
+  const source = files[path];
+  const selectorPattern = new RegExp(`(^|\\n)([ \\t]*)${selector.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\s*\\{([\\s\\S]*?)\\n?\\2\\}`, "g");
+  const matches = [...source.matchAll(selectorPattern)];
+  if (matches.length !== 1) throw fail(`Studio could not safely locate a unique CSS selector in ${path}.`, 409, "edit_not_unique");
+  const match = matches[0];
+  const block = match[0];
+  if (/[{}]/.test(match[3])) throw fail(`Studio could not safely edit a nested CSS block in ${path}.`, 409, "edit_target_unsupported");
+  const declarationPattern = new RegExp(`(^|\\n)([ \\t]*)${property.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\s*:\\s*[^;]+;`, "g");
+  const declarations = [...match[3].matchAll(declarationPattern)];
+  let updatedBlock;
+  if (declarations.length === 1) {
+    const declaration = declarations[0][0];
+    const replacement = declaration.replace(/(:\\s*)[^;]+;/, `$1${value};`);
+    updatedBlock = block.replace(declaration, replacement);
+  } else if (declarations.length === 0) {
+    const closing = /\n?([ \\t]*)\}$/.exec(block);
+    if (!closing) throw fail("Studio could not safely insert the CSS property.", 409, "edit_target_unsupported");
+    updatedBlock = block.slice(0, block.length - closing[0].length) + `\n${closing[1]}  ${property}: ${value};` + closing[0];
+  } else {
+    throw fail(`Studio found multiple ${property} declarations in ${path}.`, 409, "edit_not_unique");
+  }
+  return { updated: source.replace(block, updatedBlock), changedChars: editSpan(block, updatedBlock), operation: "css_property_set" };
+};
+
+const applyJsInsertAfter = (files, edit) => {
+  const path = String(edit?.path || "");
+  const anchor = typeof edit?.anchor === "string" ? edit.anchor : "";
+  const code = typeof edit?.code === "string" ? edit.code : "";
+  if (!path || !anchor || !code.trim()) throw fail("Studio produced an invalid JavaScript insertion.", 502, "invalid_edit");
+  if (!/^\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+\.js$/.test(path)) throw fail("JavaScript insertion must target a .js project file.", 409, "edit_target_unsupported");
+  if (!files[path]) throw fail(`Studio could not find ${path}.`, 409, "edit_target_missing");
+  assertSafeSnippet(code);
+  const source = files[path];
+  if (countOccurrences(source, anchor) !== 1) throw fail(`Studio could not safely locate the JavaScript insertion point in ${path}.`, 409, "edit_not_unique");
+  const updated = source.replace(anchor, `${anchor}\n${code.trimEnd()}\n`);
+  return { updated, changedChars: editSpan(source, updated), operation: "js_insert_after" };
+};
+
+const applyTextReplace = (files, edit) => {
+  const path = String(edit?.path || "");
+  const oldText = typeof edit?.oldText === "string" ? edit.oldText : "";
+  const newText = typeof edit?.newText === "string" ? edit.newText : "";
+  if (!path || !oldText || oldText === newText || !files[path]) throw fail("Studio produced an invalid exact replacement.", 502, "invalid_edit");
+  if (countOccurrences(files[path], oldText) !== 1) throw fail(`Studio could not safely locate the requested replacement in ${path}.`, 409, "edit_not_unique");
+  assertSafeSnippet(newText);
+  const updated = files[path].replace(oldText, newText);
+  return { updated, changedChars: editSpan(oldText, newText), operation: "exact_text_replace" };
+};
+
+const applyTargetedEditsV2 = (files, edits) => {
+  if (!Array.isArray(edits) || edits.length < 1 || edits.length > MAX_EDIT_OPS) throw fail("Studio did not return a supported targeted edit plan.", 502, "invalid_edit");
   const next = { ...files };
   const changed = [];
+  const touched = new Set();
   for (const edit of edits) {
+    const op = String(edit?.operation || "");
     const path = String(edit?.path || "");
-    const oldText = typeof edit?.oldText === "string" ? edit.oldText : "";
-    const newText = typeof edit?.newText === "string" ? edit.newText : "";
-    if (!next[path] || !oldText || oldText === newText) throw Object.assign(new Error("Studio produced an unsafe or empty edit."), { status: 502, code: "invalid_edit" });
+    if (touched.has(path)) throw fail(`Studio returned multiple operations for ${path}; combine them into one safe edit where possible.`, 409, "edit_overlap");
+    let result;
+    if (op === "css_property_set") result = applyCssProperty(next, edit);
+    else if (op === "js_insert_after") result = applyJsInsertAfter(next, edit);
+    else if (op === "exact_text_replace") result = applyTextReplace(next, edit);
+    else throw fail(`Studio returned unsupported edit operation: ${op || "unknown"}.`, 502, "unsupported_edit_operation");
     const source = next[path];
-    const occurrences = source.split(oldText).length - 1;
-    if (occurrences !== 1) throw Object.assign(new Error(`Studio could not safely locate the requested edit in ${path}.`), { status: 409, code: "edit_not_unique" });
-    const updated = source.replace(oldText, newText);
-    const ratio = Math.abs(updated.length - source.length) / Math.max(source.length, 1);
-    const changedChars = [...source].filter((char, index) => char !== [...updated][index]).length + Math.abs(source.length - updated.length);
-    if (ratio > MAX_EDIT_RATIO || changedChars > source.length * MAX_EDIT_RATIO) throw Object.assign(new Error(`The requested edit would change too much of ${path}; Studio refused a broad regeneration.`), { status: 409, code: "edit_too_broad" });
-    next[path] = updated;
-    changed.push({ path, beforeChars: source.length, afterChars: updated.length, changedChars });
+    const ratio = result.changedChars / Math.max(source.length, 1);
+    if (ratio > MAX_EDIT_RATIO) throw fail(`The requested edit would change too much of ${path}; Studio refused a broad regeneration.`, 409, "edit_too_broad");
+    next[path] = result.updated;
+    touched.add(path);
+    changed.push({ path, operation: result.operation, beforeChars: source.length, afterChars: result.updated.length, changedChars: result.changedChars });
   }
   return { files: validateFiles(next), changed };
 };
 
 const editProject = async ({ files, instruction }) => {
   const source = Object.entries(files).map(([path, content]) => `--- ${path} ---\n${content}`).join("\n");
-  const system = `You are PromptStudio Studio's targeted code editor. The user wants a small change to an existing React project. Return JSON only: {"edits":[{"path":"/App.js","oldText":"exact existing text","newText":"replacement text"}]}. Make the smallest possible exact text replacements needed. Do NOT return complete files. Do NOT rewrite unrelated code. For a simple visual request such as changing a header color, edit only the relevant class/style/value. Each oldText must occur exactly once in the supplied source. Maximum 3 edits. Never use markdown fences.`;
+  const system = `You are PromptStudio Studio's narrow targeted code editor. Return JSON only. Supported operations are exactly:\n1) css_property_set: {"operation":"css_property_set","path":"/styles.css","selector":".site-header","property":"background","value":"#2563eb"} — set one CSS declaration in one unique selector block; use for color, spacing, width, display, grid/flex and similar layout changes.\n2) js_insert_after: {"operation":"js_insert_after","path":"/App.js","anchor":"exact existing text","code":"small new JavaScript/JSX snippet"} — insert a small snippet immediately after one exact existing anchor. Use at most 3 operations total and keep each insertion small.\n3) exact_text_replace: {"operation":"exact_text_replace","path":"/App.js","oldText":"exact existing text","newText":"small replacement"} — use only for simple text/value changes.\nFor JavaScript behavior, compose a few small js_insert_after/exact_text_replace operations only when each operation has a precise unique target. Do NOT return complete files. Do NOT rewrite unrelated code. Do NOT invent a new operation. If the instruction is vague or underspecified (for example, 'make the menu better'), return {"status":"needs_clarification","message":"Ask the user one concise question describing what they want changed."} instead of making a broad guess. If the requested change cannot be expressed safely with these three operations, return {"status":"needs_clarification","message":"Ask the user to describe one small specific change."}. Never use markdown fences.`;
   const result = await getClient().models.generateContent({ model: MODEL, contents: `${system}\n\nUSER CHANGE:\n${String(instruction || "").slice(0, 2000)}\n\nEXISTING PROJECT:\n${source}` });
-  return parseJson(result.text).edits;
+  return parseJson(result.text);
 };
 
 export default async function handler(req, res) {
@@ -83,9 +162,10 @@ export default async function handler(req, res) {
     if (action === "edit") {
       const files = validateFiles(body.files);
       if (typeof body.instruction !== "string" || body.instruction.trim().length < 2) return send(res, 400, { code: "invalid_instruction", message: "Tell Studio what to change." });
-      const edits = await editProject({ files, instruction: body.instruction.trim() });
-      const applied = applyTargetedEdits(files, edits);
-      return send(res, 200, { ...applied, mode: "targeted_edit", instruction: body.instruction.trim() });
+      const plan = await editProject({ files, instruction: body.instruction.trim() });
+      if (plan?.status === "needs_clarification") return send(res, 409, { code: "needs_clarification", message: String(plan.message || "Please describe one small specific change.") });
+      const applied = applyTargetedEditsV2(files, plan?.edits);
+      return send(res, 200, { ...applied, mode: "targeted_edit_v2", instruction: body.instruction.trim() });
     }
     return send(res, 400, { code: "invalid_action", message: "Studio action must be generate or edit." });
   } catch (error) {
