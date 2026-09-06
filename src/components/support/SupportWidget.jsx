@@ -88,7 +88,11 @@ export default function SupportWidget() {
           {user && <form onSubmit={send} className="border-t border-slate-800 p-4"><div className="flex gap-2"><input value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Type your question…" className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm outline-none placeholder:text-slate-600 focus:border-blue-500" /><button disabled={sending || !message.trim()} className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold disabled:opacity-40">{sending ? "…" : "Send"}</button></div><Link to="/transactions" className="mt-3 block text-center text-xs font-semibold text-slate-500 hover:text-slate-200">View transactions →</Link><Link to="/feedback" className="mt-2 block text-center text-xs font-semibold text-slate-500 hover:text-slate-200">Send product feedback instead →</Link></form>}
         </div>
       )}
-      <button type="button" onClick={() => setOpen((value) => !value)} className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-full bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-xl shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-500" aria-label="Open PromptStudio support">💬 Help & Chat</button>
+      <button type="button" onClick={() => setOpen((value) => !value)} className={`support-fab fixed bottom-5 right-5 z-[60] ${open ? "support-fab-is-open" : ""}`} aria-label={open ? "Close PromptStudio support" : "Open PromptStudio support"} aria-expanded={open}>
+        <span className="support-robot" aria-hidden="true"><span className="support-robot-antenna" /><span className="support-robot-face"><span className="support-robot-eye" /><span className="support-robot-eye" /><span className="support-robot-mouth" /></span></span>
+        <span className="support-fab-label">{open ? "Close" : "Help & Chat"}</span>
+        {!open && <span className="support-fab-ping" aria-hidden="true" />}
+      </button>
     </>
   );
 }
