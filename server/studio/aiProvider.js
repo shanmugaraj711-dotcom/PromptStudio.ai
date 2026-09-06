@@ -65,7 +65,13 @@ const createGeminiProvider = () => ({
     const activeModel = await this.resolveModel(capability);
     const response = await getGeminiClient().models.generateContent({ model: activeModel, contents, config });
     logAIUsage(response, activeModel, { provider: "gemini", stage: "spec", capability });
-    return { ...response, provider: "gemini", model: activeModel };
+    return {
+      text: response?.text || "",
+      usageMetadata: response?.usageMetadata || response?.usage_metadata || {},
+      provider: "gemini",
+      model: activeModel,
+      raw: response,
+    };
   },
 });
 
