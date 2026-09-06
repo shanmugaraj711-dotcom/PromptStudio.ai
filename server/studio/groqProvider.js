@@ -96,16 +96,19 @@ export const createGroqProvider = () => ({
     }
 
     try {
-      const responseFormat = config.responseJsonSchema
-        ? {
-            type: "json_schema",
-            json_schema: {
-              name: "studio_spec",
-              strict: true,
-              schema: config.responseJsonSchema,
-            },
-          }
-        : { type: "json_object" };
+      // Groq's strict JSON-schema validator requires additionalProperties:false on
+      // every object, while Studio's shared schema intentionally permits the
+      // provider-agnostic content envelope to evolve. Use Groq's JSON-object mode
+      // here and keep the authoritative structural validation in Studio after the
+      // response. The capability remains structured-json-spec; this is not free-form text.
+      const responseFormat = { type: "json_object" };
+
+      console.info("Studio AI structured response mode", {
+        provider: "groq",
+        capability,
+        model: activeModel,
+        mode: "json_object",
+      });
 
       const response = await fetch(GROQ_API_URL, {
         method: "POST",
