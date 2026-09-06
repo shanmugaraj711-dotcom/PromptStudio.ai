@@ -283,7 +283,39 @@ div[class*="bg-[#070A11]"] main button[class~="bg-teal-700"]:hover {
   color: #1e293b !important;
 }
 
-div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-zinc-700"],
+/* Classic conversational workspace finish: graphite surfaces, electric blue focus, quiet chrome. */
+.workspace-shell {
+  --workspace-bg: #090a0c;
+  --workspace-surface: #111316;
+  --workspace-surface-raised: #17191d;
+  --workspace-line: rgba(255, 255, 255, 0.1);
+  --workspace-muted: #8b909a;
+}
+.workspace-page { background: radial-gradient(circle at 50% -18%, rgba(42, 63, 94, .24), transparent 31rem); }
+.workspace-topbar { background: rgba(9, 10, 12, .9); }
+.brand-mark { background: #f4f5f6; color: #0b0c0e; box-shadow: 0 0 22px rgba(255,255,255,.08); }
+.workspace-brand em, .text-link, .card-link, .action-copy h3 span { color: #8ab4ff; }
+.usage-dot, .status-pulse { background: #8ab4ff; box-shadow: 0 0 10px #8ab4ff; }
+.usage-pill { background: rgba(255,255,255,.035); }
+.workspace-hero h1 span { color: #a7adb8; }
+.primary-action { background: #f4f5f6; color: #0b0c0e; box-shadow: 0 10px 28px rgba(0,0,0,.32); }
+.primary-action:hover { filter: brightness(1.1); }
+.action-card-cyan { box-shadow: inset 0 1px rgba(138,180,255,.14); }
+.action-card-amber { box-shadow: inset 0 1px rgba(255,255,255,.1); }
+.action-icon { background: rgba(138,180,255,.12); color: #a9c7ff; }
+.action-card-amber .action-icon { background: rgba(255,255,255,.08); color: #d6d9df; }
+.usage-track span { background: #8ab4ff; }
+.insight-icon { color: #8ab4ff; }
+.bottom-nav-item:hover, .bottom-nav-item.is-active { background: rgba(138,180,255,.1); color: #a9c7ff; }
+@media (max-width: 639px) {
+  .workspace-topbar { border-bottom-color: rgba(255,255,255,.07); }
+  .workspace-hero { padding: 2rem 0 1.5rem; }
+  .workspace-hero h1 { font-size: clamp(2.5rem, 13vw, 3.4rem); }
+  .workspace-section-heading { margin-top: 1.55rem; }
+  .action-card, .insight-card { border-radius: 1.1rem; }
+}
+
+ div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-zinc-700"],
 div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-indigo-600"],
 div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-orange-600"],
 div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-emerald-600"],
