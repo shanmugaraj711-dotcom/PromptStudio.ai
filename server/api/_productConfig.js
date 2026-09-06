@@ -33,6 +33,13 @@ export const normalizeProductConfig = (input) => {
   next.pricing.customCredits.minInr = clampInt(custom.minInr, 1, 100000) ?? base.pricing.customCredits.minInr;
   next.pricing.customCredits.maxInr = clampInt(custom.maxInr, next.pricing.customCredits.minInr, 1000000) ?? base.pricing.customCredits.maxInr;
   next.pricing.customCredits.inrPerCredit = Math.max(Number(custom.inrPerCredit || base.pricing.customCredits.inrPerCredit), 0.01);
+  next.pricing.studioBuild = { ...base.pricing.studioBuild };
+  const studioBuild = pricing.studioBuild || {};
+  if (studioBuild.enabled !== undefined && typeof studioBuild.enabled !== "boolean") throw new Error("Invalid studioBuild.enabled.");
+  next.pricing.studioBuild.enabled = studioBuild.enabled !== undefined ? studioBuild.enabled : base.pricing.studioBuild.enabled;
+  next.pricing.studioBuild.buildPriceInr = clampInt(studioBuild.buildPriceInr, 1, 100000) ?? base.pricing.studioBuild.buildPriceInr;
+  next.pricing.studioBuild.currency = String(studioBuild.currency || base.pricing.studioBuild.currency).toUpperCase();
+  if (next.pricing.studioBuild.currency !== "INR") throw new Error("Studio build currency must be INR.");
   next.creditCosts = { ...base.creditCosts };
   for (const key of Object.keys(base.creditCosts)) next.creditCosts[key] = clampInt(raw.creditCosts?.[key], 0, 1000) ?? base.creditCosts[key];
   next.features = clone(base.features);
