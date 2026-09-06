@@ -64,8 +64,8 @@ export const createGroqProvider = () => ({
           response_format: responseFormat,
           temperature: 0,
           max_tokens: config.maxOutputTokens,
-          signal: controller.signal,
         }),
+        signal: controller.signal,
       });
 
       const payload = await response.json().catch(() => ({}));
