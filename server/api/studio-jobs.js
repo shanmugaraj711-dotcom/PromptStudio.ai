@@ -3,6 +3,7 @@ import { createAIProvider } from "../studio/aiProvider.js";
 import { STUDIO_AI_CAPABILITIES } from "../studio/aiModelConfig.js";
 import { renderStudioSpec, validateStudioSpec } from "../studio/templateRenderer.js";
 import { renderProductMenuSpec, validateProductMenuSpec } from "../studio/productMenuRenderer.js";
+import { renderServiceBusinessSpec, validateServiceBusinessSpec } from "../studio/serviceBusinessRenderer.js";
 
 const AI_CAPABILITY = STUDIO_AI_CAPABILITIES.STRUCTURED_JSON_SPEC;
 const GENERATION_TIMEOUT_MS = 18000;
@@ -41,19 +42,31 @@ const publicGenerationError = (error) => {
   if (isQuotaError(error)) return "Studio AI quota is currently exhausted. Please wait for the quota window to reset, then try again.";
   return isTransient(error) ? "Studio AI is temporarily unavailable. Please try again shortly." : (String(error?.message || "").trim() || "Studio could not generate the preview.");
 };
-const validateSpec = (raw) => raw?.layout === "product-menu-showcase" ? validateProductMenuSpec(raw) : validateStudioSpec(raw);
-const renderSpec = (spec) => spec.layout === "product-menu-showcase" ? renderProductMenuSpec(spec) : renderStudioSpec(spec);
-const rendererName = (spec) => spec.layout === "product-menu-showcase" ? "product-menu-showcase-v1" : "landing-page-v1";
+const validateSpec = (raw) => {
+  if (raw?.layout === "product-menu-showcase") return validateProductMenuSpec(raw);
+  if (raw?.layout === "service-business") return validateServiceBusinessSpec(raw);
+  return validateStudioSpec(raw);
+};
+const renderSpec = (spec) => {
+  if (spec.layout === "product-menu-showcase") return renderProductMenuSpec(spec);
+  if (spec.layout === "service-business") return renderServiceBusinessSpec(spec);
+  return renderStudioSpec(spec);
+};
+const rendererName = (spec) => {
+  if (spec.layout === "product-menu-showcase") return "product-menu-showcase-v1";
+  if (spec.layout === "service-business") return "service-business-v1";
+  return "landing-page-v1";
+};
 
 const STUDIO_SPEC_SCHEMA = {
   type: "object",
   properties: {
     version: { type: "string", enum: ["1.0"] },
-    layout: { type: "string", enum: ["landing-page", "product-menu-showcase"] },
+    layout: { type: "string", enum: ["landing-page", "product-menu-showcase", "service-business"] },
     theme: { type: "object", properties: {
       primaryColor: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" }, secondaryColor: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" }, accentColor: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" }, backgroundColor: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" }, surfaceColor: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" }, textColor: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" }, mutedTextColor: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" }, radius: { type: "string", enum: ["md", "lg", "xl"] }, mood: { type: "string", enum: ["warm", "modern", "minimal", "bold"] }
     }, required: ["primaryColor", "secondaryColor", "accentColor", "backgroundColor", "surfaceColor", "textColor", "mutedTextColor", "radius", "mood"], additionalProperties: false },
-    sections: { type: "array", minItems: 3, maxItems: 3, items: { type: "object", properties: { id: { type: "string" }, type: { type: "string" }, variant: { type: "string" } }, required: ["id", "type", "variant"], additionalProperties: false } },
+    sections: { type: "array", minItems: 3, maxItems: 6, items: { type: "object", properties: { id: { type: "string" }, type: { type: "string" }, variant: { type: "string" } }, required: ["id", "type", "variant"], additionalProperties: false } },
     components: { type: "array", minItems: 5, maxItems: 6, items: { type: "string" } },
     content: { type: "object", additionalProperties: true },
     responsive: { type: "object", additionalProperties: true }
@@ -83,6 +96,11 @@ const PRODUCT_MENU_FILLERS = [
   { name: "House Special", description: "A popular option selected with care.", tag: "Popular" },
   { name: "Classic Choice", description: "A dependable favourite for any occasion.", tag: "Classic" },
   { name: "Customer Pick", description: "A well-loved choice worth trying.", tag: "Favourite" }
+];
+const SERVICE_FILLERS = [
+  { name: "Core Service", description: "A dependable professional service tailored to your needs.", price: "Get a quote", tag: "Popular" },
+  { name: "Premium Service", description: "A more detailed service for customers who want extra care.", price: "Get a quote", tag: "Featured" },
+  { name: "Flexible Service", description: "A convenient option designed around your schedule.", price: "Get a quote", tag: "Available" }
 ];
 
 const normalizeLandingPageSpec = (raw) => {
@@ -115,13 +133,27 @@ const normalizeProductMenuSpec = (raw) => {
   return normalized;
 };
 
+const normalizeServiceBusinessSpec = (raw) => {
+  if (!raw || raw.layout !== "service-business") return raw;
+  const content = raw.content && typeof raw.content === "object" ? raw.content : {};
+  const services = content.services && typeof content.services === "object" ? content.services : {};
+  const items = Array.isArray(services.items) ? [...services.items].slice(0, 8) : [];
+  const originalItemCount = items.length; let fillerIndex = 0;
+  while (items.length < 3) { items.push(SERVICE_FILLERS[fillerIndex % SERVICE_FILLERS.length]); fillerIndex += 1; }
+  const normalized = { ...raw, version: "1.0", layout: "service-business", sections: [
+    { id: "hero", type: "hero", variant: "split" }, { id: "services", type: "services", variant: "grid" }, { id: "trust", type: "trust", variant: "proof" }, { id: "booking", type: "booking", variant: "form" }, { id: "contact", type: "contact", variant: "details" }, { id: "footer", type: "footer", variant: "simple" }
+  ], components: ["navbar", "hero", "service-card", "trust-section", "booking-form", "footer"], content: { ...content, services: { ...services, items } }, responsive: { breakpoint: "768px", hero: "stack", serviceColumns: { desktop: 3, mobile: 1 }, navigation: "collapse" } };
+  console.info("Studio service business spec normalized", { originalItemCount, normalizedItemCount: items.length, sectionsCanonicalized: true, responsiveCanonicalized: true });
+  return normalized;
+};
+
 const generateSpec = async (prompt) => {
-  const contents = `You are PromptStudio Studio's structured design intelligence. Convert the user's generated app brief into ONE compact Studio Spec. Never write React, JSX, CSS, HTML or source code. Return only JSON matching the supplied schema.\n\nSUPPORTED V0 LAYOUTS:\n1) landing-page: exactly hero, menu, booking sections; components navbar, hero, menu-card, booking-form, footer; responsive breakpoint 768px, hero stacks, menu 3 columns desktop/1 mobile, navigation collapses.\n2) product-menu-showcase: exactly hero, catalog, cart sections; components navbar, hero, category-filter, product-card, cart-panel, footer; responsive breakpoint 768px, hero stacks, product grid 3 columns desktop/1 mobile, navigation collapses. Use this layout when the brief is primarily a product catalogue, shop, menu showcase or browse-and-add experience. For this layout ALWAYS provide 4 to 8 useful catalog items, even when the source brief mentions fewer.\nPreserve useful brand, copy, items, prices, calls to action and visual direction. Choose a coherent palette and mood. Do not invent unsupported capabilities.\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, MAX_PROMPT_CHARS)}`;
+  const contents = `You are PromptStudio Studio's structured design intelligence. Convert the user's generated app brief into ONE compact Studio Spec. Never write React, JSX, CSS, HTML or source code. Return only JSON matching the supplied schema.\n\nSUPPORTED V0 LAYOUTS:\n1) landing-page: exactly hero, menu, booking sections; components navbar, hero, menu-card, booking-form, footer; responsive breakpoint 768px, hero stacks, menu 3 columns desktop/1 mobile, navigation collapses.\n2) product-menu-showcase: exactly hero, catalog, cart sections; components navbar, hero, category-filter, product-card, cart-panel, footer; responsive breakpoint 768px, hero stacks, product grid 3 columns desktop/1 mobile, navigation collapses. Use this layout when the brief is primarily a product catalogue, shop, menu showcase or browse-and-add experience. For this layout ALWAYS provide 4 to 8 useful catalog items, even when the source brief mentions fewer.\n3) service-business: exactly hero, services, trust, booking, contact, footer sections; components navbar, hero, service-card, trust-section, booking-form, footer; responsive breakpoint 768px, hero stacks, services 3 columns desktop/1 mobile, navigation collapses. Use this layout for service providers such as salons, barbers, gyms, cleaners, repair businesses, consultants, agencies, tutors, photographers or other appointment/contact-led businesses. ALWAYS provide 3 to 8 useful services. Include concise trust points and contact details.\nPreserve useful brand, copy, services/items, prices, calls to action and visual direction. Choose a coherent palette and mood. Do not invent unsupported capabilities.\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, MAX_PROMPT_CHARS)}`;
   const startedAt = Date.now();
   try {
     const result = await generateWithTimeout(contents);
     const raw = parseJson(result.text, "invalid_spec_response");
-    const normalized = raw?.layout === "product-menu-showcase" ? normalizeProductMenuSpec(raw) : normalizeLandingPageSpec(raw);
+    const normalized = raw?.layout === "product-menu-showcase" ? normalizeProductMenuSpec(raw) : raw?.layout === "service-business" ? normalizeServiceBusinessSpec(raw) : normalizeLandingPageSpec(raw);
     const spec = validateSpec(normalized);
     console.info("Studio spec stage completed", { provider: result.provider || aiProvider.name, model: result.model || null, capability: AI_CAPABILITY, layout: spec.layout, durationMs: Date.now() - startedAt });
     return { spec, model: result.model || null };
@@ -146,6 +178,7 @@ const deterministicValidate = (files, renderer) => {
   const imports = app.match(/import\s+(?:[^;\n]+\s+from\s+)?["']([^"']+)["']/g) || [];
   for (const line of imports) { const specifier = /["']([^"']+)["']/.exec(line)?.[1] || ""; if (specifier !== "react") throw fail(`Studio preview uses an unsupported dependency: ${specifier}.`, 422, "validation_failed"); }
   if (renderer === "product-menu-showcase-v1" && !/product-grid|product-card/.test(app)) throw fail("Studio product template failed its artifact marker check.", 422, "validation_failed");
+  if (renderer === "service-business-v1" && !/service-grid|service-card/.test(app)) throw fail("Studio service template failed its artifact marker check.", 422, "validation_failed");
   return { valid: true, fileCount: 2, appPath: "/App.js", renderer, checkedAt: Date.now() };
 };
 const currentStage = (data) => { if (data.status === "queued" || data.stage === "spec") return "spec"; if (data.stage === "render" || data.status === "rendering") return "render"; if (data.stage === "validation" || data.status === "validating") return "validation"; return data.stage || "spec"; };
