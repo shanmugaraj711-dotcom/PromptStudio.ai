@@ -8,7 +8,7 @@ import { copyToClipboard } from "../../utils/copyToClipboard";
 export default function PromptHistory() {
   const { history, loading, error, removePrompt, toggleFavorite } = usePromptHistory();
   const { templates, loading: templatesLoading, error: templatesError, removeTemplate } = usePromptTemplates();
-  const { plan } = useAuth();
+  const { user, plan } = useAuth();
   const favoriteAccess = evaluateFeatureAccess("promptBookmarking", plan);
   const templateAccess = evaluateFeatureAccess("dynamicVariableFillers", plan);
   const [deletingId, setDeletingId] = useState("");
@@ -76,6 +76,17 @@ export default function PromptHistory() {
     setCopyStatus("✓ Filled prompt copied — ready to use");
     setTimeout(() => setCopyStatus(""), 2500);
   };
+
+  if (!user) return (
+    <div className="workspace-page flex min-h-[calc(100vh-5rem)] items-center justify-center px-4 py-12">
+      <div className="workspace-panel w-full max-w-lg p-8 text-center sm:p-10">
+        <p className="workspace-eyebrow">Your private library</p>
+        <h1 className="mt-3 text-3xl font-black tracking-tight text-white">History starts after you sign in</h1>
+        <p className="mt-4 text-sm leading-6 text-slate-400">Explore PromptStudio freely. Sign in when you are ready to generate and your saved prompts will appear here securely.</p>
+        <a href="/login" className="workspace-primary-button mt-7 inline-flex min-h-12 items-center justify-center rounded-2xl px-6 text-sm font-bold">Sign in to unlock history</a>
+      </div>
+    </div>
+  );
 
   if (loading || templatesLoading) return <div className="min-h-screen flex items-center justify-center"><p>Loading your prompt library...</p></div>;
 
