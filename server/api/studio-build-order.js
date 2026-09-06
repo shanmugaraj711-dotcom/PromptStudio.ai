@@ -22,13 +22,19 @@ export default async function handler(req, res) {
     const currency = String(pricing.currency || "INR").toUpperCase();
     if (!Number.isInteger(amountInr) || amountInr < 1 || currency !== "INR") return json(res, 503, { code: "invalid_studio_pricing", message: "Studio build pricing is not configured correctly." });
 
-    const forgeRequestId = String(req.body?.studioBuildRequestId || "").trim();
-    const studioBuildRequestId = REQUEST_ID_RE.test(forgeRequestId) ? forgeRequestId : `studio_${crypto.randomUUID().replace(/-/g, "")}`;
+    const requestedId = String(req.body?.studioBuildRequestId || "").trim();
+    if (!REQUEST_ID_RE.test(requestedId)) return json(res, 400, { code: "invalid_studio_build_request", message: "A valid Studio preview request is required before checkout." });
+    const studioBuildRequestId = requestedId;
+    const studioJobRef = db.collection("studioJobs").doc(studioBuildRequestId);
+    const studioJob = await studioJobRef.get();
+    if (!studioJob.exists || studioJob.data()?.uid !== user.uid) return json(res, 404, { code: "studio_job_not_found", message: "The Studio preview could not be found." });
+    if (studioJob.data()?.status !== "ready") return json(res, 409, { code: "studio_preview_not_ready", message: "Please accept a ready Studio preview before checkout." });
+
     const ref = requestRef(db, studioBuildRequestId);
     const existing = await ref.get();
     if (existing.exists) {
       const current = existing.data() || {};
-      if (current.uid !== user.uid) return json(res, 403, { code: "studio_build_forbidden", message: "Studio build request does not belong to this account." });
+      if (current.uid !== user.uid || current.studioJobId !== studioBuildRequestId) return json(res, 403, { code: "studio_build_forbidden", message: "Studio build request does not belong to this account." });
       if (current.status === "PAID") return json(res, 200, { ok: true, alreadyPaid: true, studioBuildRequestId, status: current.status, razorpayOrderId: current.razorpayOrderId || null });
       if (current.razorpayOrderId) return json(res, 200, { ok: true, studioBuildRequestId, orderId: current.razorpayOrderId, amount: current.amountPaise, currency: current.currency, keyId: process.env.RAZORPAY_KEY_ID });
     }
@@ -37,22 +43,22 @@ export default async function handler(req, res) {
       const snap = await tx.get(ref);
       if (snap.exists) {
         const current = snap.data() || {};
-        if (current.uid !== user.uid) fail(403, "studio_build_forbidden", "Studio build request does not belong to this account.");
+        if (current.uid !== user.uid || current.studioJobId !== studioBuildRequestId) fail(403, "studio_build_forbidden", "Studio build request does not belong to this account.");
         if (current.razorpayOrderId || current.status === "PAID") return;
       }
-      tx.set(ref, { studioBuildRequestId, uid: user.uid, status: "ORDER_CREATING", amountInr, amountPaise: amountInr * 100, currency, createdAt: snap.exists ? (snap.data()?.createdAt || now()) : now(), updatedAt: now() }, { merge: true });
+      tx.set(ref, { studioBuildRequestId, studioJobId: studioBuildRequestId, uid: user.uid, status: "ORDER_CREATING", amountInr, amountPaise: amountInr * 100, currency, createdAt: snap.exists ? (snap.data()?.createdAt || now()) : now(), updatedAt: now() }, { merge: true });
     });
 
     const receipt = receiptFor(studioBuildRequestId);
-    const order = await razorpayRequest("/orders", { method: "POST", body: JSON.stringify({ amount: amountInr * 100, currency, receipt, notes: { studioBuildRequestId, uid: user.uid, type: "studio_build", priceSource: "PRODUCT_CONFIG.pricing.studioBuild.buildPriceInr" }, partial_payment: false }) });
+    const order = await razorpayRequest("/orders", { method: "POST", body: JSON.stringify({ amount: amountInr * 100, currency, receipt, notes: { studioBuildRequestId, studioJobId: studioBuildRequestId, uid: user.uid, type: "studio_build", priceSource: "PRODUCT_CONFIG.pricing.studioBuild.buildPriceInr" }, partial_payment: false }) });
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
-      if (!snap.exists || snap.data()?.uid !== user.uid) fail(404, "studio_build_not_found", "Studio build payment request was not found.");
+      if (!snap.exists || snap.data()?.uid !== user.uid || snap.data()?.studioJobId !== studioBuildRequestId) fail(404, "studio_build_not_found", "Studio build payment request was not found.");
       const current = snap.data() || {};
       if (current.razorpayOrderId && current.razorpayOrderId !== order.id) fail(409, "studio_order_conflict", "A different Razorpay order is already linked to this Studio build request.");
       tx.update(ref, { status: "PAYMENT_PENDING", razorpayOrderId: order.id, razorpayReceipt: order.receipt || receipt, razorpayOrderCreatedAt: now(), amountInr, amountPaise: amountInr * 100, currency, updatedAt: now() });
     });
-    console.info("Studio build payment order created", { studioBuildRequestId, uid: user.uid, amountInr, currency, razorpayOrderId: order.id });
+    console.info("Studio build payment order created", { studioBuildRequestId, studioJobId: studioBuildRequestId, uid: user.uid, amountInr, currency, razorpayOrderId: order.id });
     return json(res, 200, { ok: true, studioBuildRequestId, orderId: order.id, amount: order.amount, currency: order.currency, keyId: process.env.RAZORPAY_KEY_ID, amountInr });
   } catch (error) {
     console.error("Studio build Razorpay order creation failed", { code: error?.code || "unknown", status: error?.status });
