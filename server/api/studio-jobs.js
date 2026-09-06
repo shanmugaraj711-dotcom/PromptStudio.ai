@@ -1,13 +1,10 @@
 import { requireUser, adminDb } from "./_firebaseAdmin.js";
 import { createAIProvider } from "../studio/aiProvider.js";
+import { STUDIO_AI_CAPABILITIES } from "../studio/aiModelConfig.js";
 import { renderStudioSpec, validateStudioSpec } from "../studio/templateRenderer.js";
 import { renderProductMenuSpec, validateProductMenuSpec } from "../studio/productMenuRenderer.js";
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.7-flash";
-const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash-lite";
-const SECOND_FALLBACK_MODEL = process.env.GEMINI_SECOND_FALLBACK_MODEL || "gemini-3.6-flash";
-const MODEL_SEQUENCE = [...new Set([MODEL, FALLBACK_MODEL, SECOND_FALLBACK_MODEL])];
-const MAX_AI_ATTEMPTS = 1;
+const AI_CAPABILITY = STUDIO_AI_CAPABILITIES.STRUCTURED_JSON_SPEC;
 const GENERATION_TIMEOUT_MS = 18000;
 const JOB_LEASE_MS = 60000;
 const JOB_TTL_MS = 30 * 60 * 1000;
@@ -34,7 +31,7 @@ const isQuotaError = (error) => {
 const isTransient = (error) => {
   if (isQuotaError(error)) return false;
   const status = errorStatus(error); const code = String(error?.code || "").toLowerCase();
-  if (["invalid_spec", "validation_failed", "renderer_failed", "studio_ai_quota_exceeded"].includes(code)) return false;
+  if (["invalid_spec", "validation_failed", "renderer_failed", "studio_ai_quota_exceeded", "ai_model_unavailable", "ai_capability_unsupported"].includes(code)) return false;
   if (status >= 400 && status < 500 && status !== 408) return false;
   const message = String(error?.message || "").toLowerCase();
   return [408, 500, 502, 503, 504].includes(status) || /high demand|temporar|unavailable|overload|timeout|aborted|deadline/.test(message);
@@ -65,10 +62,15 @@ const STUDIO_SPEC_SCHEMA = {
   additionalProperties: false
 };
 
-const generateWithTimeout = async (model, contents) => {
+const generateWithTimeout = async (contents) => {
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), GENERATION_TIMEOUT_MS);
-  try { return await aiProvider.generateStructuredSpec({ model, contents, config: { responseMimeType: "application/json", responseJsonSchema: STUDIO_SPEC_SCHEMA, maxOutputTokens: 2200, thinkingConfig: { thinkingLevel: "low" }, abortSignal: controller.signal } }); }
-  finally { clearTimeout(timer); }
+  try {
+    return await aiProvider.generateStructuredSpec({
+      capability: AI_CAPABILITY,
+      contents,
+      config: { responseMimeType: "application/json", responseJsonSchema: STUDIO_SPEC_SCHEMA, maxOutputTokens: 2200, thinkingConfig: { thinkingLevel: "low" }, abortSignal: controller.signal },
+    });
+  } finally { clearTimeout(timer); }
 };
 
 const LANDING_MENU_FILLERS = [
@@ -115,19 +117,19 @@ const normalizeProductMenuSpec = (raw) => {
 
 const generateSpec = async (prompt) => {
   const contents = `You are PromptStudio Studio's structured design intelligence. Convert the user's generated app brief into ONE compact Studio Spec. Never write React, JSX, CSS, HTML or source code. Return only JSON matching the supplied schema.\n\nSUPPORTED V0 LAYOUTS:\n1) landing-page: exactly hero, menu, booking sections; components navbar, hero, menu-card, booking-form, footer; responsive breakpoint 768px, hero stacks, menu 3 columns desktop/1 mobile, navigation collapses.\n2) product-menu-showcase: exactly hero, catalog, cart sections; components navbar, hero, category-filter, product-card, cart-panel, footer; responsive breakpoint 768px, hero stacks, product grid 3 columns desktop/1 mobile, navigation collapses. Use this layout when the brief is primarily a product catalogue, shop, menu showcase or browse-and-add experience. For this layout ALWAYS provide 4 to 8 useful catalog items, even when the source brief mentions fewer.\nPreserve useful brand, copy, items, prices, calls to action and visual direction. Choose a coherent palette and mood. Do not invent unsupported capabilities.\n\nUSER'S GENERATED PROMPT:\n${String(prompt || "").slice(0, MAX_PROMPT_CHARS)}`;
-  let lastError;
-  for (const model of MODEL_SEQUENCE) {
-    const startedAt = Date.now();
-    try {
-      const result = await generateWithTimeout(model, contents); const raw = parseJson(result.text, "invalid_spec_response"); const normalized = raw?.layout === "product-menu-showcase" ? normalizeProductMenuSpec(raw) : normalizeLandingPageSpec(raw); const spec = validateSpec(normalized);
-      console.info("Studio spec stage completed", { model, layout: spec.layout, durationMs: Date.now() - startedAt }); return { spec, model };
-    } catch (error) {
-      lastError = error; console.warn("Studio spec model failed", { model, durationMs: Date.now() - startedAt, transient: isTransient(error), quota: isQuotaError(error), error: safeErrorDetails(error) });
-      if (isQuotaError(error)) throw fail("Studio AI quota is currently exhausted. Please wait for the quota window to reset, then try again.", 429, "studio_ai_quota_exceeded");
-      if (!isTransient(error)) throw error;
-    }
+  const startedAt = Date.now();
+  try {
+    const result = await generateWithTimeout(contents);
+    const raw = parseJson(result.text, "invalid_spec_response");
+    const normalized = raw?.layout === "product-menu-showcase" ? normalizeProductMenuSpec(raw) : normalizeLandingPageSpec(raw);
+    const spec = validateSpec(normalized);
+    console.info("Studio spec stage completed", { provider: result.provider || aiProvider.name, model: result.model || null, capability: AI_CAPABILITY, layout: spec.layout, durationMs: Date.now() - startedAt });
+    return { spec, model: result.model || null };
+  } catch (error) {
+    console.warn("Studio spec capability request failed", { provider: aiProvider.name, capability: AI_CAPABILITY, durationMs: Date.now() - startedAt, transient: isTransient(error), quota: isQuotaError(error), error: safeErrorDetails(error) });
+    if (isQuotaError(error)) throw fail("Studio AI quota is currently exhausted. Please wait for the quota window to reset, then try again.", 429, "studio_ai_quota_exceeded");
+    throw error;
   }
-  throw lastError || fail("Studio AI could not produce a structured specification.", 502, "studio_ai_failed");
 };
 
 const normalizeRenderedFiles = (files) => {
