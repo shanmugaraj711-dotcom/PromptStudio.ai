@@ -5,6 +5,7 @@ const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models";
 const STRUCTURED_JSON_MAX_ATTEMPTS = 2;
 const STRUCTURED_JSON_RETRY_DELAY_MS = 300;
+const DIAGNOSTIC_MAX_CHARS = 4000;
 
 const getGroqApiKey = () => {
   if (!process.env.GROQ_API_KEY) {
@@ -25,6 +26,7 @@ const createGroqResponse = (payload, model) => ({
     candidatesTokenCount: Number(payload?.usage?.completion_tokens || 0),
     totalTokenCount: Number(payload?.usage?.total_tokens || 0),
   },
+  finishReason: payload?.choices?.[0]?.finish_reason || null,
   provider: "groq",
   model,
   raw: payload,
@@ -70,7 +72,9 @@ const isValidJsonObject = (text) => {
   try { const parsed = JSON.parse(String(text || "").trim()); return Boolean(parsed && typeof parsed === "object" && !Array.isArray(parsed)); } catch { return false; }
 };
 
-const createError = (message, status, code) => Object.assign(new Error(message), { status, code });
+const diagnosticText = (value) => String(value ?? "").slice(0, DIAGNOSTIC_MAX_CHARS);
+
+const createError = (message, status, code, details = {}) => Object.assign(new Error(message), { status, code, ...details });
 
 export const createGroqProvider = () => ({
   name: "groq",
@@ -103,7 +107,25 @@ export const createGroqProvider = () => ({
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
           const code = payload?.error?.code || "groq_request_failed";
-          const error = createError(payload?.error?.message || `Groq request failed with status ${response.status}.`, response.status, code);
+          const failedGeneration = payload?.error?.failed_generation;
+          const diagnostic = {
+            provider: "groq",
+            capability,
+            model: activeModel,
+            mode: "json_object",
+            attempt,
+            httpStatus: response.status,
+            errorCode: code,
+            errorMessage: payload?.error?.message || null,
+            failedGeneration: failedGeneration == null ? null : diagnosticText(failedGeneration),
+            failedGenerationLength: failedGeneration == null ? null : String(failedGeneration).length,
+            promptTokenCount: Number(payload?.usage?.prompt_tokens || 0),
+            candidatesTokenCount: Number(payload?.usage?.completion_tokens || 0),
+            totalTokenCount: Number(payload?.usage?.total_tokens || 0),
+            finishReason: payload?.choices?.[0]?.finish_reason || null,
+          };
+          console.warn("Studio Groq structured JSON provider error diagnostic", diagnostic);
+          const error = createError(payload?.error?.message || `Groq request failed with status ${response.status}.`, response.status, code, { groqDiagnostic: diagnostic });
           if (code === "json_validate_failed" && attempt < STRUCTURED_JSON_MAX_ATTEMPTS) {
             console.warn("Studio Groq structured JSON generation retrying", { provider: "groq", capability, model: activeModel, attempt, nextAttempt: attempt + 1, reason: "json_validate_failed" });
             await waitForRetry(STRUCTURED_JSON_RETRY_DELAY_MS, abortSignal);
@@ -113,13 +135,25 @@ export const createGroqProvider = () => ({
         }
 
         const result = createGroqResponse(payload, activeModel);
+        console.info("Studio Groq structured JSON provider response diagnostic", {
+          provider: "groq",
+          capability,
+          model: activeModel,
+          attempt,
+          promptTokenCount: result.usageMetadata.promptTokenCount,
+          candidatesTokenCount: result.usageMetadata.candidatesTokenCount,
+          totalTokenCount: result.usageMetadata.totalTokenCount,
+          finishReason: result.finishReason,
+          responseLength: result.text.length,
+          responseValidJsonObject: isValidJsonObject(result.text),
+        });
         if (!isValidJsonObject(result.text)) {
           if (attempt < STRUCTURED_JSON_MAX_ATTEMPTS) {
             console.warn("Studio Groq structured JSON generation retrying", { provider: "groq", capability, model: activeModel, attempt, nextAttempt: attempt + 1, reason: "invalid_ai_response" });
             await waitForRetry(STRUCTURED_JSON_RETRY_DELAY_MS, abortSignal);
             continue;
           }
-          throw createError("Groq returned malformed structured JSON.", 502, "invalid_ai_response");
+          throw createError("Groq returned malformed structured JSON.", 502, "invalid_ai_response", { groqDiagnostic: { provider: "groq", capability, model: activeModel, attempt, finishReason: result.finishReason, promptTokenCount: result.usageMetadata.promptTokenCount, candidatesTokenCount: result.usageMetadata.candidatesTokenCount, totalTokenCount: result.usageMetadata.totalTokenCount, responseLength: result.text.length, responsePreview: diagnosticText(result.text) } });
         }
         logAIUsage(result, activeModel, { provider: "groq", stage: "spec", capability });
         return result;
