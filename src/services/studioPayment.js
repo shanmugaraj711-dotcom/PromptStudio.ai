@@ -28,8 +28,8 @@ const loadCheckout = () => new Promise((resolve, reject) => {
   document.body.appendChild(script);
 });
 
-export async function payForStudioBuild({ user, idToken, fetchImpl = fetch, onSuccess }) {
-  const order = await post("/api/studio-build-order", {}, idToken, fetchImpl);
+export async function payForStudioBuild({ user, idToken, studioBuildRequestId, fetchImpl = fetch, onSuccess }) {
+  const order = await post("/api/studio-build-order", { studioBuildRequestId }, idToken, fetchImpl);
   if (order.alreadyPaid) { await onSuccess?.(order); return order; }
   if (!order.orderId || !order.studioBuildRequestId) throw new StudioPaymentError("Studio did not return a valid payment order.", { code: "invalid_order_response" });
   const Razorpay = await loadCheckout();
