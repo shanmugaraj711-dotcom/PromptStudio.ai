@@ -1,5 +1,8 @@
+import { STUDIO_AI_CAPABILITIES, getConfiguredDefaultModel, getProviderModelConfig } from "./aiModelConfig.js";
+import { logAIUsage } from "./aiUsage.js";
+
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const DEFAULT_GROQ_MODEL = "moonshotai/kimi-k2-instruct";
+const GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models";
 
 const getGroqApiKey = () => {
   if (!process.env.GROQ_API_KEY) {
@@ -28,10 +31,62 @@ const createGroqResponse = (payload, model) => ({
   raw: payload,
 });
 
+const listGroqModels = async () => {
+  const response = await fetch(GROQ_MODELS_URL, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${getGroqApiKey()}`,
+      "Content-Type": "application/json",
+    },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(payload?.error?.message || `Groq model listing failed with status ${response.status}.`);
+    error.status = response.status;
+    error.code = payload?.error?.code || "groq_model_list_failed";
+    throw error;
+  }
+  return Array.isArray(payload?.data)
+    ? payload.data.filter((model) => model?.id && model?.active !== false).map((model) => ({ id: model.id }))
+    : [];
+};
+
+const resolveGroqModel = async (capability) => {
+  getProviderModelConfig("groq", capability);
+  const configuredModel = getConfiguredDefaultModel("groq", capability);
+  const availableModels = await listGroqModels();
+  const supportedStrictModels = new Set([
+    "openai/gpt-oss-20b",
+    "openai/gpt-oss-120b",
+    "qwen/qwen3.8-27b",
+  ]);
+  const match = availableModels.find((entry) => entry.id === configuredModel);
+  if (!match || (capability === STUDIO_AI_CAPABILITIES.STRUCTURED_JSON_SPEC && !supportedStrictModels.has(configuredModel))) {
+    console.error("Studio AI configured model unavailable", {
+      provider: "groq",
+      capability,
+      configuredModel,
+      availableModelCount: availableModels.length,
+    });
+    const error = new Error(`Configured groq model "${configuredModel}" is unavailable for capability "${capability}".`);
+    error.status = 503;
+    error.code = "ai_model_unavailable";
+    throw error;
+  }
+  console.info("Studio AI model verified", { provider: "groq", capability, model: configuredModel });
+  return configuredModel;
+};
+
 export const createGroqProvider = () => ({
   name: "groq",
-  async generateStructuredSpec({ contents, config = {} }) {
-    const activeModel = process.env.GROQ_MODEL || DEFAULT_GROQ_MODEL;
+  async listAvailableModels() {
+    return listGroqModels();
+  },
+  async resolveModel(capability = STUDIO_AI_CAPABILITIES.STRUCTURED_JSON_SPEC) {
+    return resolveGroqModel(capability);
+  },
+  async generateStructuredSpec({ contents, config = {}, capability = STUDIO_AI_CAPABILITIES.STRUCTURED_JSON_SPEC }) {
+    const activeModel = await this.resolveModel(capability);
     const controller = new AbortController();
     const abortSignal = config.abortSignal;
     const abortForwarder = () => controller.abort(abortSignal?.reason);
@@ -75,7 +130,9 @@ export const createGroqProvider = () => ({
         error.code = payload?.error?.code || "groq_request_failed";
         throw error;
       }
-      return createGroqResponse(payload, activeModel);
+      const result = createGroqResponse(payload, activeModel);
+      logAIUsage(result, activeModel, { provider: "groq", stage: "spec", capability });
+      return result;
     } finally {
       if (abortSignal) abortSignal.removeEventListener("abort", abortForwarder);
     }
