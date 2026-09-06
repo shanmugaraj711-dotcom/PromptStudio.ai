@@ -5,6 +5,7 @@ const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models";
 const STRUCTURED_JSON_MAX_ATTEMPTS = 2;
 const STRUCTURED_JSON_RETRY_DELAY_MS = 300;
+const GROQ_MIN_OUTPUT_TOKENS = 3600;
 const DIAGNOSTIC_MAX_CHARS = 4000;
 
 const getGroqApiKey = () => {
@@ -17,16 +18,21 @@ const getGroqApiKey = () => {
   return process.env.GROQ_API_KEY;
 };
 
-const toMessages = (contents) => [
-  {
-    role: "system",
-    content: "Return ONLY one valid JSON object. Do not use markdown, code fences, explanations, or any text outside the JSON object.",
-  },
-  {
-    role: "user",
-    content: typeof contents === "string" ? contents : JSON.stringify(contents),
-  },
-];
+const toMessages = (contents, responseJsonSchema) => {
+  const schemaInstruction = responseJsonSchema
+    ? `\n\nOUTPUT CONTRACT:\nReturn one JSON object that follows this exact Studio Spec schema. Do not invent a different field structure.\n${JSON.stringify(responseJsonSchema)}`
+    : "";
+  return [
+    {
+      role: "system",
+      content: "Return ONLY one valid JSON object. Do not use markdown, code fences, explanations, or any text outside the JSON object.",
+    },
+    {
+      role: "user",
+      content: `${typeof contents === "string" ? contents : JSON.stringify(contents)}${schemaInstruction}`,
+    },
+  ];
+};
 
 const createGroqResponse = (payload, model, parsedJson) => ({
   text: JSON.stringify(parsedJson),
@@ -112,13 +118,14 @@ export const createGroqProvider = () => ({
     }
 
     try {
-      console.info("Studio AI structured response mode", { provider: "groq", capability, model: activeModel, mode: "prompted-json", maxAttempts: STRUCTURED_JSON_MAX_ATTEMPTS });
+      const outputTokenBudget = Math.max(Number(config.maxOutputTokens) || 0, GROQ_MIN_OUTPUT_TOKENS);
+      console.info("Studio AI structured response mode", { provider: "groq", capability, model: activeModel, mode: "prompted-json", maxAttempts: STRUCTURED_JSON_MAX_ATTEMPTS, outputTokenBudget, schemaProvided: Boolean(config.responseJsonSchema) });
 
       for (let attempt = 1; attempt <= STRUCTURED_JSON_MAX_ATTEMPTS; attempt += 1) {
         const response = await fetch(GROQ_API_URL, {
           method: "POST",
           headers: { Authorization: `Bearer ${getGroqApiKey()}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: activeModel, messages: toMessages(contents), temperature: 0, max_tokens: config.maxOutputTokens }),
+          body: JSON.stringify({ model: activeModel, messages: toMessages(contents, config.responseJsonSchema), temperature: 0, max_tokens: outputTokenBudget }),
           signal: controller.signal,
         });
         const payload = await response.json().catch(() => ({}));
