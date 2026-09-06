@@ -45,7 +45,7 @@ export default function AppLayout({ children }) {
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <button type="button" onClick={() => navigate("/account#plans")} className="usage-pill" aria-label={`View usage: ${quotaLabel}`}><span className="usage-dot" />{quotaLabel}</button>
-            <button type="button" onClick={handleLogout} className="hidden rounded-xl border border-white/10 px-3 py-2 text-xs font-bold text-slate-400 transition hover:border-white/20 hover:text-white xl:inline-flex">Log out</button>
+            {user ? <button type="button" onClick={handleLogout} className="hidden rounded-xl border border-white/10 px-3 py-2 text-xs font-bold text-slate-400 transition hover:border-white/20 hover:text-white xl:inline-flex">Log out</button> : <Link to="/login" className="rounded-xl border border-cyan-400/30 px-3 py-2 text-xs font-bold text-cyan-200 transition hover:border-cyan-300/60 hover:bg-cyan-300/10">Sign in</Link>}
           </div>
         </div>
       </header>

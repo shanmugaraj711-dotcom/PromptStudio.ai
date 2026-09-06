@@ -31,7 +31,7 @@ const prepareImage = (file) => new Promise((resolve, reject) => {
 });
 
 export function usePromptBuilder() {
-  const { user, loginWithGoogle, updateQuotaState } = useAuth();
+  const { user, updateQuotaState } = useAuth();
   const [idea, setIdea] = useState("");
   const [aiModel, setAiModel] = useState("chatgpt");
   const [category, setCategory] = useState("writing");
@@ -57,29 +57,17 @@ export function usePromptBuilder() {
     if (requestInFlightRef.current) return;
     if (!idea.trim() && !image) return setError("Describe what you want AI to create or attach a reference image.");
 
+    if (!user) {
+      setError("Sign in is required to generate prompts. Your idea and reference will stay here while you sign in.");
+      return;
+    }
+
     setError("");
     requestInFlightRef.current = true;
     setIsGenerating(true);
 
     try {
-      // Keep the current builder state untouched while Google authentication is open.
-      // Use the returned Firebase user immediately so generation does not depend on
-      // the asynchronous onAuthStateChanged cycle finishing first.
-      let authenticatedUser = user;
-      if (!authenticatedUser) {
-        try {
-          authenticatedUser = await loginWithGoogle();
-        } catch (err) {
-          if (err?.code === "auth/popup-closed-by-user" || err?.code === "auth/cancelled-popup-request") {
-            return;
-          }
-          throw err;
-        }
-      }
-
-      if (!authenticatedUser) return;
-
-      const idToken = await authenticatedUser.getIdToken();
+      const idToken = await user.getIdToken();
       const result = await generatePrompt({ idea: idea.trim(), aiModel, category, idToken, requestId: createRequestId(), image });
       setGeneratedPrompt(result.prompt);
       setHistoryId(result.historyId || "");
@@ -94,7 +82,7 @@ export function usePromptBuilder() {
       requestInFlightRef.current = false;
       setIsGenerating(false);
     }
-  }, [idea, aiModel, category, image, user, loginWithGoogle, updateQuotaState]);
+  }, [idea, aiModel, category, image, user, updateQuotaState]);
 
   const reset = useCallback(() => {
     setIdea(""); setImage(null); setGeneratedPrompt(""); setHistoryId(""); setPerspectives([]); setIntelligence(null); setError("");
