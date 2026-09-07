@@ -1,0 +1,9 @@
+{
+  "forgeRequestId": "forge-20260907-auth-diagnostic",
+  "buildId": "006-auth-diagnostic",
+  "appName": "PromptStudio AI",
+  "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
+  "packageId": "promptstudio.ai",
+  "versionName": "1.0.6-test",
+  "versionCode": 7
+}
