@@ -16,31 +16,35 @@ export const Login = () => {
   const location = useLocation();
   const from = location.state?.from?.pathname || "/dashboard";
 
-  const getFriendlyErrorMessage = (errorCode) => {
+  const getFriendlyErrorMessage = (errorCode, errorMessage) => {
     switch (errorCode) {
       case "auth/invalid-email": return "Please enter a valid email address.";
       case "auth/user-disabled": return "This account has been disabled. Please contact support.";
       case "auth/user-not-found":
-      case "auth/wrong-password":
-      case "auth/invalid-credential": return "Invalid email or password.";
+      case "auth/wrong-password": return "Invalid email or password.";
+      case "auth/invalid-credential":
+        return `Google authentication failed (${errorCode}). ${errorMessage || "The Google credential was rejected by Firebase."}`;
       case "auth/too-many-requests": return "Too many failed attempts. Please try again later.";
       case "auth/popup-closed-by-user": return "Google sign-in popup was closed before completing.";
       case "auth/network-request-failed": return "Network error. Please check your internet connection.";
-      default: return "Failed to authenticate. Please check your details and try again.";
+      case "auth/operation-not-allowed": return "Google sign-in is not enabled in Firebase Authentication.";
+      case "auth/unauthorized-domain": return "This app domain is not authorized in Firebase Authentication.";
+      default:
+        return `Authentication failed${errorCode ? ` (${errorCode})` : ""}. ${errorMessage || "Please try again."}`;
     }
   };
 
   const handleEmailLogin = async (e) => {
     e.preventDefault(); setError(""); setSuccessMessage(""); setIsSubmitting(true);
     try { await login(email, password); navigate(from, { replace: true }); }
-    catch (err) { setError(getFriendlyErrorMessage(err?.code)); }
+    catch (err) { setError(getFriendlyErrorMessage(err?.code, err?.message)); }
     finally { setIsSubmitting(false); }
   };
 
   const handleGoogleLogin = async () => {
     setError(""); setSuccessMessage(""); setIsSubmitting(true);
     try { await loginWithGoogle(); navigate(from, { replace: true }); }
-    catch (err) { setError(getFriendlyErrorMessage(err?.code)); }
+    catch (err) { setError(getFriendlyErrorMessage(err?.code, err?.message)); }
     finally { setIsSubmitting(false); }
   };
 
@@ -49,7 +53,7 @@ export const Login = () => {
     if (!email) { setError("Please enter your email address to reset your password."); return; }
     setIsSubmitting(true);
     try { await resetPassword(email); setSuccessMessage("Password reset email sent! Check your inbox."); setIsResetMode(false); }
-    catch (err) { setError(getFriendlyErrorMessage(err?.code)); }
+    catch (err) { setError(getFriendlyErrorMessage(err?.code, err?.message)); }
     finally { setIsSubmitting(false); }
   };
 
