@@ -23,9 +23,11 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -199,8 +201,16 @@ class MainActivity : AppCompatActivity() {
                         request = request
                     )
 
-                    val credential = GoogleIdTokenCredential.createFrom(result.credential.data)
-                    sendGoogleResult(requestId, credential.idToken, null)
+                    val credential = result.credential
+                    if (credential !is CustomCredential ||
+                        credential.type != TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                    ) {
+                        throw IllegalStateException("Google ID token credential was not returned.")
+                    }
+
+                    val googleIdTokenCredential =
+                        GoogleIdTokenCredential.createFrom(credential.data)
+                    sendGoogleResult(requestId, googleIdTokenCredential.idToken, null)
                 } catch (error: Exception) {
                     sendGoogleResult(
                         requestId,
