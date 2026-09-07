@@ -176,17 +176,17 @@ class MainActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun signIn(requestId: String) {
-            if (!isAppOrigin()) {
-                sendGoogleResult(
-                    requestId,
-                    null,
-                    "Native Google sign-in is unavailable for this origin."
-                )
-                return
-            }
-
             lifecycleScope.launch {
                 try {
+                    if (!isAppOrigin()) {
+                        sendGoogleResult(
+                            requestId,
+                            null,
+                            "Native Google sign-in is unavailable for this origin."
+                        )
+                        return@launch
+                    }
+
                     val googleIdOption = GetGoogleIdOption.Builder()
                         .setServerClientId(getString(R.string.google_web_client_id))
                         .setFilterByAuthorizedAccounts(false)
