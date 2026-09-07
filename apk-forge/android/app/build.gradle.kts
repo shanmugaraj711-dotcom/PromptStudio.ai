@@ -19,6 +19,13 @@ val forgeVersionCode = providers.gradleProperty("VERSION_CODE")
     .orElse("1")
     .get()
     .toInt()
+val googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID")
+    .orElse("")
+    .get()
+
+if (googleWebClientId.isBlank()) {
+    throw GradleException("GOOGLE_WEB_CLIENT_ID is required for Forge native Google Sign-In")
+}
 
 android {
     namespace = "promptstudio.ai"
@@ -31,6 +38,7 @@ android {
         versionCode = forgeVersionCode
         versionName = forgeVersionName
         resValue("string", "app_name", forgeAppName)
+        resValue("string", "google_web_client_id", googleWebClientId)
         buildConfigField("String", "FORGE_WEB_ORIGIN", "\"$forgeWebOrigin\"")
     }
 
@@ -63,4 +71,7 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.activity:activity-ktx:1.10.0")
     implementation("androidx.webkit:webkit:1.12.1")
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 }
