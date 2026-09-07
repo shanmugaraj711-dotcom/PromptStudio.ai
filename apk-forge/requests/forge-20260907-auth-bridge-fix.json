@@ -1,0 +1,9 @@
+{
+  "forgeRequestId": "forge-20260907-auth-bridge-fix",
+  "buildId": "006-auth-bridge-fix",
+  "appName": "PromptStudio AI",
+  "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
+  "packageId": "promptstudio.ai",
+  "versionName": "1.0.6-test",
+  "versionCode": 7
+}
