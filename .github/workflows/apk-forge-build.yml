@@ -56,6 +56,7 @@ env:
   FORGE_VERSION_NAME: ${{ github.event.client_payload.versionName || github.event.inputs.version_name || '' }}
   FORGE_VERSION_CODE: ${{ github.event.client_payload.versionCode || github.event.inputs.version_code || '' }}
   VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+  FORGE_GOOGLE_WEB_CLIENT_ID: ${{ secrets.FORGE_GOOGLE_WEB_CLIENT_ID }}
 
 jobs:
   build-apk:
@@ -131,11 +132,16 @@ jobs:
               raise SystemExit('VERSION_NAME cannot be empty')
           if not os.environ['FORGE_REQUEST_ID'].strip() or not os.environ['FORGE_BUILD_ID'].strip():
               raise SystemExit('FORGE_REQUEST_ID and FORGE_BUILD_ID are required')
+          if not os.environ['FORGE_GOOGLE_WEB_CLIENT_ID'].strip():
+              raise SystemExit('FORGE_GOOGLE_WEB_CLIENT_ID secret is required for native Google Sign-In')
+          if not re.fullmatch(r'[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com', os.environ['FORGE_GOOGLE_WEB_CLIENT_ID'].strip()):
+              raise SystemExit('FORGE_GOOGLE_WEB_CLIENT_ID must be a Google OAuth web application client ID')
           print(f'Forge request: {os.environ["FORGE_REQUEST_ID"]}')
           print(f'Forge build: {os.environ["FORGE_BUILD_ID"]}')
           print(f'Forge origin accepted: {origin}')
           print(f'Package ID accepted: {package_id}')
           print(f'App: {os.environ["FORGE_APP_NAME"]} {os.environ["FORGE_VERSION_NAME"]} (code {os.environ["FORGE_VERSION_CODE"]})')
+          print('Native Google Sign-In client ID: present')
           PY
 
       - name: Verify source website is reachable
@@ -177,6 +183,7 @@ jobs:
           -PPACKAGE_ID="$FORGE_PACKAGE_ID"
           -PVERSION_NAME="$FORGE_VERSION_NAME"
           -PVERSION_CODE="$FORGE_VERSION_CODE"
+          -PGOOGLE_WEB_CLIENT_ID="$FORGE_GOOGLE_WEB_CLIENT_ID"
           assembleDebug
 
       - name: Inspect APK
