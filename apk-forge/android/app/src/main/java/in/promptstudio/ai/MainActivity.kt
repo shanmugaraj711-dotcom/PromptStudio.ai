@@ -170,7 +170,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private inner class NativeGoogleBridge {
+    inner class NativeGoogleBridge {
         @JavascriptInterface
         fun isAvailable(): Boolean = true
 
