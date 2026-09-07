@@ -1,0 +1,9 @@
+{
+  "forgeRequestId": "forge-20260907-google-button-fallback",
+  "buildId": "006-google-button-fallback",
+  "appName": "PromptStudio AI",
+  "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
+  "packageId": "promptstudio.ai",
+  "versionName": "1.0.8-test",
+  "versionCode": 9
+}
