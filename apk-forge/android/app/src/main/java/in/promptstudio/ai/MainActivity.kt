@@ -8,6 +8,7 @@ import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -20,6 +21,13 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
@@ -28,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private var fileCallback: ValueCallback<Array<Uri>>? = null
 
     private val appOrigin = BuildConfig.FORGE_WEB_ORIGIN.trimEnd('/')
+    private val credentialManager by lazy { CredentialManager.create(this) }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,6 +53,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(root)
 
         setupWebView()
+        webView.addJavascriptInterface(NativeGoogleBridge(), "PromptStudioNativeGoogle")
 
         if (savedInstanceState == null) {
             loadIfOnline()
@@ -88,14 +98,13 @@ class MainActivity : AppCompatActivity() {
                 val uri = request.url
 
                 // Keep ALL normal web navigation inside the native shell.
-                // This is the critical fix: OAuth/auth redirects, Vercel redirects,
-                // payment return pages, and other HTTPS pages must not be handed to Chrome.
+                // OAuth/auth redirects, Vercel redirects, payment return pages,
+                // and other HTTPS pages must not be handed to Chrome.
                 if (uri.scheme == "https" || uri.scheme == "http") {
                     return false
                 }
 
-                // Non-web schemes (upi://, intent://, mailto:, tel:, etc.) belong to
-                // Android's external handlers rather than the WebView.
+                // Non-web schemes belong to Android's external handlers.
                 return try {
                     startActivity(Intent(Intent.ACTION_VIEW, uri))
                     true
@@ -157,6 +166,68 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private inner class NativeGoogleBridge {
+        @JavascriptInterface
+        fun isAvailable(): Boolean = true
+
+        @JavascriptInterface
+        fun signIn(requestId: String) {
+            if (!isAppOrigin()) {
+                sendGoogleResult(
+                    requestId,
+                    null,
+                    "Native Google sign-in is unavailable for this origin."
+                )
+                return
+            }
+
+            lifecycleScope.launch {
+                try {
+                    val googleIdOption = GetGoogleIdOption.Builder()
+                        .setServerClientId(getString(R.string.google_web_client_id))
+                        .setFilterByAuthorizedAccounts(false)
+                        .build()
+
+                    val request = GetCredentialRequest.Builder()
+                        .addCredentialOption(googleIdOption)
+                        .build()
+
+                    val result = credentialManager.getCredential(
+                        context = this@MainActivity,
+                        request = request
+                    )
+
+                    val credential = GoogleIdTokenCredential.createFrom(result.credential.data)
+                    sendGoogleResult(requestId, credential.idToken, null)
+                } catch (error: Exception) {
+                    sendGoogleResult(
+                        requestId,
+                        null,
+                        error.message ?: "Native Google sign-in failed."
+                    )
+                }
+            }
+        }
+    }
+
+    private fun isAppOrigin(): Boolean {
+        val current = webView.url ?: return false
+        return current == appOrigin || current.startsWith("$appOrigin/")
+    }
+
+    private fun sendGoogleResult(requestId: String, idToken: String?, error: String?) {
+        val payload = JSONObject().apply {
+            put("requestId", requestId)
+            put("idToken", idToken)
+            put("error", error)
+        }
+
+        webView.evaluateJavascript(
+            "window.__promptStudioNativeGoogleResult(${JSONObject.quote(payload.toString())})",
+            null
+        )
     }
 
     private fun loadIfOnline() {
@@ -232,6 +303,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         fileCallback?.onReceiveValue(null)
         fileCallback = null
+        webView.removeJavascriptInterface("PromptStudioNativeGoogle")
         webView.destroy()
         super.onDestroy()
     }
