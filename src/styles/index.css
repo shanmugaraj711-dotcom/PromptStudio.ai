@@ -264,6 +264,44 @@ div[class*="bg-[#070A11]"] main [class*="bg-teal-950/30"] {
   border-color: #b8d8d5 !important;
 }
 
+/* Shared PromptStudio Forge language: quiet navy canvas, paper cards, and one blue action color. */
+.forge-screen {
+  min-height: calc(100vh - 4.5rem);
+  background: #f4f7fb;
+  color: #172033;
+}
+.forge-screen .forge-card {
+  border: 1px solid #dbe3ed;
+  border-radius: 1.25rem;
+  background: #ffffff;
+  box-shadow: 0 18px 45px -34px rgba(30, 55, 90, 0.45);
+}
+.forge-screen .forge-eyebrow {
+  color: #2563eb;
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.forge-screen .forge-title { color: #122039; letter-spacing: -.045em; }
+.forge-screen input,
+.forge-screen textarea,
+.forge-screen select {
+  border-color: #d5deea;
+  border-radius: .8rem;
+  background: #fbfdff;
+}
+.forge-screen input:focus,
+.forge-screen textarea:focus,
+.forge-screen select:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, .18);
+}
+.forge-screen button,
+.forge-screen a { transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease; }
+.forge-screen button:hover:not(:disabled),
+.forge-screen a:hover { transform: translateY(-1px); }
+
 /* Reference Coding AI selector: one calm palette, with selection carrying the emphasis. */
 div[class*="bg-[#070A11]"] main button[class~="bg-zinc-700"],
 div[class*="bg-[#070A11]"] main button[class~="bg-indigo-600"],

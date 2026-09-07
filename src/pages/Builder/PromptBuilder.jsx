@@ -44,6 +44,7 @@ function PromptBuilder() {
     return () => { active = false; };
   }, [user]);
   useEffect(() => { if (requestedModel && AI_MODELS.some((model) => model.id === requestedModel)) setAiModel(requestedModel); }, [requestedModel, setAiModel]);
+  useEffect(() => { const initialIdea = searchParams.get('idea'); if (initialIdea) setIdea(initialIdea); }, [searchParams, setIdea]);
   useEffect(() => { if (workflowActive && workflow.category) setCategory(workflow.category); }, [workflowActive, workflow?.category, setCategory]);
   useEffect(() => {
     if (!generatedPrompt || !resultRef.current) return undefined;

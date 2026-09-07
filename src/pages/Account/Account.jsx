@@ -33,6 +33,21 @@ export default function Account() {
   const photoURL = userProfile?.photoURL || user?.photoURL || "";
   const isPro = plan === "pro";
 
+  if (!user) return (
+    <div className="workspace-page flex min-h-[calc(100vh-5rem)] items-center justify-center px-4 py-12">
+      <div className="workspace-panel w-full max-w-xl p-8 sm:p-10">
+        <p className="workspace-eyebrow">PromptStudio account</p>
+        <h1 className="mt-3 text-3xl font-black tracking-tight text-white">Your creative workspace, ready when you are</h1>
+        <p className="mt-4 text-sm leading-6 text-slate-400">Sign in to generate prompts, keep a private history, manage your plan, and use credits across your workspace.</p>
+        <div className="mt-7 grid gap-3 sm:grid-cols-3">
+          {['Generate securely', 'Save your history', 'Manage credits'].map((benefit) => <div key={benefit} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm font-semibold text-slate-200">{benefit}</div>)}
+        </div>
+        <p className="mt-6 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-4 text-sm leading-6 text-amber-100">Generation currently requires sign-in. PromptStudio does not offer guest generations.</p>
+        <a href="/login" className="workspace-primary-button mt-7 inline-flex min-h-12 items-center justify-center rounded-2xl px-6 text-sm font-bold">Sign in to continue</a>
+      </div>
+    </div>
+  );
+
   const runPayment = async (key, action) => {
     setBusy(key); setError(""); setMessage("");
     try {
