@@ -1,0 +1,9 @@
+{
+  "forgeRequestId": "forge-20260907-google-auth-hardening",
+  "buildId": "007-google-auth-hardening",
+  "appName": "PromptStudio AI",
+  "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
+  "packageId": "promptstudio.ai",
+  "versionName": "1.0.9-test",
+  "versionCode": 10
+}
