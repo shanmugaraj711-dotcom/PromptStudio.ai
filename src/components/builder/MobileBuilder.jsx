@@ -1,6 +1,5 @@
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ResultCard from '../../pages/Result/ResultCard';
 import '../../styles/forge-mobile.css';
 
 export default function MobileBuilder({
@@ -84,10 +83,10 @@ export default function MobileBuilder({
         </button>
 
         {generatedPrompt && (
-          <div className="mobile-result-card">
+          <section className="mobile-result-card" aria-live="polite">
             <div className="mobile-result-heading">Your prompt</div>
-            <ResultCard prompt={generatedPrompt} userPlan="free" />
-          </div>
+            <textarea className="mobile-generated-prompt" value={generatedPrompt} readOnly rows={12} aria-label="Generated prompt" />
+          </section>
         )}
       </div>
     </section>
