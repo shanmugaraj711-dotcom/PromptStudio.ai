@@ -1,0 +1,9 @@
+{
+  "forgeRequestId": "forge-20260907-auth-origin-fix",
+  "buildId": "006-auth-origin-fix",
+  "appName": "PromptStudio AI",
+  "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
+  "packageId": "promptstudio.ai",
+  "versionName": "1.0.7-test",
+  "versionCode": 8
+}
