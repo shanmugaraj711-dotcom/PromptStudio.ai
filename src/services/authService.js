@@ -2,6 +2,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithCredential,
+  GoogleAuthProvider,
   signOut,
   sendPasswordResetEmail,
   updateProfile
@@ -62,9 +64,62 @@ export const loginWithEmail = async (email, password) => {
   return userCredential.user;
 };
 
+const nativeGoogleCallbacks = {};
+
+window.__promptStudioNativeGoogleCallbacks = nativeGoogleCallbacks;
+window.__promptStudioNativeGoogleResult = (rawPayload) => {
+  try {
+    const payload = JSON.parse(rawPayload);
+    const callback = nativeGoogleCallbacks[payload.requestId];
+    if (!callback) return;
+
+    delete nativeGoogleCallbacks[payload.requestId];
+
+    if (payload.error) {
+      callback.reject(new Error(payload.error));
+    } else if (payload.idToken) {
+      callback.resolve(payload.idToken);
+    } else {
+      callback.reject(new Error("Google did not return an ID token."));
+    }
+  } catch (error) {
+    console.error("Native Google bridge response error:", error);
+  }
+};
+
+const loginWithNativeGoogle = async () => {
+  const requestId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
+  const idToken = await new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      delete nativeGoogleCallbacks[requestId];
+      reject(new Error("Native Google sign-in timed out."));
+    }, 120000);
+
+    nativeGoogleCallbacks[requestId] = {
+      resolve: (token) => {
+        window.clearTimeout(timeout);
+        resolve(token);
+      },
+      reject: (error) => {
+        window.clearTimeout(timeout);
+        reject(error);
+      }
+    };
+
+    window.PromptStudioNativeGoogle.signIn(requestId);
+  });
+
+  const credential = GoogleAuthProvider.credential(idToken);
+  return signInWithCredential(auth, credential);
+};
+
 export const loginWithGoogle = async () => {
   try {
-    const userCredential = await signInWithPopup(auth, googleProvider);
+    const userCredential = window.PromptStudioNativeGoogle?.isAvailable?.()
+      ? await loginWithNativeGoogle()
+      : await signInWithPopup(auth, googleProvider);
+
     await createOrUpdateUserDoc(userCredential.user);
     return userCredential.user;
   } catch (error) {
