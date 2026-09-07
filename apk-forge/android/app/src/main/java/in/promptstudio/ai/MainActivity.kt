@@ -25,7 +25,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import androidx.credentials.exceptions.NoCredentialException
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import kotlinx.coroutines.launch
@@ -187,21 +188,17 @@ class MainActivity : AppCompatActivity() {
                         return@launch
                     }
 
-                    val googleIdOption = GetGoogleIdOption.Builder()
-                        .setServerClientId(getString(R.string.google_web_client_id))
-                        .setFilterByAuthorizedAccounts(false)
-                        .build()
+                    val credential = try {
+                        getGoogleCredential()
+                    } catch (error: NoCredentialException) {
+                        // Credential Manager's normal Google ID option can return
+                        // NoCredentialException when there is no eligible stored
+                        // credential. For a user-triggered Google button, Android's
+                        // SignInWithGoogleOption is the documented fallback that
+                        // launches the explicit Google sign-in flow.
+                        getGoogleButtonCredential()
+                    }
 
-                    val request = GetCredentialRequest.Builder()
-                        .addCredentialOption(googleIdOption)
-                        .build()
-
-                    val result = credentialManager.getCredential(
-                        context = this@MainActivity,
-                        request = request
-                    )
-
-                    val credential = result.credential
                     if (credential !is CustomCredential ||
                         credential.type != TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
                     ) {
@@ -212,14 +209,44 @@ class MainActivity : AppCompatActivity() {
                         GoogleIdTokenCredential.createFrom(credential.data)
                     sendGoogleResult(requestId, googleIdTokenCredential.idToken, null)
                 } catch (error: Exception) {
-                    sendGoogleResult(
-                        requestId,
-                        null,
-                        error.message ?: "Native Google sign-in failed."
-                    )
+                    val detail = error.message?.takeIf { it.isNotBlank() }
+                        ?: error::class.java.simpleName
+                        ?: "Native Google sign-in failed."
+                    sendGoogleResult(requestId, null, detail)
                 }
             }
         }
+    }
+
+    private suspend fun getGoogleCredential(): androidx.credentials.GetCredentialResponse {
+        val googleIdOption = com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
+            .setServerClientId(getString(R.string.google_web_client_id))
+            .setFilterByAuthorizedAccounts(false)
+            .build()
+
+        val request = GetCredentialRequest.Builder()
+            .addCredentialOption(googleIdOption)
+            .build()
+
+        return credentialManager.getCredential(
+            context = this@MainActivity,
+            request = request
+        )
+    }
+
+    private suspend fun getGoogleButtonCredential(): androidx.credentials.GetCredentialResponse {
+        val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(
+            getString(R.string.google_web_client_id)
+        ).build()
+
+        val request = GetCredentialRequest.Builder()
+            .addCredentialOption(signInWithGoogleOption)
+            .build()
+
+        return credentialManager.getCredential(
+            context = this@MainActivity,
+            request = request
+        )
     }
 
     private fun isAppOrigin(): Boolean {
