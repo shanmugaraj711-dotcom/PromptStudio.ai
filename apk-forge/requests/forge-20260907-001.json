@@ -1,0 +1,9 @@
+{
+  "forgeRequestId": "forge-20260907-001",
+  "buildId": "forge-apk-20260907-001",
+  "appName": "PromptStudio AI",
+  "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
+  "packageId": "ai.promptstudio.forge",
+  "versionName": "1.0.0",
+  "versionCode": 1
+}
