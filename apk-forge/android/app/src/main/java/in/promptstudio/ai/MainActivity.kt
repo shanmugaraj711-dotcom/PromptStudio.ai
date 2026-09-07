@@ -7,6 +7,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Bundle
+import android.util.Base64
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
@@ -21,16 +22,19 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.TextViewCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.NoCredentialException
+import androidx.core.view.MutableContextWrapper
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.security.SecureRandom
 
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
@@ -39,7 +43,7 @@ class MainActivity : AppCompatActivity() {
     private var fileCallback: ValueCallback<Array<Uri>>? = null
 
     private val appOrigin = BuildConfig.FORGE_WEB_ORIGIN.trimEnd('/')
-    private val credentialManager by lazy { CredentialManager.create(this) }
+    private val credentialManager by lazy { CredentialManager.create(applicationContext) }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -188,15 +192,19 @@ class MainActivity : AppCompatActivity() {
                         return@launch
                     }
 
+                    // One fresh cryptographically secure nonce is used for the
+                    // entire user-triggered sign-in attempt, including the
+                    // documented explicit-button fallback.
+                    val nonce = generateSecureRandomNonce()
                     val credential = try {
-                        getGoogleCredential()
+                        getGoogleCredential(nonce)
                     } catch (error: NoCredentialException) {
                         // Credential Manager's normal Google ID option can return
                         // NoCredentialException when there is no eligible stored
                         // credential. For a user-triggered Google button, Android's
                         // SignInWithGoogleOption is the documented fallback that
                         // launches the explicit Google sign-in flow.
-                        getGoogleButtonCredential()
+                        getGoogleButtonCredential(nonce)
                     }
 
                     if (credential !is CustomCredential ||
@@ -218,10 +226,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun getGoogleCredential(): androidx.credentials.GetCredentialResponse {
+    private suspend fun getGoogleCredential(nonce: String): androidx.credentials.GetCredentialResponse {
         val googleIdOption = com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
             .setServerClientId(getString(R.string.google_web_client_id))
             .setFilterByAuthorizedAccounts(false)
+            .setNonce(nonce)
             .build()
 
         val request = GetCredentialRequest.Builder()
@@ -229,23 +238,34 @@ class MainActivity : AppCompatActivity() {
             .build()
 
         return credentialManager.getCredential(
-            context = this@MainActivity,
+            context = MutableContextWrapper(this@MainActivity),
             request = request
         )
     }
 
-    private suspend fun getGoogleButtonCredential(): androidx.credentials.GetCredentialResponse {
+    private suspend fun getGoogleButtonCredential(nonce: String): androidx.credentials.GetCredentialResponse {
         val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(
             getString(R.string.google_web_client_id)
-        ).build()
+        )
+            .setNonce(nonce)
+            .build()
 
         val request = GetCredentialRequest.Builder()
             .addCredentialOption(signInWithGoogleOption)
             .build()
 
         return credentialManager.getCredential(
-            context = this@MainActivity,
+            context = MutableContextWrapper(this@MainActivity),
             request = request
+        )
+    }
+
+    private fun generateSecureRandomNonce(byteLength: Int = 32): String {
+        val randomBytes = ByteArray(byteLength)
+        SecureRandom().nextBytes(randomBytes)
+        return Base64.encodeToString(
+            randomBytes,
+            Base64.NO_WRAP or Base64.URL_SAFE or Base64.NO_PADDING
         )
     }
 
