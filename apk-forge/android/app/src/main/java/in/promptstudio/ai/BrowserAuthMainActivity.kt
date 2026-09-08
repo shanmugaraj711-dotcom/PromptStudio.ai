@@ -42,6 +42,8 @@ class BrowserAuthMainActivity : AppCompatActivity() {
     private var pendingContext: String? = null
 
     private val appOrigin = BuildConfig.FORGE_WEB_ORIGIN.trimEnd('/')
+    private val callbackUri = "$appOrigin/native-auth-callback"
+    private val callbackHost = Uri.parse(appOrigin).host.orEmpty()
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -182,7 +184,7 @@ class BrowserAuthMainActivity : AppCompatActivity() {
     private fun createAuthUri(context: String): Pair<String, String> {
         val body = JSONObject().apply {
             put("providerId", "google.com")
-            put("continueUri", CALLBACK_URI)
+            put("continueUri", callbackUri)
             put("context", context)
             put("authFlowType", "CODE_FLOW")
             put("oauthScope", "openid email profile")
@@ -201,7 +203,7 @@ class BrowserAuthMainActivity : AppCompatActivity() {
 
     private fun handleAuthCallback(intent: Intent?) {
         val uri = intent?.data ?: return
-        if (uri.scheme != "https" || uri.host != CALLBACK_HOST || uri.path != "/native-auth-callback") return
+        if (uri.scheme != "https" || uri.host != callbackHost || uri.path != "/native-auth-callback") return
         val requestId = pendingRequestId
         val sessionId = pendingSessionId
         if (requestId.isNullOrBlank() || sessionId.isNullOrBlank()) {
@@ -348,8 +350,6 @@ class BrowserAuthMainActivity : AppCompatActivity() {
     companion object {
         private const val FILE_CHOOSER_REQUEST = 4101
         private const val TAG = "PromptStudioGoogle"
-        private const val CALLBACK_HOST = "prompt-studio-ai-forge-test.vercel.app"
-        private const val CALLBACK_URI = "https://prompt-studio-ai-forge-test.vercel.app/native-auth-callback"
         private const val FIREBASE_WEB_API_KEY = "AIzaSyB34-r9vGA1G-12YiHqt99PZ7AA8Ghzlmg"
     }
 }
