@@ -1,6 +1,13 @@
-/* Forge workspace contrast guard.
+/* Forge workspace visual system.
  * Scoped to .forge-screen so the existing dark workspace and Reference Coding theme stay untouched.
  */
+.forge-screen {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(59, 130, 246, 0.14), transparent 30%),
+    radial-gradient(circle at 92% 8%, rgba(6, 182, 212, 0.12), transparent 28%),
+    linear-gradient(180deg, #f7faff 0%, #eef5ff 100%);
+}
+
 .forge-screen .text-white:not(button) { color: #122039 !important; }
 .forge-screen .text-slate-100 { color: #172033 !important; }
 .forge-screen .text-slate-200 { color: #243247 !important; }
@@ -8,10 +15,32 @@
 .forge-screen .text-slate-400 { color: #526174 !important; }
 .forge-screen .text-slate-500 { color: #64748b !important; }
 .forge-screen .text-slate-600 { color: #718096 !important; }
-.forge-screen [class*="border-white/"] { border-color: #dbe3ed !important; }
-.forge-screen [class*="bg-white/[0.03]"] { background: #ffffff !important; }
-.forge-screen [class*="bg-white/[0.025]"] { background: #fbfdff !important; }
-.forge-screen [class*="bg-white/[0.02]"] { background: #f8fafc !important; }
+.forge-screen [class*="border-white/"] { border-color: #d8e2f0 !important; }
+.forge-screen [class*="bg-white/[0.03]"] { background: rgba(255, 255, 255, 0.9) !important; }
+.forge-screen [class*="bg-white/[0.025]"] { background: rgba(255, 255, 255, 0.82) !important; }
+.forge-screen [class*="bg-white/[0.02]"] { background: rgba(248, 250, 252, 0.86) !important; }
+
+/* Turn the large workspace cards into a more premium, colorful surface. */
+.forge-screen .rounded-3xl {
+  border-color: #d7e2f0 !important;
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.07);
+}
+.forge-screen .rounded-3xl:nth-child(1) {
+  background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(239,246,255,0.96)) !important;
+}
+.forge-screen .rounded-3xl:nth-child(3) {
+  background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(240,249,255,0.98)) !important;
+}
+.forge-screen .rounded-3xl:nth-child(3) > div:first-child > span {
+  background: #dff7ff !important;
+  border-color: #b8eaf5 !important;
+  color: #155e75 !important;
+}
+
+/* Make compact information rows feel like interactive cards. */
+.forge-screen [class*="border-white/"][class*="bg-white/"] {
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.045);
+}
 
 /* Keep primary actions and semantic status colors readable. */
 .forge-screen .text-cyan-100,
@@ -20,3 +49,11 @@
 .forge-screen .text-emerald-200 { color: #047857 !important; }
 .forge-screen .text-red-200 { color: #b91c1c !important; }
 .forge-screen .text-amber-100 { color: #92400e !important; }
+
+/* Preserve deliberate cyan surfaces while making them brighter on the light theme. */
+.forge-screen [class*="bg-cyan-400/[0.05]"],
+.forge-screen [class*="bg-cyan-400/[0.06]"],
+.forge-screen [class*="bg-cyan-400/10"] {
+  background: linear-gradient(135deg, #ecfeff, #e0f2fe) !important;
+}
+.forge-screen [class*="border-cyan-400/"] { border-color: #b9e8f3 !important; }
