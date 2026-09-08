@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "promptstudio.ai",
+      "sha256_cert_fingerprints": [
+        "35:CE:EE:1F:DB:F8:29:2E:F8:F8:8A:23:62:B8:C2:B4:7C:DC:30:C8:86:D0:B8:23:C7:01:A8:19:D9:CE:86:CD"
+      ]
+    }
+  }
+]
