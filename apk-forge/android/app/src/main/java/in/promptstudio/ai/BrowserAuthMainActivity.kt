@@ -60,7 +60,7 @@ class BrowserAuthMainActivity : AppCompatActivity() {
         })
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         handleAuthCallback(intent)
@@ -133,7 +133,7 @@ class BrowserAuthMainActivity : AppCompatActivity() {
                             .addCredentialOption(option)
                             .build()
                         val result = CredentialManager.create(this@BrowserAuthMainActivity)
-                            .getCredential(request, this@BrowserAuthMainActivity)
+                            .getCredential(this@BrowserAuthMainActivity, request)
                         val credential = result.credential
                         if (credential is CustomCredential &&
                             credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
@@ -276,9 +276,10 @@ class BrowserAuthMainActivity : AppCompatActivity() {
         val text = buildString {
             var current: Throwable? = error
             repeat(8) {
-                if (current == null) return@repeat
-                append(current!!::class.java.name).append(' ').append(current!!.message.orEmpty()).append(' ')
-                current = current!!.cause
+                if (current != null) {
+                    append(current!!::class.java.name).append(' ').append(current!!.message.orEmpty()).append(' ')
+                    current = current!!.cause
+                }
             }
         }
         return text.contains("GetCredentialCancellationException", true) &&
