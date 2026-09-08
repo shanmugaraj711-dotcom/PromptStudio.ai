@@ -23,6 +23,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -31,8 +32,16 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.security.SecureRandom
 
 class MainActivity : AppCompatActivity() {
@@ -41,6 +50,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var offlineView: View
     private var fileCallback: ValueCallback<Array<Uri>>? = null
     private var pendingGoogleRequestId: String? = null
+    private var pendingBrowserState: String? = null
+    private var pendingBrowserSessionId: String? = null
 
     private val appOrigin = BuildConfig.FORGE_WEB_ORIGIN.trimEnd('/')
 
@@ -62,9 +73,11 @@ class MainActivity : AppCompatActivity() {
         webView.addJavascriptInterface(NativeGoogleBridge(), "PromptStudioNativeGoogle")
 
         if (savedInstanceState == null) {
+            handleNativeAuthCallback(intent)
             loadIfOnline()
         } else {
             webView.restoreState(savedInstanceState)
+            handleNativeAuthCallback(intent)
         }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -77,6 +90,12 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleNativeAuthCallback(intent)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -176,8 +195,6 @@ class MainActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun signIn(requestId: String) {
-            // WebView JavaScript bridge calls run on a private WebView thread.
-            // Move all Activity/WebView/Credential Manager work onto the UI lifecycle.
             runOnUiThread {
                 if (!isAppOrigin()) {
                     sendGoogleResult(
@@ -199,9 +216,6 @@ class MainActivity : AppCompatActivity() {
                         val webClientId = getString(R.string.google_web_client_id)
                         val nonce = generateSecureRandomNonce()
 
-                        // Current Google guidance uses Credential Manager. The explicit
-                        // Sign in with Google option is intended for a user-initiated
-                        // Google button and also covers accounts requiring re-authentication.
                         val googleOption = GetSignInWithGoogleOption.Builder(
                             serverClientId = webClientId
                         )
@@ -235,6 +249,10 @@ class MainActivity : AppCompatActivity() {
                         }
                     } catch (error: GetCredentialException) {
                         logGoogleFailure("credentialManager", error)
+                        if (isCredentialReauthFailure(error)) {
+                            startBrowserGoogleSignIn(requestId)
+                            return@launch
+                        }
                         sendGoogleResult(requestId, null, formatGoogleError(error))
                     } catch (error: GoogleIdTokenParsingException) {
                         logGoogleFailure("googleIdTokenParsing", error)
@@ -243,11 +261,215 @@ class MainActivity : AppCompatActivity() {
                         logGoogleFailure("credentialManagerUnexpected", error)
                         sendGoogleResult(requestId, null, formatGoogleError(error))
                     } finally {
-                        pendingGoogleRequestId = null
+                        if (pendingBrowserState == null) {
+                            pendingGoogleRequestId = null
+                        }
                     }
                 }
             }
         }
+    }
+
+    private fun isCredentialReauthFailure(error: Throwable): Boolean {
+        val chain = buildString {
+            var current: Throwable? = error
+            var depth = 0
+            while (current != null && depth < 8) {
+                append(current::class.java.name)
+                append(' ')
+                append(current.message.orEmpty())
+                append(' ')
+                current = current.cause
+                depth++
+            }
+        }
+        return chain.contains("GetCredentialCancellationException", ignoreCase = true) &&
+            chain.contains("16") &&
+            chain.contains("reauth", ignoreCase = true)
+    }
+
+    private fun startBrowserGoogleSignIn(requestId: String) {
+        val state = generateSecureRandomNonce(24)
+        pendingBrowserState = state
+        pendingGoogleRequestId = requestId
+
+        lifecycleScope.launch {
+            try {
+                val auth = withContext(Dispatchers.IO) {
+                    createFirebaseGoogleAuthUri(state)
+                }
+                pendingBrowserSessionId = auth.sessionId
+
+                CustomTabsIntent.Builder()
+                    .setShowTitle(true)
+                    .build()
+                    .launchUrl(this@MainActivity, Uri.parse(auth.authUri))
+            } catch (error: Exception) {
+                logGoogleFailure("browserAuthStart", error)
+                clearBrowserAuthState()
+                sendGoogleResult(requestId, null, formatGoogleError(error))
+            }
+        }
+    }
+
+    private data class FirebaseAuthUri(
+        val authUri: String,
+        val sessionId: String?
+    )
+
+    private fun createFirebaseGoogleAuthUri(state: String): FirebaseAuthUri {
+        val callback = NATIVE_AUTH_CALLBACK_URI
+        val body = JSONObject().apply {
+            put("providerId", "google.com")
+            put("continueUri", callback)
+            put("authFlowType", "CODE_FLOW")
+            put("oauthScope", "openid email profile")
+            put("context", state)
+        }
+
+        val response = postJson(
+            "https://identitytoolkit.googleapis.com/v1/accounts:createAuthUri?key=$FIREBASE_WEB_API_KEY",
+            body.toString()
+        )
+
+        val authUri = response.optString("authUri")
+        if (authUri.isBlank()) {
+            throw IllegalStateException(
+                "Firebase did not return a Google authorization URL: ${response.optString("error")}"
+            )
+        }
+
+        return FirebaseAuthUri(
+            authUri = authUri,
+            sessionId = response.optString("sessionId").takeIf { it.isNotBlank() }
+        )
+    }
+
+    private fun handleNativeAuthCallback(intent: Intent?) {
+        val uri = intent?.data ?: return
+        if (uri.scheme != "https" ||
+            uri.host != AUTH_CALLBACK_HOST ||
+            uri.path != "/native-auth-callback"
+        ) {
+            return
+        }
+
+        val requestId = pendingGoogleRequestId
+        val expectedState = pendingBrowserState
+        if (requestId.isNullOrBlank() || expectedState.isNullOrBlank()) {
+            Log.w(TAG, "Ignoring native auth callback without a matching pending request")
+            return
+        }
+
+        val returnedState = uri.getQueryParameter("state")
+        if (returnedState != expectedState) {
+            clearBrowserAuthState()
+            sendGoogleResult(requestId, null, "Google sign-in state validation failed.")
+            return
+        }
+
+        val error = uri.getQueryParameter("error")
+        if (!error.isNullOrBlank()) {
+            clearBrowserAuthState()
+            sendGoogleResult(requestId, null, "Google sign-in failed: $error")
+            return
+        }
+
+        if (uri.getQueryParameter("code").isNullOrBlank()) {
+            clearBrowserAuthState()
+            sendGoogleResult(requestId, null, "Google sign-in returned no authorization code.")
+            return
+        }
+
+        lifecycleScope.launch {
+            try {
+                val callbackUrl = uri.toString()
+                val result = withContext(Dispatchers.IO) {
+                    exchangeFirebaseAuthCode(callbackUrl)
+                }
+                val googleIdToken = result.optString("oauthIdToken")
+                if (googleIdToken.isBlank()) {
+                    throw IllegalStateException(
+                        "Firebase completed the browser flow but returned no Google ID token."
+                    )
+                }
+                clearBrowserAuthState()
+                sendGoogleResult(requestId, googleIdToken, null)
+            } catch (authError: Exception) {
+                logGoogleFailure("browserAuthExchange", authError)
+                clearBrowserAuthState()
+                sendGoogleResult(requestId, null, formatGoogleError(authError))
+            }
+        }
+    }
+
+    private fun exchangeFirebaseAuthCode(callbackUrl: String): JSONObject {
+        val uri = Uri.parse(callbackUrl)
+        val query = uri.query.orEmpty()
+        val postBody = if (query.contains("providerId=")) {
+            query
+        } else if (query.isBlank()) {
+            "providerId=google.com"
+        } else {
+            "$query&providerId=google.com"
+        }
+
+        val body = JSONObject().apply {
+            put("requestUri", callbackUrl)
+            put("postBody", postBody)
+            put("returnSecureToken", true)
+            put("returnIdpCredential", true)
+            pendingBrowserSessionId?.let { put("sessionId", it) }
+        }
+
+        return postJson(
+            "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=$FIREBASE_WEB_API_KEY",
+            body.toString()
+        )
+    }
+
+    private fun postJson(urlString: String, jsonBody: String): JSONObject {
+        val connection = (URL(urlString).openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 15000
+            readTimeout = 20000
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+            setRequestProperty("Accept", "application/json")
+        }
+
+        return try {
+            connection.outputStream.use { output ->
+                output.write(jsonBody.toByteArray(StandardCharsets.UTF_8))
+            }
+
+            val status = connection.responseCode
+            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+            val responseText = stream?.use { input ->
+                BufferedReader(InputStreamReader(input, StandardCharsets.UTF_8)).readText()
+            }.orEmpty()
+
+            if (status !in 200..299) {
+                val errorMessage = try {
+                    JSONObject(responseText).optJSONObject("error")?.optString("message")
+                } catch (_: Exception) {
+                    null
+                }
+                throw IllegalStateException(
+                    "Firebase auth request failed ($status): ${errorMessage ?: responseText.take(300)}"
+                )
+            }
+
+            JSONObject(responseText)
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun clearBrowserAuthState() {
+        pendingBrowserState = null
+        pendingBrowserSessionId = null
+        pendingGoogleRequestId = null
     }
 
     private fun generateSecureRandomNonce(byteLength: Int = 32): String {
@@ -275,7 +497,7 @@ class MainActivity : AppCompatActivity() {
                 depth++
             }
         }
-        Log.e(TAG, "Credential Manager Google failure stage=$stage chain=$chain")
+        Log.e(TAG, "Google auth failure stage=$stage chain=$chain")
     }
 
     private fun formatGoogleError(error: Throwable): String {
@@ -369,6 +591,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         pendingGoogleRequestId = null
+        pendingBrowserState = null
+        pendingBrowserSessionId = null
         fileCallback?.onReceiveValue(null)
         fileCallback = null
         webView.removeJavascriptInterface("PromptStudioNativeGoogle")
@@ -379,5 +603,10 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val FILE_CHOOSER_REQUEST = 4101
         private const val TAG = "PromptStudioGoogle"
+        private const val AUTH_CALLBACK_HOST = "prompt-studio-ai-forge-test.vercel.app"
+        private const val NATIVE_AUTH_CALLBACK_URI =
+            "https://prompt-studio-ai-forge-test.vercel.app/native-auth-callback"
+        private const val FIREBASE_WEB_API_KEY =
+            "AIzaSyB34-r9vGA1G-12YiHqt99PZ7AA8Ghzlmg"
     }
 }
