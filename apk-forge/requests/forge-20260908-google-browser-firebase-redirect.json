@@ -1,0 +1,9 @@
+{
+  "forgeRequestId": "forge-20260908-google-browser-firebase-redirect",
+  "buildId": "015-google-browser-firebase-redirect",
+  "appName": "PromptStudio AI",
+  "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
+  "packageId": "promptstudio.ai",
+  "versionName": "1.1.5-test",
+  "versionCode": 16
+}
