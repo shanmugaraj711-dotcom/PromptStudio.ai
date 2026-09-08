@@ -1,3 +1,5 @@
+import java.net.URI
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -27,7 +29,7 @@ if (googleWebClientId.isBlank()) {
     throw GradleException("GOOGLE_WEB_CLIENT_ID is required for Forge native Google Sign-In")
 }
 
-val forgeWebHost = java.net.URI(forgeWebOrigin).host
+val forgeWebHost = URI(forgeWebOrigin).host
     ?: throw GradleException("FORGE_WEB_ORIGIN must contain a valid HTTPS host")
 
 android {
