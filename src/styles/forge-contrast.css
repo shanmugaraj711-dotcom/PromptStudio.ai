@@ -1,7 +1,7 @@
 /* Forge workspace contrast guard.
  * Scoped to .forge-screen so the existing dark workspace and Reference Coding theme stay untouched.
  */
-.forge-screen .text-white { color: #122039 !important; }
+.forge-screen .text-white:not(button) { color: #122039 !important; }
 .forge-screen .text-slate-100 { color: #172033 !important; }
 .forge-screen .text-slate-200 { color: #243247 !important; }
 .forge-screen .text-slate-300 { color: #3f5066 !important; }
