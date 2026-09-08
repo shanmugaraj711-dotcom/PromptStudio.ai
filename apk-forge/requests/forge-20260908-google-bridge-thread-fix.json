@@ -1,0 +1,9 @@
+{
+  "forgeRequestId": "forge-20260908-google-bridge-thread-fix",
+  "buildId": "010-google-bridge-thread-fix",
+  "appName": "PromptStudio AI",
+  "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
+  "packageId": "promptstudio.ai",
+  "versionName": "1.1.2-test",
+  "versionCode": 13
+}
