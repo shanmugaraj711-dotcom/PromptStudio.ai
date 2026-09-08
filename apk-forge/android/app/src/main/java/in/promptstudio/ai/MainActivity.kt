@@ -9,6 +9,7 @@ import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Bundle
 import android.util.Base64
+import android.util.Log
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
@@ -27,7 +28,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
@@ -191,55 +191,34 @@ class MainActivity : AppCompatActivity() {
                         return@launch
                     }
 
-                    // One fresh cryptographically secure nonce is used for the
-                    // entire user-triggered sign-in attempt, including the
-                    // documented explicit-button fallback.
+                    // The user-triggered Google button maps directly to Android's
+                    // documented SignInWithGoogleOption flow. A fresh nonce is
+                    // generated for every sign-in attempt.
                     val nonce = generateSecureRandomNonce()
                     val credential = try {
-                        getGoogleCredential(nonce)
-                    } catch (error: NoCredentialException) {
-                        // Credential Manager's normal Google ID option can return
-                        // NoCredentialException when there is no eligible stored
-                        // credential. For a user-triggered Google button, Android's
-                        // SignInWithGoogleOption is the documented fallback that
-                        // launches the explicit Google sign-in flow.
                         getGoogleButtonCredential(nonce)
+                    } catch (error: Exception) {
+                        logCredentialFailure("getGoogleButtonCredential", error)
+                        throw error
                     }
 
                     if (credential !is CustomCredential ||
                         credential.type != TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
                     ) {
-                        throw IllegalStateException("Google ID token credential was not returned.")
+                        val type = if (credential is CustomCredential) credential.type else credential::class.java.name
+                        throw IllegalStateException("Google ID token credential was not returned; type=$type")
                     }
 
                     val googleIdTokenCredential =
                         GoogleIdTokenCredential.createFrom(credential.data)
                     sendGoogleResult(requestId, googleIdTokenCredential.idToken, null)
                 } catch (error: Exception) {
-                    val detail = error.message?.takeIf { it.isNotBlank() }
-                        ?: error::class.java.simpleName
-                        ?: "Native Google sign-in failed."
+                    logCredentialFailure("nativeGoogleSignIn", error)
+                    val detail = formatCredentialError(error)
                     sendGoogleResult(requestId, null, detail)
                 }
             }
         }
-    }
-
-    private suspend fun getGoogleCredential(nonce: String): androidx.credentials.GetCredentialResponse {
-        val googleIdOption = com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
-            .setServerClientId(getString(R.string.google_web_client_id))
-            .setFilterByAuthorizedAccounts(false)
-            .setNonce(nonce)
-            .build()
-
-        val request = GetCredentialRequest.Builder()
-            .addCredentialOption(googleIdOption)
-            .build()
-
-        return credentialManager.getCredential(
-            context = MutableContextWrapper(this@MainActivity),
-            request = request
-        )
     }
 
     private suspend fun getGoogleButtonCredential(nonce: String): androidx.credentials.GetCredentialResponse {
@@ -266,6 +245,35 @@ class MainActivity : AppCompatActivity() {
             randomBytes,
             Base64.NO_WRAP or Base64.URL_SAFE or Base64.NO_PADDING
         )
+    }
+
+    private fun logCredentialFailure(stage: String, error: Throwable) {
+        val chain = buildString {
+            var current: Throwable? = error
+            var depth = 0
+            while (current != null && depth < 6) {
+                if (depth > 0) append(" <- ")
+                append(current::class.java.name)
+                val message = current.message?.replace('\n', ' ')?.take(240)
+                if (!message.isNullOrBlank()) {
+                    append(": ")
+                    append(message)
+                }
+                current = current.cause
+                depth++
+            }
+        }
+        Log.e(TAG, "Google Credential Manager failure stage=$stage chain=$chain")
+    }
+
+    private fun formatCredentialError(error: Throwable): String {
+        val message = error.message?.takeIf { it.isNotBlank() }
+        val className = error::class.java.simpleName.ifBlank { error::class.java.name }
+        return if (message != null) {
+            "[$className] $message"
+        } else {
+            "[$className] Native Google sign-in failed."
+        }
     }
 
     private fun isAppOrigin(): Boolean {
@@ -366,5 +374,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val FILE_CHOOSER_REQUEST = 4101
+        private const val TAG = "PromptStudioGoogle"
     }
 }
