@@ -26,7 +26,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="prompt-studio-ai-forge-test.vercel.app"
+                    android:host="${forgeWebHost}"
                     android:pathPrefix="/native-auth-callback" />
             </intent-filter>
         </activity>
