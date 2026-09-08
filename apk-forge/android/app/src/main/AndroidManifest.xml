@@ -12,7 +12,7 @@
         android:theme="@style/Theme.PromptStudioAI"
         android:usesCleartextTraffic="false">
         <activity
-            android:name=".MainActivity"
+            android:name=".BrowserAuthMainActivity"
             android:exported="true"
             android:launchMode="singleTop">
             <intent-filter>
