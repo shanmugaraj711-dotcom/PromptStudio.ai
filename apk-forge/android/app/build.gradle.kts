@@ -27,6 +27,9 @@ if (googleWebClientId.isBlank()) {
     throw GradleException("GOOGLE_WEB_CLIENT_ID is required for Forge native Google Sign-In")
 }
 
+val forgeWebHost = java.net.URI(forgeWebOrigin).host
+    ?: throw GradleException("FORGE_WEB_ORIGIN must contain a valid HTTPS host")
+
 android {
     namespace = "promptstudio.ai"
     compileSdk = 35
@@ -40,6 +43,7 @@ android {
         resValue("string", "app_name", forgeAppName)
         resValue("string", "google_web_client_id", googleWebClientId)
         buildConfigField("String", "FORGE_WEB_ORIGIN", "\"$forgeWebOrigin\"")
+        manifestPlaceholders["forgeWebHost"] = forgeWebHost
     }
 
     compileOptions {
