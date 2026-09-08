@@ -1,0 +1,9 @@
+{
+  "forgeRequestId": "forge-20260908-google-direct-button",
+  "buildId": "008-google-direct-button",
+  "appName": "PromptStudio AI",
+  "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
+  "packageId": "promptstudio.ai",
+  "versionName": "1.1.0-test",
+  "versionCode": 11
+}
