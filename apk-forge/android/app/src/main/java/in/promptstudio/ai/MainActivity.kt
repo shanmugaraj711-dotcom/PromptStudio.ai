@@ -7,6 +7,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Bundle
+import android.util.Base64
 import android.util.Log
 import android.view.View
 import android.webkit.JavascriptInterface
@@ -22,10 +23,17 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
+import androidx.lifecycle.lifecycleScope
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.security.SecureRandom
 
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
@@ -95,14 +103,10 @@ class MainActivity : AppCompatActivity() {
             ): Boolean {
                 val uri = request.url
 
-                // Keep ALL normal web navigation inside the native shell.
-                // OAuth/auth redirects, Vercel redirects, payment return pages,
-                // and other HTTPS pages must not be handed to Chrome.
                 if (uri.scheme == "https" || uri.scheme == "http") {
                     return false
                 }
 
-                // Non-web schemes belong to Android's external handlers.
                 return try {
                     startActivity(Intent(Intent.ACTION_VIEW, uri))
                     true
@@ -172,69 +176,97 @@ class MainActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun signIn(requestId: String) {
-            // JavaScript bridge methods are invoked on WebView's private background
-            // thread. Do not touch WebView state here; even webView.url must be read
-            // on the WebView/UI thread. Otherwise Android surfaces a generic
-            // "Java exception was raised during method invocation" to JavaScript.
+            // WebView JavaScript bridge calls run on a private WebView thread.
+            // Move all Activity/WebView/Credential Manager work onto the UI lifecycle.
             runOnUiThread {
-                try {
-                    if (!isAppOrigin()) {
-                        sendGoogleResult(
-                            requestId,
-                            null,
-                            "Native Google sign-in is unavailable for this origin."
+                if (!isAppOrigin()) {
+                    sendGoogleResult(
+                        requestId,
+                        null,
+                        "Native Google sign-in is unavailable for this origin."
+                    )
+                    return@runOnUiThread
+                }
+
+                if (pendingGoogleRequestId != null) {
+                    sendGoogleResult(requestId, null, "A Google sign-in request is already in progress.")
+                    return@runOnUiThread
+                }
+
+                pendingGoogleRequestId = requestId
+                lifecycleScope.launch {
+                    try {
+                        val webClientId = getString(R.string.google_web_client_id)
+                        val nonce = generateSecureRandomNonce()
+
+                        // Current Google guidance uses Credential Manager. The explicit
+                        // Sign in with Google option is intended for a user-initiated
+                        // Google button and also covers accounts requiring re-authentication.
+                        val googleOption = GetSignInWithGoogleOption.Builder(
+                            serverClientId = webClientId
                         )
-                        return@runOnUiThread
+                            .setNonce(nonce)
+                            .build()
+
+                        val request = GetCredentialRequest.Builder()
+                            .addCredentialOption(googleOption)
+                            .build()
+
+                        val credentialManager = CredentialManager.create(this@MainActivity)
+                        val result = credentialManager.getCredential(
+                            request = request,
+                            context = this@MainActivity
+                        )
+
+                        val credential = result.credential
+                        if (credential is CustomCredential &&
+                            credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                        ) {
+                            val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                            val idToken = googleCredential.idToken
+                            if (idToken.isBlank()) {
+                                throw IllegalStateException("Google sign-in returned an empty ID token.")
+                            }
+                            sendGoogleResult(requestId, idToken, null)
+                        } else {
+                            throw IllegalStateException(
+                                "Unexpected credential type: ${credential::class.java.name}"
+                            )
+                        }
+                    } catch (error: GetCredentialException) {
+                        logGoogleFailure("credentialManager", error)
+                        sendGoogleResult(requestId, null, formatGoogleError(error))
+                    } catch (error: GoogleIdTokenParsingException) {
+                        logGoogleFailure("googleIdTokenParsing", error)
+                        sendGoogleResult(requestId, null, formatGoogleError(error))
+                    } catch (error: Exception) {
+                        logGoogleFailure("credentialManagerUnexpected", error)
+                        sendGoogleResult(requestId, null, formatGoogleError(error))
+                    } finally {
+                        pendingGoogleRequestId = null
                     }
-
-                    if (pendingGoogleRequestId != null) {
-                        sendGoogleResult(requestId, null, "A Google sign-in request is already in progress.")
-                        return@runOnUiThread
-                    }
-
-                    val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                        .requestIdToken(getString(R.string.google_web_client_id))
-                        .requestEmail()
-                        .build()
-
-                    val client = GoogleSignIn.getClient(this@MainActivity, options)
-                    pendingGoogleRequestId = requestId
-                    startActivityForResult(client.signInIntent, GOOGLE_SIGN_IN_REQUEST)
-                } catch (error: Exception) {
-                    logGoogleFailure("startLegacyGoogleSignIn", error)
-                    sendGoogleResult(requestId, null, formatGoogleError(error))
                 }
             }
         }
     }
 
-    private fun handleGoogleSignInResult(data: Intent?) {
-        val requestId = pendingGoogleRequestId ?: return
-        pendingGoogleRequestId = null
-
-        try {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(data)
-            val account = task.getResult(ApiException::class.java)
-            val idToken = account.idToken
-            if (idToken.isNullOrBlank()) {
-                throw IllegalStateException("Google sign-in returned no ID token.")
-            }
-            sendGoogleResult(requestId, idToken, null)
-        } catch (error: Exception) {
-            logGoogleFailure("legacyGoogleSignInResult", error)
-            sendGoogleResult(requestId, null, formatGoogleError(error))
-        }
+    private fun generateSecureRandomNonce(byteLength: Int = 32): String {
+        val randomBytes = ByteArray(byteLength)
+        SecureRandom().nextBytes(randomBytes)
+        return Base64.encodeToString(
+            randomBytes,
+            Base64.NO_WRAP or Base64.URL_SAFE or Base64.NO_PADDING
+        )
     }
 
     private fun logGoogleFailure(stage: String, error: Throwable) {
-        val apiCode = (error as? ApiException)?.statusCode
         val chain = buildString {
             var current: Throwable? = error
             var depth = 0
-            while (current != null && depth < 6) {
+            while (current != null && depth < 8) {
                 if (depth > 0) append(" <- ")
                 append(current::class.java.name)
-                val message = current.message?.replace('\n', ' ')?.take(240)
+                val message = current.message?.replace('\n', ' ')?.take(300)
                 if (!message.isNullOrBlank()) {
                     append(": ")
                     append(message)
@@ -243,17 +275,13 @@ class MainActivity : AppCompatActivity() {
                 depth++
             }
         }
-        Log.e(TAG, "Legacy Google Sign-In failure stage=$stage apiStatus=$apiCode chain=$chain")
+        Log.e(TAG, "Credential Manager Google failure stage=$stage chain=$chain")
     }
 
     private fun formatGoogleError(error: Throwable): String {
-        val apiException = error as? ApiException
         val message = error.message?.takeIf { it.isNotBlank() }
         val className = error::class.java.simpleName.ifBlank { error::class.java.name }
-        return if (apiException != null) {
-            val detail = message ?: "Google sign-in failed."
-            "[$className] status=${apiException.statusCode}: $detail"
-        } else if (message != null) {
+        return if (message != null) {
             "[$className] $message"
         } else {
             "[$className] Google sign-in failed."
@@ -334,23 +362,6 @@ class MainActivity : AppCompatActivity() {
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    @Deprecated("Android framework callback retained for WebView file chooser and Google sign-in compatibility")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (requestCode == GOOGLE_SIGN_IN_REQUEST) {
-            handleGoogleSignInResult(data)
-            return
-        }
-
-        if (requestCode != FILE_CHOOSER_REQUEST) return
-        val results = if (resultCode == RESULT_OK) {
-            WebChromeClient.FileChooserParams.parseResult(resultCode, data)
-        } else null
-        fileCallback?.onReceiveValue(results)
-        fileCallback = null
-    }
-
     override fun onSaveInstanceState(outState: Bundle) {
         webView.saveState(outState)
         super.onSaveInstanceState(outState)
@@ -367,7 +378,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val FILE_CHOOSER_REQUEST = 4101
-        private const val GOOGLE_SIGN_IN_REQUEST = 4102
         private const val TAG = "PromptStudioGoogle"
     }
 }
