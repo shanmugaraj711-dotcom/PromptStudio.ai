@@ -32,15 +32,8 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.net.HttpURLConnection
-import java.net.URL
-import java.nio.charset.StandardCharsets
 import java.security.SecureRandom
 
 class MainActivity : AppCompatActivity() {
@@ -50,7 +43,7 @@ class MainActivity : AppCompatActivity() {
     private var fileCallback: ValueCallback<Array<Uri>>? = null
     private var pendingGoogleRequestId: String? = null
     private var pendingBrowserState: String? = null
-    private var pendingBrowserSessionId: String? = null
+    private var pendingNativeResult: Triple<String, String?, String?>? = null
 
     private val appOrigin = BuildConfig.FORGE_WEB_ORIGIN.trimEnd('/')
 
@@ -73,6 +66,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             webView.restoreState(savedInstanceState)
             handleNativeAuthCallback(intent)
+            flushPendingNativeResult()
         }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -128,6 +122,7 @@ class MainActivity : AppCompatActivity() {
                 progressBar.visibility = View.GONE
                 offlineView.visibility = View.GONE
                 webView.visibility = View.VISIBLE
+                flushPendingNativeResult()
             }
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                 super.onReceivedError(view, request, error)
@@ -157,6 +152,7 @@ class MainActivity : AppCompatActivity() {
     inner class NativeGoogleBridge {
         @JavascriptInterface
         fun isAvailable(): Boolean = true
+
         @JavascriptInterface
         fun signIn(requestId: String) {
             runOnUiThread {
@@ -224,33 +220,14 @@ class MainActivity : AppCompatActivity() {
         val state = generateSecureRandomNonce(24)
         pendingBrowserState = state
         pendingGoogleRequestId = requestId
-        lifecycleScope.launch {
-            try {
-                val auth = withContext(Dispatchers.IO) { createFirebaseGoogleAuthUri(state) }
-                pendingBrowserSessionId = auth.sessionId
-                CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(this@MainActivity, Uri.parse(auth.authUri))
-            } catch (error: Exception) {
-                logGoogleFailure("browserAuthStart", error)
-                clearBrowserAuthState()
-                sendGoogleResult(requestId, null, formatGoogleError(error))
-            }
+        val callbackUrl = Uri.parse("$NATIVE_AUTH_CALLBACK_URI?nativeAuth=1&state=${Uri.encode(state)}")
+        try {
+            CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(this, callbackUrl)
+        } catch (error: Exception) {
+            logGoogleFailure("browserAuthStart", error)
+            clearBrowserAuthState()
+            sendGoogleResult(requestId, null, formatGoogleError(error))
         }
-    }
-
-    private data class FirebaseAuthUri(val authUri: String, val sessionId: String?)
-
-    private fun createFirebaseGoogleAuthUri(state: String): FirebaseAuthUri {
-        val body = JSONObject().apply {
-            put("providerId", "google.com")
-            put("continueUri", NATIVE_AUTH_CALLBACK_URI)
-            put("authFlowType", "CODE_FLOW")
-            put("oauthScope", "openid email profile")
-            put("context", state)
-        }
-        val response = postJson("https://identitytoolkit.googleapis.com/v1/accounts:createAuthUri?key=$FIREBASE_WEB_API_KEY", body.toString())
-        val authUri = response.optString("authUri")
-        if (authUri.isBlank()) throw IllegalStateException("Firebase did not return a Google authorization URL: ${response.optString("error")}")
-        return FirebaseAuthUri(authUri, response.optString("sessionId").takeIf { it.isNotBlank() })
     }
 
     private fun handleNativeAuthCallback(intent: Intent?) {
@@ -262,84 +239,31 @@ class MainActivity : AppCompatActivity() {
             Log.w(TAG, "Ignoring native auth callback without a matching pending request")
             return
         }
-        val returnedState = uri.getQueryParameter("state")
+        val fragmentParams = uri.fragment?.let { Uri.parse("https://callback.invalid/?$it") }
+        val returnedState = uri.getQueryParameter("state") ?: fragmentParams?.getQueryParameter("state")
         if (returnedState != expectedState) {
             clearBrowserAuthState()
             sendGoogleResult(requestId, null, "Google sign-in state validation failed.")
             return
         }
-        val error = uri.getQueryParameter("error")
+        val error = uri.getQueryParameter("error") ?: fragmentParams?.getQueryParameter("error")
         if (!error.isNullOrBlank()) {
             clearBrowserAuthState()
             sendGoogleResult(requestId, null, "Google sign-in failed: $error")
             return
         }
-        if (uri.getQueryParameter("code").isNullOrBlank()) {
+        val googleIdToken = fragmentParams?.getQueryParameter("idToken")
+        if (googleIdToken.isNullOrBlank()) {
             clearBrowserAuthState()
-            sendGoogleResult(requestId, null, "Google sign-in returned no authorization code.")
+            sendGoogleResult(requestId, null, "Google browser sign-in returned no Google ID token.")
             return
         }
-        lifecycleScope.launch {
-            try {
-                val callbackUrl = uri.toString()
-                val result = withContext(Dispatchers.IO) { exchangeFirebaseAuthCode(callbackUrl) }
-                val googleIdToken = result.optString("oauthIdToken")
-                if (googleIdToken.isBlank()) throw IllegalStateException("Firebase completed the browser flow but returned no Google ID token.")
-                clearBrowserAuthState()
-                sendGoogleResult(requestId, googleIdToken, null)
-            } catch (authError: Exception) {
-                logGoogleFailure("browserAuthExchange", authError)
-                clearBrowserAuthState()
-                sendGoogleResult(requestId, null, formatGoogleError(authError))
-            }
-        }
-    }
-
-    private fun exchangeFirebaseAuthCode(callbackUrl: String): JSONObject {
-        val uri = Uri.parse(callbackUrl)
-        val query = uri.query.orEmpty()
-        val postBody = when {
-            query.contains("providerId=") -> query
-            query.isBlank() -> "providerId=google.com"
-            else -> "$query&providerId=google.com"
-        }
-        val body = JSONObject().apply {
-            put("requestUri", callbackUrl)
-            put("postBody", postBody)
-            put("returnSecureToken", true)
-            put("returnIdpCredential", true)
-            pendingBrowserSessionId?.let { put("sessionId", it) }
-        }
-        return postJson("https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=$FIREBASE_WEB_API_KEY", body.toString())
-    }
-
-    private fun postJson(urlString: String, jsonBody: String): JSONObject {
-        val connection = (URL(urlString).openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            connectTimeout = 15000
-            readTimeout = 20000
-            doOutput = true
-            setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-            setRequestProperty("Accept", "application/json")
-        }
-        return try {
-            connection.outputStream.use { it.write(jsonBody.toByteArray(StandardCharsets.UTF_8)) }
-            val status = connection.responseCode
-            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-            val responseText = stream?.use { BufferedReader(InputStreamReader(it, StandardCharsets.UTF_8)).readText() }.orEmpty()
-            if (status !in 200..299) {
-                val errorMessage = try { JSONObject(responseText).optJSONObject("error")?.optString("message") } catch (_: Exception) { null }
-                throw IllegalStateException("Firebase auth request failed ($status): ${errorMessage ?: responseText.take(300)}")
-            }
-            JSONObject(responseText)
-        } finally {
-            connection.disconnect()
-        }
+        clearBrowserAuthState()
+        sendGoogleResult(requestId, googleIdToken, null)
     }
 
     private fun clearBrowserAuthState() {
         pendingBrowserState = null
-        pendingBrowserSessionId = null
         pendingGoogleRequestId = null
     }
 
@@ -377,14 +301,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun sendGoogleResult(requestId: String, idToken: String?, error: String?) {
+        pendingNativeResult = Triple(requestId, idToken, error)
+        runOnUiThread { flushPendingNativeResult() }
+    }
+
+    private fun flushPendingNativeResult() {
+        val result = pendingNativeResult ?: return
+        if (!::webView.isInitialized || webView.url.isNullOrBlank()) return
         val payload = JSONObject().apply {
-            put("requestId", requestId)
-            put("idToken", idToken)
-            put("error", error)
+            put("requestId", result.first)
+            put("idToken", result.second)
+            put("error", result.third)
         }
-        runOnUiThread {
-            webView.evaluateJavascript("window.__promptStudioNativeGoogleResult(${JSONObject.quote(payload.toString())})", null)
-        }
+        webView.evaluateJavascript("window.__promptStudioNativeGoogleResult(${JSONObject.quote(payload.toString())})", null)
+        pendingNativeResult = null
     }
 
     private fun loadIfOnline() {
@@ -433,7 +363,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         pendingGoogleRequestId = null
         pendingBrowserState = null
-        pendingBrowserSessionId = null
+        pendingNativeResult = null
         fileCallback?.onReceiveValue(null)
         fileCallback = null
         webView.removeJavascriptInterface("PromptStudioNativeGoogle")
@@ -446,6 +376,5 @@ class MainActivity : AppCompatActivity() {
         private const val TAG = "PromptStudioGoogle"
         private const val AUTH_CALLBACK_HOST = "prompt-studio-ai-forge-test.vercel.app"
         private const val NATIVE_AUTH_CALLBACK_URI = "https://prompt-studio-ai-forge-test.vercel.app/native-auth-callback"
-        private const val FIREBASE_WEB_API_KEY = "AIzaSyB34-r9vGA1G-12YiHqt99PZ7AA8Ghzlmg"
     }
 }
