@@ -172,17 +172,21 @@ class MainActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun signIn(requestId: String) {
-            if (!isAppOrigin()) {
-                sendGoogleResult(
-                    requestId,
-                    null,
-                    "Native Google sign-in is unavailable for this origin."
-                )
-                return
-            }
-
+            // JavaScript bridge methods are invoked on WebView's private background
+            // thread. Do not touch WebView state here; even webView.url must be read
+            // on the WebView/UI thread. Otherwise Android surfaces a generic
+            // "Java exception was raised during method invocation" to JavaScript.
             runOnUiThread {
                 try {
+                    if (!isAppOrigin()) {
+                        sendGoogleResult(
+                            requestId,
+                            null,
+                            "Native Google sign-in is unavailable for this origin."
+                        )
+                        return@runOnUiThread
+                    }
+
                     if (pendingGoogleRequestId != null) {
                         sendGoogleResult(requestId, null, "A Google sign-in request is already in progress.")
                         return@runOnUiThread
