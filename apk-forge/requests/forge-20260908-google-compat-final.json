@@ -1,0 +1,9 @@
+{
+  "forgeRequestId": "forge-20260908-google-compat-final",
+  "buildId": "009-google-compat-final",
+  "appName": "PromptStudio AI",
+  "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
+  "packageId": "promptstudio.ai",
+  "versionName": "1.1.1-test",
+  "versionCode": 12
+}
