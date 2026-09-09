@@ -193,16 +193,57 @@ jobs:
           -PFIREBASE_ANDROID_APP_ID="$FORGE_FIREBASE_ANDROID_APP_ID"
           assembleDebug
 
+      - name: Sign APK with registered Forge certificate
+        env:
+          FORGE_SIGNING_BUNDLE: ${{ secrets.FORGE_SIGNING_BUNDLE }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import base64, json, os
+          from pathlib import Path
+          bundle = json.loads(os.environ["FORGE_SIGNING_BUNDLE"])
+          folder = Path(os.environ["RUNNER_TEMP"]) / "forge-signing"
+          folder.mkdir(mode=0o700, exist_ok=True)
+          for name, value in [
+              ("forge.p12", base64.b64decode(bundle["keystore"], validate=True)),
+              ("password", bundle["password"].encode()),
+          ]:
+              path = folder / name
+              path.write_bytes(value)
+              path.chmod(0o600)
+          PY
+          signing_dir="$RUNNER_TEMP/forge-signing"
+          trap 'rm -f "$signing_dir/forge.p12" "$signing_dir/password"' EXIT
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign \
+            --ks "$signing_dir/forge.p12" --ks-type PKCS12 \
+            --ks-key-alias forge-test \
+            --ks-pass "file:$signing_dir/password" \
+            --key-pass "file:$signing_dir/password" \
+            app/build/outputs/apk/debug/app-debug.apk
+
       - name: Inspect APK
         run: |
-          test -f app/build/outputs/apk/debug/app-debug.apk
-          ls -lh app/build/outputs/apk/debug/app-debug.apk
-          sha256sum app/build/outputs/apk/debug/app-debug.apk
+          set -euo pipefail
+          apk="app/build/outputs/apk/debug/app-debug.apk"
+          proof="app/build/outputs/apk/debug/verification.txt"
+          test -s "$apk"
+          {
+            echo "Commit: $GITHUB_SHA"
+            echo "Build: $FORGE_BUILD_ID"
+            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$apk"
+            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk"
+            sha256sum "$apk"
+          } | tee "$proof"
+          grep -Fq 'Signer #1 certificate SHA-1 digest: 01283886de5bc273e481cb203e3de552617be32c' "$proof"
+          grep -Fq "package: name='$FORGE_PACKAGE_ID'" "$proof"
+          ls -lh "$apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: promptstudio-forge-${{ env.FORGE_BUILD_ID }}
-          path: apk-forge/android/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            apk-forge/android/app/build/outputs/apk/debug/app-debug.apk
+            apk-forge/android/app/build/outputs/apk/debug/verification.txt
           if-no-files-found: error
           retention-days: 14
