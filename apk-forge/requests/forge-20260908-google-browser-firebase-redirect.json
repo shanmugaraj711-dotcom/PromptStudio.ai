@@ -5,5 +5,6 @@
   "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
   "packageId": "promptstudio.ai",
   "versionName": "1.2.3-test",
-  "versionCode": 24
+  "versionCode": 24,
+  "firebaseAndroidAppId": "1:768747699651:android:1a02adda6c99f13ff65176"
 }
