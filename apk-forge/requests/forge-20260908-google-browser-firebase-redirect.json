@@ -1,10 +1,10 @@
 {
-  "forgeRequestId": "forge-20260909-clean-working-build",
-  "buildId": "021-clean-working-build",
+  "forgeRequestId": "forge-20260909-reserved-state-fix",
+  "buildId": "022-reserved-state-fix",
   "appName": "PromptStudio AI",
   "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
   "packageId": "promptstudio.ai",
-  "versionName": "1.2.1-test",
-  "versionCode": 22
+  "versionName": "1.2.2-test",
+  "versionCode": 23
 }
 
