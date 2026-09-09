@@ -2,7 +2,9 @@ package promptstudio.ai
 
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
 import android.util.Base64
@@ -10,6 +12,7 @@ import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
@@ -36,10 +39,13 @@ import java.security.SecureRandom
 
 class BrowserAuthMainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
+    private lateinit var pendingPrefs: SharedPreferences
     private var fileCallback: ValueCallback<Array<Uri>>? = null
     private var pendingRequestId: String? = null
     private var pendingSessionId: String? = null
     private var pendingContext: String? = null
+    private var webViewReady = false
+    private var queuedResult: String? = null
 
     private val appOrigin = BuildConfig.FORGE_WEB_ORIGIN.trimEnd('/')
     private val callbackUri = "$appOrigin/native-auth-callback"
@@ -48,12 +54,16 @@ class BrowserAuthMainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        restorePending()
         webView = WebView(this)
         setContentView(webView)
         configureWebView()
         webView.addJavascriptInterface(NativeGoogleBridge(), "PromptStudioNativeGoogle")
-        handleAuthCallback(intent)
-        if (savedInstanceState == null && intent?.data == null) webView.loadUrl(appOrigin)
+
+        val callbackIntent = intent
+        handleAuthCallback(callbackIntent)
+        if (savedInstanceState == null || callbackIntent?.data != null) webView.loadUrl(appOrigin)
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -65,6 +75,9 @@ class BrowserAuthMainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        webViewReady = false
+        queuedResult = null
+        restorePending()
         handleAuthCallback(intent)
     }
 
@@ -80,7 +93,16 @@ class BrowserAuthMainActivity : AppCompatActivity() {
             setAcceptThirdPartyCookies(webView, true)
         }
         webView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView, request: android.webkit.WebResourceRequest): Boolean {
+            override fun onPageFinished(view: WebView, url: String) {
+                super.onPageFinished(view, url)
+                val normalized = url.trimEnd('/')
+                if (normalized == appOrigin || url.startsWith("$appOrigin/")) {
+                    webViewReady = true
+                    flushQueuedResult()
+                }
+            }
+
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val uri = request.url
                 if (uri.scheme == "http" || uri.scheme == "https") return false
                 return try {
@@ -141,8 +163,10 @@ class BrowserAuthMainActivity : AppCompatActivity() {
                             credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
                         ) {
                             val google = GoogleIdTokenCredential.createFrom(credential.data)
+                            clearPending()
                             sendResult(requestId, google.idToken, null)
                         } else {
+                            clearPending()
                             sendResult(requestId, null, "Unexpected Google credential type.")
                         }
                     } catch (error: GetCredentialException) {
@@ -168,10 +192,13 @@ class BrowserAuthMainActivity : AppCompatActivity() {
     private fun startBrowserFallback(requestId: String) {
         val context = secureNonce(24)
         pendingContext = context
+        pendingSessionId = null
+        savePending()
         lifecycleScope.launch {
             try {
                 val auth = withContext(Dispatchers.IO) { createAuthUri(context) }
                 pendingSessionId = auth.second
+                savePending()
                 CustomTabsIntent.Builder().setShowTitle(true).build()
                     .launchUrl(this@BrowserAuthMainActivity, Uri.parse(auth.first))
             } catch (error: Exception) {
@@ -212,10 +239,28 @@ class BrowserAuthMainActivity : AppCompatActivity() {
         val isNativeSchemeCallback = uri.scheme == NATIVE_SCHEME && uri.host == NATIVE_CALLBACK_HOST
         if (!isHttpsCallback && !isNativeSchemeCallback) return
 
+        if (!restorePending()) {
+            Log.w(TAG, "Ignoring auth callback without a valid pending session")
+            return
+        }
+
         val requestId = pendingRequestId
         val sessionId = pendingSessionId
-        if (requestId.isNullOrBlank() || sessionId.isNullOrBlank()) {
-            Log.w(TAG, "Ignoring auth callback without a pending session")
+        val expectedState = pendingContext
+        val callbackState = uri.getQueryParameter("state")
+        if (requestId.isNullOrBlank() || sessionId.isNullOrBlank() || expectedState.isNullOrBlank()) {
+            clearPending()
+            Log.w(TAG, "Ignoring auth callback with incomplete pending state")
+            return
+        }
+        if (uri.getQueryParameter("nativeAuth") != "1") {
+            clearPending()
+            sendResult(requestId, null, "Invalid native sign-in callback.")
+            return
+        }
+        if (callbackState != expectedState) {
+            clearPending()
+            sendResult(requestId, null, "Google sign-in state did not match the pending request.")
             return
         }
         if (uri.getQueryParameter("error") != null) {
@@ -316,18 +361,59 @@ class BrowserAuthMainActivity : AppCompatActivity() {
             put("idToken", idToken)
             put("error", error)
         }
+        val script = "window.__promptStudioNativeGoogleResult(${JSONObject.quote(payload.toString())})"
         runOnUiThread {
-            webView.evaluateJavascript(
-                "window.__promptStudioNativeGoogleResult(${JSONObject.quote(payload.toString())})",
-                null
-            )
+            if (!webViewReady) {
+                queuedResult = script
+                return@runOnUiThread
+            }
+            webView.evaluateJavascript(script, null)
         }
+    }
+
+    private fun flushQueuedResult() {
+        val script = queuedResult ?: return
+        queuedResult = null
+        webView.evaluateJavascript(script, null)
+    }
+
+    private fun savePending() {
+        val requestId = pendingRequestId ?: return
+        val context = pendingContext ?: return
+        pendingPrefs.edit()
+            .putString(KEY_REQUEST_ID, requestId)
+            .putString(KEY_SESSION_ID, pendingSessionId)
+            .putString(KEY_STATE, context)
+            .putLong(KEY_CREATED_AT, System.currentTimeMillis())
+            .apply()
+    }
+
+    private fun restorePending(): Boolean {
+        val requestId = pendingPrefs.getString(KEY_REQUEST_ID, null)
+        val sessionId = pendingPrefs.getString(KEY_SESSION_ID, null)
+        val state = pendingPrefs.getString(KEY_STATE, null)
+        val createdAt = pendingPrefs.getLong(KEY_CREATED_AT, 0L)
+        if (requestId.isNullOrBlank() || sessionId.isNullOrBlank() || state.isNullOrBlank()) {
+            pendingRequestId = null
+            pendingSessionId = null
+            pendingContext = null
+            return false
+        }
+        if (createdAt <= 0L || System.currentTimeMillis() - createdAt > PENDING_TTL_MS) {
+            clearPending()
+            return false
+        }
+        pendingRequestId = requestId
+        pendingSessionId = sessionId
+        pendingContext = state
+        return true
     }
 
     private fun clearPending() {
         pendingRequestId = null
         pendingSessionId = null
         pendingContext = null
+        pendingPrefs.edit().remove(KEY_REQUEST_ID).remove(KEY_SESSION_ID).remove(KEY_STATE).remove(KEY_CREATED_AT).apply()
     }
 
     private fun secureNonce(bytes: Int = 32): String {
@@ -356,7 +442,6 @@ class BrowserAuthMainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        clearPending()
         fileCallback?.onReceiveValue(null)
         fileCallback = null
         webView.removeJavascriptInterface("PromptStudioNativeGoogle")
@@ -370,5 +455,11 @@ class BrowserAuthMainActivity : AppCompatActivity() {
         private const val FIREBASE_WEB_API_KEY = "AIzaSyB34-r9vGA1G-12YiHqt99PZ7AA8Ghzlmg"
         private const val NATIVE_SCHEME = "promptstudio"
         private const val NATIVE_CALLBACK_HOST = "native-auth-callback"
+        private const val PREFS_NAME = "promptstudio_native_auth"
+        private const val KEY_REQUEST_ID = "requestId"
+        private const val KEY_SESSION_ID = "sessionId"
+        private const val KEY_STATE = "state"
+        private const val KEY_CREATED_AT = "createdAt"
+        private const val PENDING_TTL_MS = 10 * 60 * 1000L
     }
 }
