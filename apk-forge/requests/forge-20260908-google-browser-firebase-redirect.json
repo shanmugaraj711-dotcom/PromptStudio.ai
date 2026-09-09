@@ -1,9 +1,9 @@
 {
-  "forgeRequestId": "forge-20260909-native-callback-diagnostic",
-  "buildId": "020-native-callback-diagnostic",
+  "forgeRequestId": "forge-20260909-clean-working-build",
+  "buildId": "021-clean-working-build",
   "appName": "PromptStudio AI",
   "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
   "packageId": "promptstudio.ai",
-  "versionName": "1.2.0-test",
-  "versionCode": 21
+  "versionName": "1.2.1-test",
+  "versionCode": 22
 }
