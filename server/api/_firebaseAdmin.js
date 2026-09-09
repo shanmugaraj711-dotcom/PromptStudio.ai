@@ -2,13 +2,48 @@ import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 
+const parseServiceAccount = (raw) => {
+  if (!raw) return null;
+
+  let parsed = raw;
+  for (let attempt = 0; attempt < 2 && typeof parsed === "string"; attempt += 1) {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!parsed || typeof parsed !== "object") return null;
+
+  const projectId = typeof parsed.project_id === "string" ? parsed.project_id.trim() : "";
+  const clientEmail = typeof parsed.client_email === "string" ? parsed.client_email.trim() : "";
+  const privateKey = typeof parsed.private_key === "string" ? parsed.private_key.replace(/\\n/g, "\n").trim() : "";
+
+  if (!projectId || !clientEmail || !privateKey) return null;
+  return { projectId, clientEmail, privateKey };
+};
+
 const getCredential = () => {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (raw) {
-    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-    return cert({ projectId: parsed.project_id, clientEmail: parsed.client_email, privateKey: parsed.private_key.replace(/\\n/g, "\n") });
+  const serviceAccount = parseServiceAccount(raw);
+
+  if (serviceAccount) return cert(serviceAccount);
+
+  const projectId = String(process.env.FIREBASE_ADMIN_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || "").trim();
+  const clientEmail = String(process.env.FIREBASE_ADMIN_CLIENT_EMAIL || "").trim();
+  const privateKey = String(process.env.FIREBASE_ADMIN_PRIVATE_KEY || "").replace(/\\n/g, "\n").trim();
+
+  if (projectId && clientEmail && privateKey) {
+    return cert({ projectId, clientEmail, privateKey });
   }
-  return cert({ projectId: process.env.FIREBASE_ADMIN_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT, clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL, privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, "\n") });
+
+  const error = new Error(
+    "Firebase server credentials are not configured correctly. Provide a service-account JSON containing project_id, client_email, and private_key, or provide FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, and FIREBASE_ADMIN_PRIVATE_KEY."
+  );
+  error.status = 503;
+  error.code = "server_configuration_error";
+  throw error;
 };
 
 export const getAdminApp = () => getApps().length ? getApps()[0] : initializeApp({ credential: getCredential() });
