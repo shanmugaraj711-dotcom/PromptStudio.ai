@@ -1,9 +1,9 @@
 {
-  "forgeRequestId": "forge-20260909-reserved-state-fix",
-  "buildId": "022-reserved-state-fix",
+  "forgeRequestId": "forge-20260909-native-firebase-auth",
+  "buildId": "023-native-firebase-auth",
   "appName": "PromptStudio AI",
   "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
   "packageId": "promptstudio.ai",
-  "versionName": "1.2.2-test",
-  "versionCode": 23
+  "versionName": "1.2.3-test",
+  "versionCode": 24
 }
