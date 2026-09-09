@@ -143,10 +143,9 @@ class BrowserAuthMainActivity : AppCompatActivity() {
                     sendResult(requestId, null, "Native Google sign-in is unavailable for this origin.")
                     return@runOnUiThread
                 }
-                if (pendingRequestId != null) {
-                    sendResult(requestId, null, "A Google sign-in request is already in progress.")
-                    return@runOnUiThread
-                }
+
+                // Single-slot policy: every new attempt supersedes the previous one.
+                clearPending()
                 pendingRequestId = requestId
                 lifecycleScope.launch {
                     try {
@@ -253,14 +252,15 @@ class BrowserAuthMainActivity : AppCompatActivity() {
             Log.w(TAG, "Ignoring auth callback with incomplete pending state")
             return
         }
+
+        // A callback from a superseded/replayed transaction must never clear the current slot.
+        if (callbackState != expectedState) {
+            Log.w(TAG, "Ignoring auth callback with stale or mismatched state")
+            return
+        }
         if (uri.getQueryParameter("nativeAuth") != "1") {
             clearPending()
             sendResult(requestId, null, "Invalid native sign-in callback.")
-            return
-        }
-        if (callbackState != expectedState) {
-            clearPending()
-            sendResult(requestId, null, "Google sign-in state did not match the pending request.")
             return
         }
         if (uri.getQueryParameter("error") != null) {
@@ -413,7 +413,9 @@ class BrowserAuthMainActivity : AppCompatActivity() {
         pendingRequestId = null
         pendingSessionId = null
         pendingContext = null
-        pendingPrefs.edit().remove(KEY_REQUEST_ID).remove(KEY_SESSION_ID).remove(KEY_STATE).remove(KEY_CREATED_AT).apply()
+        if (::pendingPrefs.isInitialized) {
+            pendingPrefs.edit().remove(KEY_REQUEST_ID).remove(KEY_SESSION_ID).remove(KEY_STATE).remove(KEY_CREATED_AT).apply()
+        }
     }
 
     private fun secureNonce(bytes: Int = 32): String {
