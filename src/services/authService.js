@@ -16,6 +16,7 @@ import {
   serverTimestamp
 } from "firebase/firestore";
 import { auth, db, googleProvider } from "../firebase";
+import "./nativeDiagnostic";
 
 const createOrUpdateUserDoc = async (user, name = null) => {
   if (!user) return;
