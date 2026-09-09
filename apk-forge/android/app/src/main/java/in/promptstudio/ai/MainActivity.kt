@@ -23,7 +23,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
-import androidx.browser.customtabs.CustomTabsIntent
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -32,6 +31,10 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.security.SecureRandom
@@ -40,9 +43,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var progressBar: ProgressBar
     private lateinit var offlineView: View
+    private lateinit var firebaseAuth: FirebaseAuth
     private var fileCallback: ValueCallback<Array<Uri>>? = null
     private var pendingGoogleRequestId: String? = null
-    private var pendingBrowserState: String? = null
     private var pendingNativeResult: Triple<String, String?, String?>? = null
 
     private val appOrigin = BuildConfig.FORGE_WEB_ORIGIN.trimEnd('/')
@@ -50,6 +53,9 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        initializeFirebase()
+        firebaseAuth = FirebaseAuth.getInstance()
+
         val root = FrameLayout(this)
         webView = WebView(this)
         progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal)
@@ -60,14 +66,14 @@ class MainActivity : AppCompatActivity() {
         setContentView(root)
         setupWebView()
         webView.addJavascriptInterface(NativeGoogleBridge(), "PromptStudioNativeGoogle")
+
         if (savedInstanceState == null) {
-            handleNativeAuthCallback(intent)
             loadIfOnline()
         } else {
             webView.restoreState(savedInstanceState)
-            handleNativeAuthCallback(intent)
             flushPendingNativeResult()
         }
+
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (webView.canGoBack()) webView.goBack() else {
@@ -76,12 +82,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        handleNativeAuthCallback(intent)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -96,9 +96,10 @@ class MainActivity : AppCompatActivity() {
             setSupportMultipleWindows(false)
             cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
         }
-        val cookies = android.webkit.CookieManager.getInstance()
-        cookies.setAcceptCookie(true)
-        cookies.setAcceptThirdPartyCookies(webView, true)
+        android.webkit.CookieManager.getInstance().apply {
+            setAcceptCookie(true)
+            setAcceptThirdPartyCookies(webView, true)
+        }
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val uri = request.url
@@ -111,12 +112,14 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
             }
+
             override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
                 super.onPageStarted(view, url, favicon)
                 progressBar.visibility = View.VISIBLE
                 offlineView.visibility = View.GONE
                 webView.visibility = View.VISIBLE
             }
+
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
                 progressBar.visibility = View.GONE
@@ -124,6 +127,7 @@ class MainActivity : AppCompatActivity() {
                 webView.visibility = View.VISIBLE
                 flushPendingNativeResult()
             }
+
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                 super.onReceivedError(view, request, error)
                 if (request.isForMainFrame) showOfflineState()
@@ -134,11 +138,19 @@ class MainActivity : AppCompatActivity() {
                 progressBar.progress = newProgress
                 progressBar.visibility = if (newProgress in 1..99) View.VISIBLE else View.GONE
             }
-            override fun onShowFileChooser(webView: WebView, filePathCallback: ValueCallback<Array<Uri>>, fileChooserParams: FileChooserParams): Boolean {
+
+            override fun onShowFileChooser(
+                webView: WebView,
+                filePathCallback: ValueCallback<Array<Uri>>,
+                fileChooserParams: FileChooserParams
+            ): Boolean {
                 fileCallback?.onReceiveValue(null)
                 fileCallback = filePathCallback
                 return try {
-                    startActivityForResult(fileChooserParams.createIntent().apply { addCategory(Intent.CATEGORY_OPENABLE) }, FILE_CHOOSER_REQUEST)
+                    startActivityForResult(
+                        fileChooserParams.createIntent().apply { addCategory(Intent.CATEGORY_OPENABLE) },
+                        FILE_CHOOSER_REQUEST
+                    )
                     true
                 } catch (_: ActivityNotFoundException) {
                     fileCallback = null
@@ -168,103 +180,54 @@ class MainActivity : AppCompatActivity() {
                 lifecycleScope.launch {
                     try {
                         val webClientId = getString(R.string.google_web_client_id)
-                        val nonce = generateSecureRandomNonce()
-                        val googleOption = GetSignInWithGoogleOption.Builder(serverClientId = webClientId).setNonce(nonce).build()
-                        val request = GetCredentialRequest.Builder().addCredentialOption(googleOption).build()
+                        val googleOption = GetSignInWithGoogleOption.Builder(serverClientId = webClientId)
+                            .setNonce(generateSecureRandomNonce())
+                            .build()
+                        val request = GetCredentialRequest.Builder()
+                            .addCredentialOption(googleOption)
+                            .build()
                         val credentialManager = CredentialManager.create(this@MainActivity)
-                        val result = credentialManager.getCredential(request = request, context = this@MainActivity)
+                        val result = credentialManager.getCredential(
+                            request = request,
+                            context = this@MainActivity
+                        )
                         val credential = result.credential
                         if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                             val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
                             val idToken = googleCredential.idToken
                             if (idToken.isBlank()) throw IllegalStateException("Google sign-in returned an empty ID token.")
+
+                            firebaseAuth.signInWithCredential(GoogleAuthProvider.getCredential(idToken, null)).await()
                             sendGoogleResult(requestId, idToken, null)
                         } else {
                             throw IllegalStateException("Unexpected credential type: ${credential::class.java.name}")
                         }
                     } catch (error: GetCredentialException) {
                         logGoogleFailure("credentialManager", error)
-                        if (isCredentialReauthFailure(error)) {
-                            startBrowserGoogleSignIn(requestId)
-                            return@launch
-                        }
                         sendGoogleResult(requestId, null, formatGoogleError(error))
                     } catch (error: GoogleIdTokenParsingException) {
                         logGoogleFailure("googleIdTokenParsing", error)
                         sendGoogleResult(requestId, null, formatGoogleError(error))
                     } catch (error: Exception) {
-                        logGoogleFailure("credentialManagerUnexpected", error)
+                        logGoogleFailure("firebaseNativeAuth", error)
                         sendGoogleResult(requestId, null, formatGoogleError(error))
                     } finally {
-                        if (pendingBrowserState == null) pendingGoogleRequestId = null
+                        pendingGoogleRequestId = null
                     }
                 }
             }
         }
     }
 
-    private fun isCredentialReauthFailure(error: Throwable): Boolean {
-        val chain = buildString {
-            var current: Throwable? = error
-            var depth = 0
-            while (current != null && depth < 8) {
-                append(current::class.java.name).append(' ').append(current.message.orEmpty()).append(' ')
-                current = current.cause
-                depth++
-            }
-        }
-        return chain.contains("GetCredentialCancellationException", ignoreCase = true) && chain.contains("16") && chain.contains("reauth", ignoreCase = true)
-    }
-
-    private fun startBrowserGoogleSignIn(requestId: String) {
-        val state = generateSecureRandomNonce(24)
-        pendingBrowserState = state
-        pendingGoogleRequestId = requestId
-        val callbackUrl = Uri.parse("$NATIVE_AUTH_CALLBACK_URI?nativeAuth=1&state=${Uri.encode(state)}")
-        try {
-            CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(this, callbackUrl)
-        } catch (error: Exception) {
-            logGoogleFailure("browserAuthStart", error)
-            clearBrowserAuthState()
-            sendGoogleResult(requestId, null, formatGoogleError(error))
-        }
-    }
-
-    private fun handleNativeAuthCallback(intent: Intent?) {
-        val uri = intent?.data ?: return
-        if (uri.scheme != "https" || uri.host != AUTH_CALLBACK_HOST || uri.path != "/native-auth-callback") return
-        val requestId = pendingGoogleRequestId
-        val expectedState = pendingBrowserState
-        if (requestId.isNullOrBlank() || expectedState.isNullOrBlank()) {
-            Log.w(TAG, "Ignoring native auth callback without a matching pending request")
-            return
-        }
-        val fragmentParams = uri.fragment?.let { Uri.parse("https://callback.invalid/?$it") }
-        val returnedState = uri.getQueryParameter("state") ?: fragmentParams?.getQueryParameter("state")
-        if (returnedState != expectedState) {
-            clearBrowserAuthState()
-            sendGoogleResult(requestId, null, "Google sign-in state validation failed.")
-            return
-        }
-        val error = uri.getQueryParameter("error") ?: fragmentParams?.getQueryParameter("error")
-        if (!error.isNullOrBlank()) {
-            clearBrowserAuthState()
-            sendGoogleResult(requestId, null, "Google sign-in failed: $error")
-            return
-        }
-        val googleIdToken = fragmentParams?.getQueryParameter("idToken")
-        if (googleIdToken.isNullOrBlank()) {
-            clearBrowserAuthState()
-            sendGoogleResult(requestId, null, "Google browser sign-in returned no Google ID token.")
-            return
-        }
-        clearBrowserAuthState()
-        sendGoogleResult(requestId, googleIdToken, null)
-    }
-
-    private fun clearBrowserAuthState() {
-        pendingBrowserState = null
-        pendingGoogleRequestId = null
+    private fun initializeFirebase() {
+        if (FirebaseApp.getApps(this).isNotEmpty()) return
+        val options = FirebaseOptions.Builder()
+            .setProjectId(BuildConfig.FIREBASE_PROJECT_ID)
+            .setApplicationId(BuildConfig.FIREBASE_ANDROID_APP_ID)
+            .setApiKey(BuildConfig.FIREBASE_API_KEY)
+            .setGcmSenderId(BuildConfig.FIREBASE_MESSAGING_SENDER_ID)
+            .build()
+        FirebaseApp.initializeApp(this, options)
     }
 
     private fun generateSecureRandomNonce(byteLength: Int = 32): String {
@@ -274,19 +237,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun logGoogleFailure(stage: String, error: Throwable) {
-        val chain = buildString {
-            var current: Throwable? = error
-            var depth = 0
-            while (current != null && depth < 8) {
-                if (depth > 0) append(" <- ")
-                append(current::class.java.name)
-                val message = current.message?.replace('\n', ' ')?.take(300)
-                if (!message.isNullOrBlank()) append(": ").append(message)
-                current = current.cause
-                depth++
-            }
-        }
-        Log.e(TAG, "Google auth failure stage=$stage chain=$chain")
+        Log.e(TAG, "Google auth failure stage=$stage", error)
     }
 
     private fun formatGoogleError(error: Throwable): String {
@@ -313,7 +264,10 @@ class MainActivity : AppCompatActivity() {
             put("idToken", result.second)
             put("error", result.third)
         }
-        webView.evaluateJavascript("window.__promptStudioNativeGoogleResult(${JSONObject.quote(payload.toString())})", null)
+        webView.evaluateJavascript(
+            "window.__promptStudioNativeGoogleResult(${JSONObject.quote(payload.toString())})",
+            null
+        )
         pendingNativeResult = null
     }
 
@@ -323,7 +277,9 @@ class MainActivity : AppCompatActivity() {
             webView.visibility = View.VISIBLE
             offlineView.visibility = View.GONE
             webView.loadUrl(appOrigin)
-        } else showOfflineState()
+        } else {
+            showOfflineState()
+        }
     }
 
     private fun showOfflineState() {
@@ -339,9 +295,21 @@ class MainActivity : AppCompatActivity() {
             setPadding(48, 48, 48, 48)
             visibility = View.GONE
         }
-        val title = TextView(this).apply { text = "You're offline"; textSize = 22f; gravity = android.view.Gravity.CENTER }
-        val message = TextView(this).apply { text = "Connect to the internet and try again."; textSize = 16f; gravity = android.view.Gravity.CENTER; setPadding(0, 16, 0, 24) }
-        val retry = android.widget.Button(this).apply { text = "Try again"; setOnClickListener { loadIfOnline() } }
+        val title = TextView(this).apply {
+            text = "You're offline"
+            textSize = 22f
+            gravity = android.view.Gravity.CENTER
+        }
+        val message = TextView(this).apply {
+            text = "Connect to the internet and try again."
+            textSize = 16f
+            gravity = android.view.Gravity.CENTER
+            setPadding(0, 16, 0, 24)
+        }
+        val retry = android.widget.Button(this).apply {
+            text = "Try again"
+            setOnClickListener { loadIfOnline() }
+        }
         container.addView(title)
         container.addView(message)
         container.addView(retry)
@@ -360,9 +328,18 @@ class MainActivity : AppCompatActivity() {
         super.onSaveInstanceState(outState)
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == FILE_CHOOSER_REQUEST) {
+            fileCallback?.onReceiveValue(
+                if (resultCode == RESULT_OK && data?.data != null) arrayOf(data.data!!) else null
+            )
+            fileCallback = null
+        }
+    }
+
     override fun onDestroy() {
         pendingGoogleRequestId = null
-        pendingBrowserState = null
         pendingNativeResult = null
         fileCallback?.onReceiveValue(null)
         fileCallback = null
@@ -374,7 +351,5 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val FILE_CHOOSER_REQUEST = 4101
         private const val TAG = "PromptStudioGoogle"
-        private const val AUTH_CALLBACK_HOST = "prompt-studio-ai-forge-test.vercel.app"
-        private const val NATIVE_AUTH_CALLBACK_URI = "https://prompt-studio-ai-forge-test.vercel.app/native-auth-callback"
     }
 }
