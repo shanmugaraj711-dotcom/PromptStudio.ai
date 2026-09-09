@@ -1,9 +1,9 @@
 {
-  "forgeRequestId": "forge-20260909-native-callback-persistence-retry",
-  "buildId": "019-native-callback-persistence",
+  "forgeRequestId": "forge-20260909-native-callback-diagnostic",
+  "buildId": "020-native-callback-diagnostic",
   "appName": "PromptStudio AI",
   "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
   "packageId": "promptstudio.ai",
-  "versionName": "1.1.9-test",
-  "versionCode": 20
+  "versionName": "1.2.0-test",
+  "versionCode": 21
 }
