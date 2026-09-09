@@ -24,9 +24,15 @@ val forgeVersionCode = providers.gradleProperty("VERSION_CODE")
 val googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID")
     .orElse("")
     .get()
+val firebaseAndroidAppId = providers.gradleProperty("FIREBASE_ANDROID_APP_ID")
+    .orElse("")
+    .get()
 
 if (googleWebClientId.isBlank()) {
     throw GradleException("GOOGLE_WEB_CLIENT_ID is required for Forge native Google Sign-In")
+}
+if (firebaseAndroidAppId.isBlank()) {
+    throw GradleException("FIREBASE_ANDROID_APP_ID is required for native Firebase initialization")
 }
 
 val forgeWebHost = URI(forgeWebOrigin).host
@@ -45,6 +51,10 @@ android {
         resValue("string", "app_name", forgeAppName)
         resValue("string", "google_web_client_id", googleWebClientId)
         buildConfigField("String", "FORGE_WEB_ORIGIN", "\"$forgeWebOrigin\"")
+        buildConfigField("String", "FIREBASE_ANDROID_APP_ID", "\"$firebaseAndroidAppId\"")
+        buildConfigField("String", "FIREBASE_API_KEY", "\"AIzaSyB34-r9vGA1G-12YiHqt99PZ7AA8Ghzlmg\"")
+        buildConfigField("String", "FIREBASE_PROJECT_ID", "\"promptstudio-ai-d31b8\"")
+        buildConfigField("String", "FIREBASE_MESSAGING_SENDER_ID", "\"768747699651\"")
         manifestPlaceholders["forgeWebHost"] = forgeWebHost
     }
 
@@ -73,10 +83,11 @@ android {
 }
 
 dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:34.18.0"))
+    implementation("com.google.firebase:firebase-auth")
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.activity:activity-ktx:1.10.0")
-    implementation("androidx.browser:browser:1.8.0")
     implementation("androidx.webkit:webkit:1.12.1")
     implementation("androidx.credentials:credentials:1.6.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
