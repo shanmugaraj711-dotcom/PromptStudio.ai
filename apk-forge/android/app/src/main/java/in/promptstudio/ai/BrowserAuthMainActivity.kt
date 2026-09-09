@@ -123,7 +123,7 @@ class BrowserAuthMainActivity : AppCompatActivity() {
                 }
                 if (pendingRequestId != null) {
                     sendResult(requestId, null, "A Google sign-in request is already in progress.")
-                    return@runUiThread
+                    return@runOnUiThread
                 }
                 pendingRequestId = requestId
                 lifecycleScope.launch {
@@ -231,11 +231,7 @@ class BrowserAuthMainActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             try {
-                val requestUri = if (isHttpsCallback) {
-                    uri.toString()
-                } else {
-                    buildHttpsCallbackUri(uri)
-                }
+                val requestUri = if (isHttpsCallback) uri.toString() else buildHttpsCallbackUri(uri)
                 val result = withContext(Dispatchers.IO) { finishAuth(requestUri, sessionId) }
                 val googleIdToken = result.optString("oauthIdToken")
                 if (googleIdToken.isBlank()) {
