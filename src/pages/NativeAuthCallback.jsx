@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
-import {
-  getRedirectResult,
-  GoogleAuthProvider,
-  signInWithRedirect,
-} from "firebase/auth";
-import { auth, googleProvider } from "../firebase";
 
 const PENDING_KEY = "promptstudio-native-google-state";
 const ALLOWED_HOST = "prompt-studio-ai-forge-test.vercel.app";
+const NATIVE_SCHEME = "promptstudio";
+const NATIVE_HOST = "native-auth-callback";
+
+function redirectToNative(params, state) {
+  const next = new URLSearchParams(params);
+  next.set("nativeAuth", "1");
+  next.set("state", state);
+  window.location.replace(`${NATIVE_SCHEME}://${NATIVE_HOST}?${next.toString()}`);
+}
 
 export default function NativeAuthCallback() {
-  const [message, setMessage] = useState("Opening secure Google sign-in…");
+  const [message, setMessage] = useState("Returning to PromptStudio AI…");
 
   useEffect(() => {
     let cancelled = false;
@@ -22,35 +25,31 @@ export default function NativeAuthCallback() {
       }
 
       const params = new URLSearchParams(window.location.search);
-      const state = params.get("state");
-      const nativeAuth = params.get("nativeAuth") === "1";
-      if (!nativeAuth || !state) {
+      const storedState = sessionStorage.getItem(PENDING_KEY);
+      const state = params.get("state") || storedState;
+      const hasOAuthResult = params.has("code") || params.has("error");
+
+      if (hasOAuthResult) {
+        if (!state) {
+          setMessage("Google sign-in returned without a native state.");
+          return;
+        }
+        sessionStorage.removeItem(PENDING_KEY);
+        redirectToNative(params, state);
+        return;
+      }
+
+      if (!state) {
         setMessage("Invalid native sign-in request.");
         return;
       }
 
       try {
-        const result = await getRedirectResult(auth);
-        if (cancelled) return;
-
-        if (result) {
-          const credential = GoogleAuthProvider.credentialFromResult(result);
-          const idToken = credential?.idToken;
-          if (!idToken) throw new Error("Google returned no ID token.");
-
-          sessionStorage.removeItem(PENDING_KEY);
-          const callback = `${window.location.origin}/native-auth-callback#state=${encodeURIComponent(state)}&idToken=${encodeURIComponent(idToken)}`;
-          window.location.replace(callback);
-          return;
-        }
-
-        const pendingState = sessionStorage.getItem(PENDING_KEY);
-        if (pendingState) {
-          throw new Error("Google sign-in returned without a redirect result.");
-        }
-
         sessionStorage.setItem(PENDING_KEY, state);
         setMessage("Waiting for Google…");
+        const { auth, googleProvider } = await import("../firebase");
+        const { signInWithRedirect } = await import("firebase/auth");
+        if (cancelled) return;
         await signInWithRedirect(auth, googleProvider);
       } catch (error) {
         sessionStorage.removeItem(PENDING_KEY);
