@@ -1,0 +1,10 @@
+{
+  "forgeRequestId": "forge-20260909-inside-fixes",
+  "buildId": "028-inside-fixes",
+  "appName": "PromptStudio AI",
+  "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
+  "packageId": "promptstudio.ai",
+  "versionName": "1.2.8-test",
+  "versionCode": 29,
+  "firebaseAndroidAppId": "1:768747699651:android:1a02adda6c99f13ff65176"
+}
