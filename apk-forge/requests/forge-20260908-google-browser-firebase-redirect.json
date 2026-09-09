@@ -1,10 +1,10 @@
 {
-  "forgeRequestId": "forge-20260909-native-firebase-auth",
-  "buildId": "023-native-firebase-auth",
+  "forgeRequestId": "forge-20260909-native-firebase-auth-kotlin-fix",
+  "buildId": "024-native-firebase-auth-kotlin-fix",
   "appName": "PromptStudio AI",
   "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
   "packageId": "promptstudio.ai",
-  "versionName": "1.2.3-test",
-  "versionCode": 24,
+  "versionName": "1.2.4-test",
+  "versionCode": 25,
   "firebaseAndroidAppId": "1:768747699651:android:1a02adda6c99f13ff65176"
 }
