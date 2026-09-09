@@ -4,10 +4,8 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
 plugins: [react()],
 server: {
-allowedHosts: [
-'.v0.build',
-'.vercel.run',
-],
+// Vercel Sandbox assigns a new preview hostname on each restart.
+allowedHosts: true,
 },
 build: {
 rollupOptions: {
