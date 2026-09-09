@@ -206,19 +206,20 @@ jobs:
           folder.mkdir(mode=0o700, exist_ok=True)
           for name, value in [
               ("forge.p12", base64.b64decode(bundle["keystore"], validate=True)),
-              ("password", bundle["password"].encode()),
+              ("password", (bundle["password"] + "\n").encode()),
+              ("key-password", (bundle["password"] + "\n").encode()),
           ]:
               path = folder / name
               path.write_bytes(value)
               path.chmod(0o600)
           PY
           signing_dir="$RUNNER_TEMP/forge-signing"
-          trap 'rm -f "$signing_dir/forge.p12" "$signing_dir/password"' EXIT
+          trap 'rm -f "$signing_dir/forge.p12" "$signing_dir/password" "$signing_dir/key-password"' EXIT
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign \
             --ks "$signing_dir/forge.p12" --ks-type PKCS12 \
             --ks-key-alias forge-test \
             --ks-pass "file:$signing_dir/password" \
-            --key-pass "file:$signing_dir/password" \
+            --key-pass "file:$signing_dir/key-password" \
             app/build/outputs/apk/debug/app-debug.apk
 
       - name: Inspect APK
