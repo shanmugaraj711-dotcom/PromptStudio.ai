@@ -1,0 +1,10 @@
+{
+  "forgeRequestId": "forge-20260909-registered-signing-verified",
+  "buildId": "027-registered-signing-verified",
+  "appName": "PromptStudio AI",
+  "forgeWebOrigin": "https://prompt-studio-ai-forge-test.vercel.app",
+  "packageId": "promptstudio.ai",
+  "versionName": "1.2.7-test",
+  "versionCode": 28,
+  "firebaseAndroidAppId": "1:768747699651:android:1a02adda6c99f13ff65176"
+}
