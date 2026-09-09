@@ -5,8 +5,8 @@ export default defineConfig({
 plugins: [react()],
 server: {
 allowedHosts: [
-'6gdyzv2jfobl2dtfhk7gqjlx.v0.build',
-'sb-68ppqnxf64wa.vercel.run',
+'.v0.build',
+'.vercel.run',
 ],
 },
 build: {
