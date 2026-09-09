@@ -123,7 +123,7 @@ class BrowserAuthMainActivity : AppCompatActivity() {
                 }
                 if (pendingRequestId != null) {
                     sendResult(requestId, null, "A Google sign-in request is already in progress.")
-                    return@runOnUiThread
+                    return@runUiThread
                 }
                 pendingRequestId = requestId
                 lifecycleScope.launch {
@@ -182,9 +182,14 @@ class BrowserAuthMainActivity : AppCompatActivity() {
     }
 
     private fun createAuthUri(context: String): Pair<String, String> {
+        val nativeContinueUri = Uri.parse(callbackUri).buildUpon()
+            .appendQueryParameter("nativeAuth", "1")
+            .appendQueryParameter("state", context)
+            .build()
+            .toString()
         val body = JSONObject().apply {
             put("providerId", "google.com")
-            put("continueUri", callbackUri)
+            put("continueUri", nativeContinueUri)
             put("context", context)
             put("authFlowType", "CODE_FLOW")
             put("oauthScope", "openid email profile")
@@ -203,7 +208,10 @@ class BrowserAuthMainActivity : AppCompatActivity() {
 
     private fun handleAuthCallback(intent: Intent?) {
         val uri = intent?.data ?: return
-        if (uri.scheme != "https" || uri.host != callbackHost || uri.path != "/native-auth-callback") return
+        val isHttpsCallback = uri.scheme == "https" && uri.host == callbackHost && uri.path == "/native-auth-callback"
+        val isNativeSchemeCallback = uri.scheme == NATIVE_SCHEME && uri.host == NATIVE_CALLBACK_HOST
+        if (!isHttpsCallback && !isNativeSchemeCallback) return
+
         val requestId = pendingRequestId
         val sessionId = pendingSessionId
         if (requestId.isNullOrBlank() || sessionId.isNullOrBlank()) {
@@ -223,7 +231,12 @@ class BrowserAuthMainActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             try {
-                val result = withContext(Dispatchers.IO) { finishAuth(uri.toString(), sessionId) }
+                val requestUri = if (isHttpsCallback) {
+                    uri.toString()
+                } else {
+                    buildHttpsCallbackUri(uri)
+                }
+                val result = withContext(Dispatchers.IO) { finishAuth(requestUri, sessionId) }
                 val googleIdToken = result.optString("oauthIdToken")
                 if (googleIdToken.isBlank()) {
                     throw IllegalStateException("Google authorization completed but no Google ID token was returned.")
@@ -235,6 +248,14 @@ class BrowserAuthMainActivity : AppCompatActivity() {
                 sendResult(requestId, null, formatError(error))
             }
         }
+    }
+
+    private fun buildHttpsCallbackUri(nativeUri: Uri): String {
+        val builder = Uri.parse(callbackUri).buildUpon().clearQuery()
+        for (name in nativeUri.queryParameterNames) {
+            builder.appendQueryParameter(name, nativeUri.getQueryParameter(name))
+        }
+        return builder.build().toString()
     }
 
     private fun finishAuth(requestUri: String, sessionId: String): JSONObject {
@@ -351,5 +372,7 @@ class BrowserAuthMainActivity : AppCompatActivity() {
         private const val FILE_CHOOSER_REQUEST = 4101
         private const val TAG = "PromptStudioGoogle"
         private const val FIREBASE_WEB_API_KEY = "AIzaSyB34-r9vGA1G-12YiHqt99PZ7AA8Ghzlmg"
+        private const val NATIVE_SCHEME = "promptstudio"
+        private const val NATIVE_CALLBACK_HOST = "native-auth-callback"
     }
 }
