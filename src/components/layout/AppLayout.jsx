@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { createQuotaState } from "../../constants/quota";
 import { useAuth } from "../../context/AuthContext";
 import { fetchRuntimeProductConfig } from "../../services/runtimeProductConfig";
 
 const baseNavItems = [
-  { to: "/dashboard", label: "Home", icon: "⌂" },
+  { to: "/", label: "Home", icon: "⌂" },
   { to: "/builder", label: "Create", icon: "+" },
   { to: "/history", label: "History", icon: "↺", feature: "promptHistory" },
   { to: "/account", label: "Account", icon: "○" },
@@ -13,6 +13,7 @@ const baseNavItems = [
 
 export default function AppLayout({ children }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { user, plan, promptsToday, lastPromptDate, logout } = useAuth();
   const [productConfig, setProductConfig] = useState(null);
 
@@ -54,13 +55,13 @@ export default function AppLayout({ children }) {
   };
 
   return (
-    <div className="workspace-shell min-h-screen overflow-x-hidden text-slate-100">
+    <div className={`workspace-shell min-h-screen overflow-x-hidden text-slate-100 ${pathname === "/history" ? "history-page" : ""}`}>
       <header className="workspace-topbar sticky top-0 z-40">
         <div className="mx-auto flex min-h-[4.25rem] max-w-6xl items-center gap-3 px-4 sm:px-6">
           <Link
-            to="/dashboard"
+            to="/"
             className="workspace-brand flex min-w-0 items-center gap-3"
-            aria-label="PromptStudio AI dashboard"
+            aria-label="PromptStudio AI home"
           >
             <span className="brand-mark grid size-9 shrink-0 place-items-center rounded-[0.9rem] text-lg font-black">
               P
