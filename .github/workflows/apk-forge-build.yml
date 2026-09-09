@@ -99,6 +99,7 @@ jobs:
               "packageId": "FORGE_PACKAGE_ID",
               "versionName": "FORGE_VERSION_NAME",
               "versionCode": "FORGE_VERSION_CODE",
+              "firebaseAndroidAppId": "FORGE_FIREBASE_ANDROID_APP_ID",
           }
           env_path = os.environ["GITHUB_ENV"]
           with open(env_path, "a", encoding="utf-8") as env:
