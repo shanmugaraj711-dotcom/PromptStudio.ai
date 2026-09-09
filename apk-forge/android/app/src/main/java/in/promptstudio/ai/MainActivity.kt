@@ -28,6 +28,7 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.tasks.Tasks
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
@@ -35,7 +36,9 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.security.SecureRandom
 
@@ -197,7 +200,13 @@ class MainActivity : AppCompatActivity() {
                             val idToken = googleCredential.idToken
                             if (idToken.isBlank()) throw IllegalStateException("Google sign-in returned an empty ID token.")
 
-                            firebaseAuth.signInWithCredential(GoogleAuthProvider.getCredential(idToken, null)).await()
+                            withContext(Dispatchers.IO) {
+                                Tasks.await(
+                                    firebaseAuth.signInWithCredential(
+                                        GoogleAuthProvider.getCredential(idToken, null)
+                                    )
+                                )
+                            }
                             sendGoogleResult(requestId, idToken, null)
                         } else {
                             throw IllegalStateException("Unexpected credential type: ${credential::class.java.name}")
