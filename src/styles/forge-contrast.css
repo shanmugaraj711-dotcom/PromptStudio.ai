@@ -57,3 +57,49 @@
   background: linear-gradient(135deg, #ecfeff, #e0f2fe) !important;
 }
 .forge-screen [class*="border-cyan-400/"] { border-color: #b9e8f3 !important; }
+
+/* History is a light reading surface inside the dark application shell. */
+.history-page .workspace-content {
+  color: #111827;
+}
+.history-page .workspace-content > div {
+  color: #111827;
+}
+.history-page .workspace-content h1,
+.history-page .workspace-content h2,
+.history-page .workspace-content h3 {
+  color: #111827 !important;
+}
+.history-page .workspace-content p {
+  color: #374151;
+}
+.history-page .workspace-content input {
+  color: #111827 !important;
+  background: #ffffff !important;
+}
+.history-page .workspace-content input::placeholder {
+  color: #9ca3af !important;
+}
+.history-page .workspace-content article {
+  color: #111827 !important;
+  background: #ffffff !important;
+  border-color: #e5e7eb !important;
+}
+.history-page .workspace-content article p {
+  color: #374151 !important;
+}
+.history-page .workspace-content article h2,
+.history-page .workspace-content article h3 {
+  color: #111827 !important;
+}
+.history-page .workspace-content article .text-gray-500 { color: #6b7280 !important; }
+.history-page .workspace-content article .text-gray-700 { color: #374151 !important; }
+.history-page .workspace-content article .text-gray-900 { color: #111827 !important; }
+.history-page .workspace-content article .border-t { border-color: #e5e7eb !important; }
+.history-page .workspace-content > div > div > div.rounded-2xl.border.bg-white {
+  background: #ffffff !important;
+  border-color: #e5e7eb !important;
+}
+.history-page .workspace-content > div > div > div.rounded-2xl.border.bg-white input {
+  color: #111827 !important;
+}
