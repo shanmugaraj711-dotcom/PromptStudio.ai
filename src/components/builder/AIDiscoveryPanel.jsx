@@ -1,66 +1,31 @@
-import { Link } from 'react-router-dom';
 import { getAICatalog } from '../../config/aiCatalog';
+
+const MODEL_MARKS = { chatgpt: '✦', claude: 'C', gemini: 'G', grok: '𝕏', midjourney: 'M' };
 
 function AIDiscoveryPanel({ category, aiModel, onToolSelect, onExample }) {
   const catalog = getAICatalog(category);
   const selectedTool = catalog.tools.find((tool) => tool.modelId === aiModel);
 
-  return (
-    <div className="builder-ai-panel mt-5 rounded-2xl border border-indigo-100 bg-gradient-to-br from-white via-indigo-50/40 to-violet-50/60 p-4 shadow-sm sm:p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-sm font-black text-slate-900">2. Choose your AI</p>
-          <p className="mt-1 text-xs leading-relaxed text-slate-600">Recommended tools for {catalog.title}. Choosing an example never changes this selection.</p>
-        </div>
-        <span className="w-fit rounded-full border border-indigo-100 bg-white px-3 py-1 text-[11px] font-bold text-indigo-700 shadow-sm">
-          {selectedTool ? `✓ ${selectedTool.name} selected` : 'Choose one'}
-        </span>
-      </div>
-
-      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0">
-        {catalog.tools.map((tool) => (
-          <button
-            key={tool.id}
-            type="button"
-            onClick={() => onToolSelect?.({ modelId: tool.modelId })}
-            aria-pressed={aiModel === tool.modelId}
-            className={`min-w-[205px] snap-start rounded-xl border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-md sm:min-w-0 ${aiModel === tool.modelId ? 'border-indigo-400 bg-indigo-50 ring-2 ring-indigo-100' : 'border-slate-200 bg-white'}`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-bold text-slate-900">{tool.name}</span>
-              {tool.badge && <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[9px] font-black text-white">{tool.badge}</span>}
-            </div>
-            <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">{tool.reason}</p>
-            {aiModel === tool.modelId && <p className="mt-2 text-[10px] font-black uppercase tracking-wide text-indigo-700">Selected AI · locked</p>}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-4 border-t border-indigo-100 pt-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-black text-slate-900">3. Start with an example <span className="font-normal text-slate-400">(optional)</span></p>
-            <p className="mt-1 text-xs text-slate-500">Examples only fill your idea. Your {selectedTool?.name || 'selected AI'} stays selected.</p>
-          </div>
-          <span className="hidden rounded-full bg-white px-3 py-1 text-[10px] font-bold text-slate-500 shadow-sm sm:inline">CONTENT ONLY</span>
-        </div>
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
-          {catalog.examples.map((example) => (
-            <button
-              key={example.title}
-              type="button"
-              onClick={() => onExample?.(example)}
-              className="min-w-[215px] snap-start rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md md:min-w-0"
-            >
-              <p className="text-xs font-black text-indigo-700">{example.title}</p>
-              <p className="mt-1 text-[11px] leading-relaxed text-slate-600">{example.description}</p>
-              <span className="mt-2 inline-flex rounded-lg bg-slate-50 px-2.5 py-1.5 text-[10px] font-bold text-slate-700">Use example →</span>
-            </button>
-          ))}
-        </div>
+  return <div className="builder-ai-panel mt-4 rounded-2xl border border-slate-200/90 bg-white/90 p-3 shadow-[0_16px_45px_-35px_rgba(15,23,42,0.35)] backdrop-blur sm:p-3.5">
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">AI model</p><p className="mt-0.5 truncate text-xs font-bold text-slate-700">{selectedTool ? `${selectedTool.name} · recommended for ${catalog.title}` : 'Choose the engine for this prompt'}</p></div>
+      <span className="shrink-0 rounded-full border border-indigo-100 bg-indigo-50 px-2 py-1 text-[9px] font-black text-indigo-700">{selectedTool ? 'Selected' : 'Choose'}</span>
+    </div>
+    <div className="mt-2.5 flex gap-1.5 overflow-x-auto pb-0.5" role="listbox" aria-label="AI model">
+      {catalog.tools.map((tool) => <button key={tool.id} type="button" onClick={() => onToolSelect?.({ modelId: tool.modelId })} aria-pressed={aiModel === tool.modelId} title={tool.reason} className={`group flex min-h-10 shrink-0 items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition duration-200 ${aiModel === tool.modelId ? 'border-indigo-300 bg-indigo-50 shadow-[0_6px_20px_-12px_rgba(79,70,229,0.6)]' : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-sm'}`}>
+        <span className={`grid h-6 w-6 place-items-center rounded-lg text-[10px] font-black ${aiModel === tool.modelId ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{MODEL_MARKS[tool.modelId] || tool.name?.[0] || 'AI'}</span>
+        <span className="text-[11px] font-black text-slate-800">{tool.name}</span>
+        {tool.badge && <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[8px] font-black text-amber-700">{tool.badge}</span>}
+        {aiModel === tool.modelId && <span className="text-[10px] font-black text-indigo-600">✓</span>}
+      </button>)}
+    </div>
+    <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-2.5">
+      <span className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">Quick starts</span>
+      <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
+        {catalog.examples.map((example) => <button key={example.title} type="button" onClick={() => onExample?.(example)} className="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[10px] font-bold text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700">{example.title} →</button>)}
       </div>
     </div>
-  );
+  </div>;
 }
 
 export default AIDiscoveryPanel;
