@@ -9,7 +9,15 @@ export function deliveryFiles(revision) {
     "build.mjs": `import { build } from "esbuild";
 import { mkdir, writeFile } from "node:fs/promises";
 await mkdir("dist", {recursive:true});
-await build({entryPoints:["entry.jsx"],bundle:true,outdir:"dist",entryNames:"app",loader:{".js":"jsx"},platform:"browser",format:"esm",minify:true,define:{"process.env.NODE_ENV":'"production"'}});
+const allowed = new Set(["react","react-dom/client","lucide-react","./App.js","./styles.css"]);
+const sourceBoundary = {name:"studio-source-boundary", setup(builder) {
+  builder.onResolve({filter:/.*/}, (args) => {
+    if (args.importer.endsWith("/App.js") && !allowed.has(args.path)) return {errors:[{text:"Unsupported import in accepted Studio source."}]};
+    if (args.importer.endsWith("/styles.css") && !args.path.startsWith("https://") && !args.path.startsWith("data:")) return {errors:[{text:"Local CSS imports/assets are not supported."}]};
+    return undefined;
+  });
+}};
+await build({plugins:[sourceBoundary],entryPoints:["entry.jsx"],bundle:true,outdir:"dist",entryNames:"app",loader:{".js":"jsx"},platform:"browser",format:"esm",minify:true,define:{"process.env.NODE_ENV":'"production"'}});
 await writeFile("dist/index.html", ${JSON.stringify('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="studio-revision" content="' + revision.revisionId + '"><title>Studio website</title><link rel="stylesheet" href="/app.css"></head><body><div id="root"></div><script type="module" src="/app.js"></script></body></html>')});
 await writeFile("dist/studio-revision.json", ${JSON.stringify(JSON.stringify({ revisionId: revision.revisionId }))});
 `,
