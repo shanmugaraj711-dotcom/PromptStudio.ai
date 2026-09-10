@@ -75,12 +75,24 @@ const createGeminiProvider = () => ({
   },
 });
 
+const unsupportedProvider = (providerName) => {
+  const error = new Error(`Unsupported Studio AI provider "${providerName}". Configure STUDIO_AI_PROVIDER as "groq" or "gemini".`);
+  error.status = 503;
+  error.code = "ai_provider_unsupported";
+  return error;
+};
+
 export const createAIProvider = () => {
   const providerName = String(process.env.STUDIO_AI_PROVIDER || "gemini").trim().toLowerCase();
   if (providerName === "groq") {
     console.info("Studio AI provider selected", { provider: "groq" });
     return createGroqProvider();
   }
-  console.info("Studio AI provider selected", { provider: "gemini" });
-  return createGeminiProvider();
+  if (providerName === "gemini") {
+    console.info("Studio AI provider selected", { provider: "gemini" });
+    return createGeminiProvider();
+  }
+  const error = unsupportedProvider(providerName);
+  console.error("Studio AI provider is unsupported", { provider: providerName, code: error.code });
+  throw error;
 };
