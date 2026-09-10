@@ -3,6 +3,8 @@ import { isConfigured, razorpayRequest, verifyOrderSignature } from "./_razorpay
 
 import { assertRevisionBinding } from "../studio/acceptedRevision.js";
 
+import { enqueueDelivery } from "../studio/deliveryQueue.js";
+
 const paidStates = new Set(["PAID", "BUILDING", "READY"]);
 const fail = (status, code, message) => { const error = new Error(message); error.status = status; error.code = code; throw error; };
 
@@ -46,6 +48,8 @@ export default async function handler(req, res) {
       if (current.uid !== user.uid) fail(403, "studio_build_forbidden", "Studio build payment does not belong to this account.");
       assertRevisionBinding(current, revisionSnap.data(), user.uid);
       if (current.razorpayOrderId !== orderId) fail(409, "studio_order_mismatch", "The checkout order changed during verification.");
+      if (!paidStates.has(current.status) && current.status !== "PAYMENT_PENDING") fail(409, "studio_payment_state_invalid", "Studio payment is not ready for delivery.");
+      await enqueueDelivery(tx, db, current, revisionSnap.data());
       if (paidStates.has(current.status)) return current;
       if (current.status !== "PAYMENT_PENDING") fail(409, "studio_payment_state_invalid", `Studio build request is currently ${current.status}.`);
       tx.update(ref, { status: "PAID", paymentId, paidAt: new Date(), paymentVerifiedAt: new Date(), razorpayOrderStatus: order.status, razorpayPaymentStatus: payment.status, updatedAt: new Date() });
