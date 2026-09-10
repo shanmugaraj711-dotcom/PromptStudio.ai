@@ -16,7 +16,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: node --test server/studio/acceptedRevision.node-check.mjs server/studio/delivery.node-check.mjs server/studio/paymentVerification.node-check.mjs
+      - run: node --test server/studio/acceptedRevision.node-check.mjs server/studio/delivery.node-check.mjs server/studio/paymentVerification.node-check.mjs server/studio/aiProvider.node-check.mjs
       - run: npm ci
       - run: npm run build
       - name: Compile a frozen customer revision with the real build package
