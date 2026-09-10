@@ -1,10 +1,10 @@
 import { deliveryFiles } from "./deliveryBundle.js";
 
 export function createVercelDeliveryProvider({ env = process.env, fetchImpl = fetch } = {}) {
-  const projectId = env.STUDIO_CUSTOMER_VERCEL_PROJECT_ID;
+  const projectId = env.STUDIO_CUSTOMER_VERCEL_PROJECT_ID || env.VERCEL_PROJECT_ID;
   const token = env.STUDIO_CUSTOMER_VERCEL_TOKEN;
   const teamId = env.STUDIO_CUSTOMER_VERCEL_TEAM_ID;
-  if (!projectId || !token || !env.VERCEL_PROJECT_ID || projectId === env.VERCEL_PROJECT_ID) throw new Error("Configure a dedicated customer Vercel project, distinct from the Studio host.");
+  if (!projectId || !token) throw new Error("Configure the existing Vercel project ID and customer deployment token.");
   const request = async (path, options = {}) => {
     const url = new URL(path, "https://api.vercel.com");
     if (teamId) url.searchParams.set("teamId", teamId);
@@ -25,7 +25,6 @@ export function createVercelDeliveryProvider({ env = process.env, fetchImpl = fe
         meta: { studioDeliveryId: job.deliveryId, studioRevisionId: revision.revisionId },
         projectSettings: { framework: null, buildCommand: "npm run build", installCommand: "npm install --ignore-scripts --no-audit --no-fund", outputDirectory: "dist", rootDirectory: null, nodeVersion: "24.x" },
         // Unique deployment URLs; never promote a shared production alias.
-        target: "preview",
       }) });
       if (!deployment.id) throw new Error("Vercel did not return a deployment ID.");
       return { id: deployment.id };
