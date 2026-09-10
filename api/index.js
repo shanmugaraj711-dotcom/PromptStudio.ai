@@ -21,6 +21,8 @@ import v1TransactionsHandler from "../server/api/v1/transactions.js";
 import v1ImageToPromptHandler from "../server/api/v1/plugin/image-to-prompt.js";
 import whatsappWebhookHandler from "../server/api/webhooks/whatsapp.js";
 
+import studioDeliveryHandler from "../server/api/studio-delivery.js";
+
 const STATIC_HANDLERS = {
   "/api/admin-bootstrap": adminBootstrapHandler,
   "/api/admin": adminHandler,
@@ -34,6 +36,7 @@ const STATIC_HANDLERS = {
   "/api/razorpay-webhook": razorpayWebhookHandler,
   "/api/reference-coding": referenceCodingHandler,
   "/api/share-prompt": sharePromptHandler,
+  "/api/studio-delivery": studioDeliveryHandler,
   "/api/studio": studioHandler,
   "/api/studio-jobs": studioJobsHandler,
   "/api/studio-build-order": studioBuildOrderHandler,
