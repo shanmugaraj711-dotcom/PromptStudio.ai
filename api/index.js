@@ -20,6 +20,7 @@ import v1SupportHandler from "../server/api/v1/support.js";
 import v1TransactionsHandler from "../server/api/v1/transactions.js";
 import v1ImageToPromptHandler from "../server/api/v1/plugin/image-to-prompt.js";
 import whatsappWebhookHandler from "../server/api/webhooks/whatsapp.js";
+import liveSignalHandler from "../server/api/live-signal.js";
 
 import studioDeliveryHandler from "../server/api/studio-delivery.js";
 
@@ -47,6 +48,7 @@ const STATIC_HANDLERS = {
   "/api/v1/transactions": v1TransactionsHandler,
   "/api/v1/plugin/image-to-prompt": v1ImageToPromptHandler,
   "/api/webhooks/whatsapp": whatsappWebhookHandler,
+  "/api/live-signal": liveSignalHandler,
 };
 
 const normalizePath = (value) => {
