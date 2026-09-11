@@ -1,23 +1,13 @@
 import { requireUser, json } from "./_firebaseAdmin.js";
 
 const GEO_CODES = {
-  "tamil nadu": "IN-TN",
-  "tamilnadu": "IN-TN",
-  "chennai": "IN-TN",
-  "coimbatore": "IN-TN",
-  "madurai": "IN-TN",
-  "tiruchirappalli": "IN-TN",
-  "salem": "IN-TN",
-  "kerala": "IN-KL",
-  "karnataka": "IN-KA",
-  "andhra pradesh": "IN-AP",
-  "telangana": "IN-TG",
-  "maharashtra": "IN-MH",
-  "delhi": "IN-DL",
-  "india": "IN",
+  "tamil nadu": "IN-TN", tamilnadu: "IN-TN", chennai: "IN-TN", coimbatore: "IN-TN", madurai: "IN-TN", tiruchirappalli: "IN-TN", salem: "IN-TN",
+  kerala: "IN-KL", karnataka: "IN-KA", "andhra pradesh": "IN-AP", telangana: "IN-TG", maharashtra: "IN-MH", delhi: "IN-DL", india: "IN",
 };
 
 const clean = (value, max = 80) => String(value || "").trim().replace(/[<>]/g, "").slice(0, max);
+const providerError = (message, code = "provider_unavailable") => Object.assign(new Error(message), { status: 503, code });
+
 const decodeTrends = (text) => {
   const raw = String(text || "").replace(/^\)\]\}',?\s*/, "");
   const data = JSON.parse(raw);
@@ -37,20 +27,32 @@ const decodeNews = (xml, location) => {
     const block = match[1];
     const read = (tag) => { const found = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i")); return found ? found[1].replace(/<!\[CDATA\[|\]\]>/g, "").trim() : ""; };
     const title = clean(read("title"), 120);
-    const link = read("link");
-    return { rank: index + 1, title, traffic: "Live topic", description: `${location} coverage`, url: link };
+    return { rank: index + 1, title, traffic: "Live topic", description: `${location} coverage`, url: read("link") };
   }).filter((item) => item.title);
 };
 
 const withTimeout = async (url, ms = 6500) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
-  try { return await fetch(url, { signal: controller.signal, headers: { "User-Agent": "PromptStudioAI/1.0 LiveSignal" } }); }
-  finally { clearTimeout(timer); }
+  try {
+    return await fetch(url, { signal: controller.signal, headers: { "User-Agent": "PromptStudioAI/1.0 LiveSignal" } });
+  } catch (error) {
+    if (error?.name === "AbortError") throw providerError("Live Signal took too long to receive fresh data.", "provider_timeout");
+    throw providerError("Live Signal could not reach its live data source.", "provider_network_error");
+  } finally { clearTimeout(timer); }
+};
+
+const fetchNewsTopics = async (location) => {
+  const query = encodeURIComponent(`${location} when:1d`);
+  const response = await withTimeout(`https://news.google.com/rss/search?q=${query}&hl=en-IN&gl=IN&ceid=IN:en`);
+  if (!response.ok) throw providerError("Live Signal could not retrieve current topics for this location.");
+  const topics = decodeNews(await response.text(), location);
+  if (!topics.length) throw providerError("No current topics are available for this location right now.", "no_topics");
+  return topics;
 };
 
 export default async function handler(req, res) {
-  if (req.method !== "GET") return json(res, 405, { message: "Use GET for Live Signal." });
+  if (req.method !== "GET") return json(res, 405, { code: "method_not_allowed", message: "Live Signal uses GET requests." });
   try {
     await requireUser(req);
     const requestedLocation = clean(req.query?.location || "Tamil Nadu");
@@ -65,30 +67,39 @@ export default async function handler(req, res) {
           const geo = await geoResponse.json();
           location = clean(geo?.principalSubdivision || geo?.city || geo?.locality || location);
         }
-      } catch {}
+      } catch (error) {
+        console.warn("[live-signal] reverse geocode unavailable", { code: error?.code || "unknown" });
+      }
     }
 
-    const geoCode = GEO_CODES[location.toLowerCase()] || GEO_CODES[location.toLowerCase().replace(/\s+/g, " ")];
+    const geoCode = GEO_CODES[location.toLowerCase()];
     let topics = [];
     let source = "google-trends";
 
     if (geoCode) {
-      const response = await withTimeout(`https://trends.google.com/trends/api/dailytrends?hl=en-IN&tz=-330&geo=${encodeURIComponent(geoCode)}&ns=15`);
-      if (!response.ok) throw new Error("The live trend provider returned an error.");
-      topics = decodeTrends(await response.text());
+      try {
+        const response = await withTimeout(`https://trends.google.com/trends/api/dailytrends?hl=en-IN&tz=-330&geo=${encodeURIComponent(geoCode)}&ns=15`);
+        if (!response.ok) throw providerError("The live trend source is temporarily unavailable.");
+        topics = decodeTrends(await response.text());
+        if (!topics.length) throw providerError("The live trend source returned no current topics.", "no_topics");
+      } catch (error) {
+        console.warn("[live-signal] Google Trends failed; using Google News fallback", { location, code: error?.code || "unknown" });
+        try {
+          topics = await fetchNewsTopics(location);
+          source = "google-news-fallback";
+        } catch (fallbackError) {
+          throw providerError("Live Signal is temporarily unavailable for this location. Please try again shortly.", "live_signal_unavailable");
+        }
+      }
     } else {
       source = "google-news";
-      const query = encodeURIComponent(`${location} when:1d`);
-      const response = await withTimeout(`https://news.google.com/rss/search?q=${query}&hl=en-IN&gl=IN&ceid=IN:en`);
-      if (!response.ok) throw new Error("The live topic provider returned an error.");
-      topics = decodeNews(await response.text(), location);
+      topics = await fetchNewsTopics(location);
     }
 
-    if (!topics.length) throw new Error("No live topics are available for this location right now.");
     res.setHeader("Cache-Control", "private, max-age=300, stale-while-revalidate=600");
     return json(res, 200, { location, source, updatedAt: new Date().toISOString(), topics });
   } catch (error) {
-    console.error("[live-signal]", error?.message || error);
-    return json(res, Number(error?.status) || 503, { message: error?.message || "Live Signal is temporarily unavailable." });
+    console.error("[live-signal] request failed", { code: error?.code || "unknown", status: error?.status || 503, message: error?.message || "unknown" });
+    return json(res, Number(error?.status) || 503, { code: error?.code || "live_signal_unavailable", message: error?.message || "Live Signal is temporarily unavailable. Please try again shortly." });
   }
 }
