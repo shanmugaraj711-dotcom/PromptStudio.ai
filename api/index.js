@@ -1,5 +1,11 @@
 import adminBootstrapHandler from "../server/api/admin-bootstrap.js";
 import adminHandler from "../server/api/admin.js";
+import apkForgeHandler from "../server/api/apk-forge.js";
+import apkForgeOrderHandler from "../server/api/apk-forge-order.js";
+import apkForgeVerifyHandler from "../server/api/apk-forge-verify.js";
+import apkForgeBuildStatusHandler from "../server/api/apk-forge-build-status.js";
+import apkForgeHistoryHandler from "../server/api/apk-forge-history.js";
+import apkForgeDownloadHandler from "../server/api/apk-forge-download.js";
 import feedbackHandler from "../server/api/feedback.js";
 import generatePromptCreditsHandler from "../server/api/generate-prompt-credits.js";
 import generatePromptHandler from "../server/api/generate-prompt.js";
@@ -21,12 +27,17 @@ import v1TransactionsHandler from "../server/api/v1/transactions.js";
 import v1ImageToPromptHandler from "../server/api/v1/plugin/image-to-prompt.js";
 import whatsappWebhookHandler from "../server/api/webhooks/whatsapp.js";
 import liveSignalHandler from "../server/api/live-signal.js";
-
 import studioDeliveryHandler from "../server/api/studio-delivery.js";
 
 const STATIC_HANDLERS = {
   "/api/admin-bootstrap": adminBootstrapHandler,
   "/api/admin": adminHandler,
+  "/api/apk-forge": apkForgeHandler,
+  "/api/apk-forge-order": apkForgeOrderHandler,
+  "/api/apk-forge-verify": apkForgeVerifyHandler,
+  "/api/apk-forge-build-status": apkForgeBuildStatusHandler,
+  "/api/apk-forge-history": apkForgeHistoryHandler,
+  "/api/apk-forge-download": apkForgeDownloadHandler,
   "/api/feedback": feedbackHandler,
   "/api/generate-prompt-credits": generatePromptCreditsHandler,
   "/api/generate-prompt": generatePromptHandler,
