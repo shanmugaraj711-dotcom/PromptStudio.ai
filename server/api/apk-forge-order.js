@@ -8,17 +8,19 @@ const fail = (status, code, message) => { const error = new Error(message); erro
 const now = () => new Date();
 const requestRef = (db, id) => db.collection("apkForgeRequests").doc(id);
 const receiptFor = (forgeRequestId) => `forge_${forgeRequestId}`.slice(0, 40);
+const payableStates = new Set(["PREVIEW_ACCEPTED", "ORDER_CREATING", "PAYMENT_PENDING"]);
+const paidStates = new Set(["BUILDING", "VERIFYING", "READY", "BUILD_FAILED"]);
 const reserveOrderCreation = async ({ db, forgeRequestId, uid, amountInr, currency }) => {
   const ref = requestRef(db, forgeRequestId);
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref); if (!snap.exists) fail(404, "forge_request_not_found", "Forge request was not found.");
     const request = snap.data() || {};
     if (request.uid !== uid) fail(403, "forge_request_forbidden", "Forge request does not belong to this account.");
-    if (!request.previewAcceptedAt && ["PAYMENT_REQUIRED", "ORDER_CREATING", "PAYMENT_PENDING"].includes(request.status)) fail(409, "forge_preview_not_accepted", "Review and accept the Forge preview before starting payment.");
-    if (!["PAYMENT_REQUIRED", "ORDER_CREATING", "PAYMENT_PENDING"].includes(request.status)) {
-      if (["PAID", "PENDING_REVIEW", "APPROVED", "BUILDING", "VERIFYING", "READY"].includes(request.status)) return { action: "already_paid", request };
+    if (!payableStates.has(request.status)) {
+      if (paidStates.has(request.status) || request.paymentId) return { action: "already_paid", request };
       fail(409, "forge_request_not_payable", `Forge request is currently ${request.status}.`);
     }
+    if (!request.previewAcceptedAt) fail(409, "forge_preview_not_accepted", "Review and accept the Forge preview before starting payment.");
     if (request.amountInr !== undefined && Number(request.amountInr) !== amountInr) fail(409, "forge_price_changed", "The Forge price for this request no longer matches the current server configuration. Please start a new request.");
     if (request.currency && request.currency !== currency) fail(409, "forge_currency_changed", "Forge payment currency no longer matches the request.");
     if (request.razorpayOrderId) return { action: "existing_order", request };
