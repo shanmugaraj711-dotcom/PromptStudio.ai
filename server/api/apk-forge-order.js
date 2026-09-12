@@ -14,6 +14,7 @@ const reserveOrderCreation = async ({ db, forgeRequestId, uid, amountInr, curren
     const snap = await tx.get(ref); if (!snap.exists) fail(404, "forge_request_not_found", "Forge request was not found.");
     const request = snap.data() || {};
     if (request.uid !== uid) fail(403, "forge_request_forbidden", "Forge request does not belong to this account.");
+    if (!request.previewAcceptedAt && ["PAYMENT_REQUIRED", "ORDER_CREATING", "PAYMENT_PENDING"].includes(request.status)) fail(409, "forge_preview_not_accepted", "Review and accept the Forge preview before starting payment.");
     if (!["PAYMENT_REQUIRED", "ORDER_CREATING", "PAYMENT_PENDING"].includes(request.status)) {
       if (["PAID", "PENDING_REVIEW", "APPROVED", "BUILDING", "VERIFYING", "READY"].includes(request.status)) return { action: "already_paid", request };
       fail(409, "forge_request_not_payable", `Forge request is currently ${request.status}.`);
