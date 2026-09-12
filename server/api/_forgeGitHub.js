@@ -23,7 +23,7 @@ export const dispatchForgeBuild = async ({ forgeRequestId, buildId, appName, for
 };
 export const listForgeBuildRuns = async ({ forgeRequestId, buildId }) => {
   const query = new URLSearchParams({ event: "push", branch: BRANCH, per_page: "30" });
-  const data = await githubRequest(`/repos/${REPO}/actions/runs?${query.toString()});
+  const data = await githubRequest(`/repos/${REPO}/actions/runs?${query.toString()}`);
   const runs = Array.isArray(data?.workflow_runs) ? data.workflow_runs : [];
   return runs.filter((run) => {
     if (run?.path !== `.github/workflows/${BUILD_WORKFLOW}`) return false;
