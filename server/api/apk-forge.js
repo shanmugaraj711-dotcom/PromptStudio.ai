@@ -1,11 +1,13 @@
 import crypto from "node:crypto";
 import { adminDb, requireUser } from "./_firebaseAdmin.js";
 import { getRuntimeProductConfig } from "./_productConfig.js";
+import { createForgePreview } from "./_forgeIntelligence.js";
 
 const MAX_DESCRIPTION = 12000;
 const MAX_REFERENCE_FILES = 8;
 const MAX_REFERENCE_TEXT = 120000;
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
+const MAX_REFERENCE_IMAGE_DATA = 5 * 1024 * 1024;
 const MAX_WEBSITE_URL = 2048;
 const EXECUTABLE_EXTENSIONS = new Set([".exe", ".dll", ".msi", ".com", ".scr", ".bin"]);
 
@@ -49,10 +51,10 @@ const validateWebsiteUrl = (value) => {
   if (url.protocol !== "https:" || url.username || url.password || url.port || url.pathname !== "/" || url.search || url.hash) throw Object.assign(new Error("Website URL must be HTTPS and contain only an origin."), { status: 400, code: "invalid_website_url" });
   return url.origin;
 };
-const buildBrief = ({ description, references, outputFormat, websiteUrl }) => {
+const buildBrief = ({ description, references, outputFormat, websiteUrl, preview }) => {
   const executableReferences = references.filter((item) => item.executable);
   const safeReferences = references.map((item) => `- ${item.name} | ${item.detectedType} | ${item.size ?? "unknown"} bytes | executable/binary=${item.executable}`).join("\n");
-  return { mode: "apk-forge", platform: "android", outputFormat: outputFormat || "build-ready-android-brief", websiteUrl: websiteUrl || null, systemInstruction: APP_FORGE_SYSTEM_INSTRUCTION, intent: description, evidence: safeReferences, warnings: executableReferences.length ? ["One or more references appear to be executable/binary content. They were classified as reference evidence only and must never be executed."] : [], implementation: { appArchitecture: "Choose a maintainable Android architecture appropriate to the requirements; prefer Kotlin and Jetpack Compose unless evidence requires otherwise.", screens: "Derive screens and navigation from the customer's stated intent and supplied evidence; do not add unrelated template screens.", behavior: "Implement every explicitly requested behavior. Preserve only behavior supported by evidence and mark inferred behavior as an assumption.", dataModel: "Derive only the entities and fields required by the requested workflows; never invent production data.", integrations: "Implement only requested or explicitly required integrations; otherwise mark them as pending/unsupported.", permissions: "Request the minimum Android permissions required by the actual feature set.", accessibility: "Include semantics, touch targets, contrast, dynamic text and screen-reader support.", responsive: "Support common Android phone sizes and orientations where relevant.", acceptance: "Define testable acceptance criteria for every major screen, state and workflow.", verification: "Build, install, exercise the critical flows, verify failure states, and inspect the final APK before marking READY." }, handoff: "This response is a build specification/handoff. Android compilation must occur in an isolated build runner, never inside the production serverless runtime." };
+  return { mode: "apk-forge", platform: "android", outputFormat: outputFormat || "build-ready-android-brief", websiteUrl: websiteUrl || null, systemInstruction: APP_FORGE_SYSTEM_INSTRUCTION, intent: description, evidence: safeReferences, warnings: executableReferences.length ? ["One or more references appear to be executable/binary content. They were classified as reference evidence only and must never be executed."] : [], preview, implementation: { appArchitecture: "Choose a maintainable Android architecture appropriate to the requirements; prefer Kotlin and Jetpack Compose unless evidence requires otherwise.", screens: preview?.screens?.map((screen) => `${screen.title}: ${screen.purpose}`).join(" | ") || "Derive screens and navigation from the customer's stated intent and supplied evidence; do not add unrelated template screens.", behavior: preview?.keyInteractions?.join(" | ") || "Implement every explicitly requested behavior. Preserve only behavior supported by evidence and mark inferred behavior as an assumption.", dataModel: preview?.dataEntities?.join(", ") || "Derive only the entities and fields required by the requested workflows; never invent production data.", integrations: "Implement only requested or explicitly required integrations; otherwise mark them as pending/unsupported.", permissions: "Request the minimum Android permissions required by the actual feature set.", accessibility: "Include semantics, touch targets, contrast, dynamic text and screen-reader support.", responsive: "Support common Android phone sizes and orientations where relevant.", acceptance: "Define testable acceptance criteria for every major screen, state and workflow.", verification: "Build, install, exercise the critical flows, verify failure states, and inspect the final APK before marking READY." }, handoff: "This response is a build specification/handoff. Android compilation must occur in an isolated build runner, never inside the production serverless runtime." };
 };
 
 export default async function handler(req, res) {
@@ -72,7 +74,9 @@ export default async function handler(req, res) {
     const sanitized = referencesInput.map(sanitizeReference);
     const oversized = sanitized.find((file) => file.size !== null && file.size > MAX_FILE_BYTES);
     if (oversized) return res.status(413).json({ code: "reference_too_large", message: `${oversized.name} exceeds the 25 MB Forge reference limit.` });
-    const brief = buildBrief({ description, references: sanitized, outputFormat, websiteUrl });
+    const intelligenceReferences = referencesInput.map((file, index) => ({ ...sanitized[index], content: !sanitized[index].executable && typeof file?.content === "string" && file.content.length <= MAX_REFERENCE_TEXT ? file.content : undefined, data: !sanitized[index].executable && typeof file?.data === "string" && file.data.length <= MAX_REFERENCE_IMAGE_DATA ? file.data : undefined }));
+    const preview = await createForgePreview({ description, references: intelligenceReferences });
+    const brief = buildBrief({ description, references: sanitized, outputFormat, websiteUrl, preview });
     const config = await getRuntimeProductConfig(adminDb());
     const pricing = config.pricing.apkForge || {};
     if (pricing.enabled !== true) return res.status(503).json({ code: "apk_forge_disabled", message: "APK Forge is temporarily unavailable." });
