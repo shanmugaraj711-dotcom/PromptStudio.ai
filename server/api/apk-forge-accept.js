@@ -20,8 +20,8 @@ export default async function handler(req, res) {
       if (request.previewAcceptedAt) return { forgeRequestId, status: request.status, alreadyAccepted: true, acceptedAt: request.previewAcceptedAt };
       if (!ACCEPTABLE.has(request.status)) return { error: [409, "forge_preview_not_accepting", `This Forge request is currently ${request.status}. Generate a new preview before purchasing a different version.`] };
       const acceptedAt = new Date();
-      tx.update(ref, { previewAcceptedAt: acceptedAt, previewAcceptedBy: user.uid, updatedAt: acceptedAt });
-      return { forgeRequestId, status: request.status, alreadyAccepted: false, acceptedAt };
+      tx.update(ref, { status: "PREVIEW_ACCEPTED", previewAcceptedAt: acceptedAt, previewAcceptedBy: user.uid, updatedAt: acceptedAt });
+      return { forgeRequestId, status: "PREVIEW_ACCEPTED", alreadyAccepted: false, acceptedAt };
     });
     if (result.error) return json(res, result.error[0], { code: result.error[1], message: result.error[2] });
     return json(res, 200, { ok: true, ...result, acceptedAt: result.acceptedAt?.toISOString?.() || null });
