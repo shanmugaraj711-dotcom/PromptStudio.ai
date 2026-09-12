@@ -4,23 +4,30 @@ import { isConfigured, razorpayRequest, verifyOrderSignature } from "./_razorpay
 import { dispatchForgeBuild } from "./_forgeGitHub.js";
 
 const buildableStates = new Set(["PAYMENT_PENDING"]);
-const buildConfig = () => ({
-  appName: String(process.env.FORGE_APP_NAME || "PromptStudio AI").trim() || "PromptStudio AI",
-  forgeWebOrigin: String(process.env.FORGE_WEB_ORIGIN || "").trim().replace(/\/$/, ""),
-  packageId: String(process.env.FORGE_PACKAGE_ID || "in.promptstudio.ai").trim(),
-  versionName: String(process.env.FORGE_VERSION_NAME || "0.1.0").trim() || "0.1.0"
-});
+const retryableBuildFailures = new Set(["forge_build_origin_not_configured", "forge_dispatch_invalid_inputs"]);
+const buildConfig = () => {
+  const configuredOrigin = String(process.env.FORGE_WEB_ORIGIN || "").trim().replace(/\/$/, "");
+  const vercelProductionUrl = String(process.env.VERCEL_PROJECT_PRODUCTION_URL || "").trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const forgeWebOrigin = configuredOrigin || (vercelProductionUrl ? `https://${vercelProductionUrl}` : "https://promptstudioai.in");
+  return {
+    appName: String(process.env.FORGE_APP_NAME || "PromptStudio AI").trim() || "PromptStudio AI",
+    forgeWebOrigin,
+    packageId: String(process.env.FORGE_PACKAGE_ID || "in.promptstudio.ai").trim(),
+    versionName: String(process.env.FORGE_VERSION_NAME || "0.1.0").trim() || "0.1.0"
+  };
+};
 const fail = (status, code, message) => { const error = new Error(message); error.status = status; error.code = code; throw error; };
 const startBuild = async ({ db, ref, forgeRequestId, uid }) => {
   const buildId = crypto.randomUUID().replace(/-/g, "");
   const config = buildConfig();
-  if (!config.forgeWebOrigin) fail(503, "forge_build_origin_not_configured", "Forge cannot start a real APK build until FORGE_WEB_ORIGIN is configured.");
+  if (!/^https:\/\/[^/]+$/.test(config.forgeWebOrigin)) fail(500, "forge_build_origin_invalid", "Forge build origin is invalid. Configure FORGE_WEB_ORIGIN as a HTTPS origin.");
   const versionCode = String(Math.floor(Date.now() / 1000));
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref); if (!snap.exists) fail(404, "forge_request_not_found", "Forge request was not found.");
     const current = snap.data() || {};
     if (current.uid !== uid) fail(403, "forge_request_forbidden", "Forge request does not belong to this account.");
-    if (!buildableStates.has(current.status)) fail(409, "forge_request_not_buildable", `Forge request is currently ${current.status}.`);
+    const retryingInfrastructureFailure = current.status === "BUILD_FAILED" && retryableBuildFailures.has(String(current.buildFailureCode || ""));
+    if (!buildableStates.has(current.status) && !retryingInfrastructureFailure) fail(409, "forge_request_not_buildable", `Forge request is currently ${current.status}.`);
     const ts = new Date();
     tx.update(ref, { status: "BUILDING", buildId, buildStartedAt: ts, buildDispatchPending: true, buildAppName: config.appName, buildWebOrigin: config.forgeWebOrigin, buildPackageId: config.packageId, buildVersionName: config.versionName, buildVersionCode: versionCode, updatedAt: ts });
   });
@@ -66,7 +73,16 @@ export default async function handler(req, res) {
     const current = currentSnap.data() || {};
     if (current.status === "READY") return json(res, 200, { ok: true, forgeRequestId: current.forgeRequestId, status: "READY", orderId, paymentId, buildId: current.buildId || null });
     if (current.status === "BUILDING" || current.status === "VERIFYING") return json(res, 200, { ok: true, forgeRequestId: current.forgeRequestId, status: current.status, orderId, paymentId, buildId: current.buildId || null });
-    if (current.status === "BUILD_FAILED") return json(res, 409, { code: "build_failed", message: current.buildFailureMessage || "The previous Forge build failed. Start a new Forge request before trying again.", forgeRequestId: current.forgeRequestId, status: current.status, buildId: current.buildId || null });
+    if (current.status === "BUILD_FAILED") {
+      if (!retryableBuildFailures.has(String(current.buildFailureCode || ""))) return json(res, 409, { code: "build_failed", message: current.buildFailureMessage || "The previous Forge build failed. Start a new Forge request before trying again.", forgeRequestId: current.forgeRequestId, status: current.status, buildId: current.buildId || null });
+      try {
+        const buildResult = await startBuild({ db, ref, forgeRequestId: current.forgeRequestId, uid: user.uid });
+        return json(res, 200, { ok: true, forgeRequestId: current.forgeRequestId, status: "BUILDING", orderId, paymentId, buildId: buildResult.buildId, recoveredPaidBuild: true });
+      } catch (error) {
+        const failedSnap = await ref.get(); const failed = failedSnap.data() || {};
+        return json(res, 502, { code: error.code || "forge_build_dispatch_failed", message: error.message || "Payment succeeded but the real APK build could not be started.", forgeRequestId: current.forgeRequestId, status: failed.status || "BUILD_FAILED", buildId: failed.buildId || null });
+      }
+    }
     if (!buildableStates.has(current.status)) fail(409, "forge_request_not_buildable", `Forge request is currently ${current.status}.`);
 
     await db.runTransaction(async (tx) => {
