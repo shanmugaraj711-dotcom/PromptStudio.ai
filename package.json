@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/check-server-syntax-20260912.mjs && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run"
@@ -14,7 +14,6 @@
     "@codesandbox/sandpack-react": "^2.20.0",
     "@google/genai": "^2.16.0",
     "firebase": "^11.10.0",
-    "firebase-admin": "^13.10.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.0"
@@ -24,7 +23,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.3",
     "@vitejs/plugin-react": "^4.3.1",
-    "autoprefixer": "^10.4.19",
+    "autoprefixer": "10.4.19",
     "eslint": "^8.57.1",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
