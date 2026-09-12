@@ -15,7 +15,10 @@ permissions:
 env:
   VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
   FORGE_GOOGLE_WEB_CLIENT_ID: ${{ secrets.FORGE_GOOGLE_WEB_CLIENT_ID }}
-  FORGE_FIREBASE_ANDROID_APP_ID: ${{ secrets.FORGE_FIREBASE_ANDROID_APP_ID }}
+  # Firebase Android App IDs are identifiers, not credentials. Keep the existing
+  # secret as an override, but fall back to the registered PromptStudio Forge app
+  # so builds do not fail merely because the duplicate secret was never created.
+  FORGE_FIREBASE_ANDROID_APP_ID: ${{ secrets.FORGE_FIREBASE_ANDROID_APP_ID || '1:768747699651:android:1a02adda6c99f13ff65176' }}
 
 jobs:
   build-apk:
