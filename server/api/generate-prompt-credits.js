@@ -21,6 +21,7 @@ const SECONDARY_MODEL = PRIMARY_MODEL === "gemini-3.6-flash" || FALLBACK_MODEL =
 const CODING_PRIMARY_MODEL = "gemini-3.7-flash";
 const CODING_FALLBACK_MODEL = "gemini-3.6-flash";
 const CODING_SECONDARY_MODEL = "gemini-3.5-flash";
+const GROQ_FALLBACK_MODEL = "openai/gpt-oss-120b";
 
 class ApiError extends Error { constructor(status, code, message, quota) { super(message); this.status = status; this.code = code; this.quota = quota; } }
 const parseBody = (body) => { if (!body) return {}; if (typeof body === "string") { try { return JSON.parse(body); } catch { throw new ApiError(400, "invalid_request", "The request body must be valid JSON."); } } return body; };
@@ -102,8 +103,10 @@ const generate = async ({ client, idea, aiModel, category, images, referenceFile
   const retryable = (error) => { const status = Number(error?.status || error?.statusCode || 0); const message = String(error?.message || "").toLowerCase(); const code = String(error?.code || "").toLowerCase(); const modelNotFound = status === 404 && (message.includes("model") || message.includes("models/")); return [408,429,500,502,503,504].includes(status) || modelNotFound || code.includes("resource_exhausted") || code.includes("unavailable") || code.includes("internal") || message.includes("temporar") || message.includes("overload") || message.includes("timeout") || message.includes("aborted") || message.includes("deadline") || message.includes("incomplete_response") || message.includes("invalid json"); };
   let lastError;
   const attempts = [[primaryModel, isCoding ? 14000 : 16000], [fallbackModel, isCoding ? 10000 : 11000], [secondaryModel, isCoding ? 9000 : 10000]];
+  const seen = new Set();
   for (const [model, timeoutMs] of attempts) {
-    if (!model || attempts.slice(0, attempts.indexOf([model, timeoutMs])).some(([used]) => used === model)) continue;
+    if (!model || seen.has(model)) continue;
+    seen.add(model);
     try {
       const response = await call(model, timeoutMs);
       const raw = String(response.text || "").trim();
@@ -113,18 +116,31 @@ const generate = async ({ client, idea, aiModel, category, images, referenceFile
       return { prompt: String(parsed.prompt).trim(), perspectives, intelligence: { intent: parsed.intent || "", outputType: parsed.outputType || category, assumptions: Array.isArray(parsed.assumptions) ? parsed.assumptions.slice(0,5) : [], missing: Array.isArray(parsed.missing) ? parsed.missing.slice(0,5) : [], recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations.slice(0,5) : [] } };
     } catch (error) { lastError = error; console.warn("Prompt generation model attempt failed", { model, reason: error?.name || error?.code || "unknown", status: error?.status || error?.statusCode || null }); if (!retryable(error)) throw error; }
   }
+  if (process.env.GROQ_API_KEY && images.length === 0) {
+    try {
+      const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 12000);
+      try {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.GROQ_API_KEY}` }, body: JSON.stringify({ model: GROQ_FALLBACK_MODEL, messages: [{ role: "system", content: `${systemInstruction}\nReturn JSON only.` }, { role: "user", content: text }], response_format: { type: "json_object" }, reasoning_effort: "high", max_completion_tokens: 3600, temperature: 0.2 }), signal: controller.signal });
+        if (!response.ok) { const body = await response.text().catch(() => ""); const error = new Error(`Groq ${response.status}: ${body.slice(0,200)}`); error.status = response.status; throw error; }
+        const payload = await response.json(); const raw = String(payload?.choices?.[0]?.message?.content || "").trim(); const parsed = JSON.parse(raw || "{}"); const perspectives = Array.isArray(parsed.perspectives) ? parsed.perspectives.filter((item) => item?.label && item?.prompt).slice(0,3) : [];
+        if (!parsed.prompt || perspectives.length < 3) throw Object.assign(new Error("incomplete_response"), { code: "incomplete_response" });
+        console.info("Prompt Lab used Groq tertiary fallback", { model: GROQ_FALLBACK_MODEL });
+        return { prompt: String(parsed.prompt).trim(), perspectives, intelligence: { intent: parsed.intent || "", outputType: parsed.outputType || category, assumptions: Array.isArray(parsed.assumptions) ? parsed.assumptions.slice(0,5) : [], missing: Array.isArray(parsed.missing) ? parsed.missing.slice(0,5) : [], recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations.slice(0,5) : [] } };
+      } finally { clearTimeout(timeout); }
+    } catch (error) { lastError = error; console.warn("Prompt generation Groq fallback failed", { status: error?.status || null, reason: error?.message || "unknown" }); }
+  }
   throw lastError || new Error("generation_failed");
 };
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return json(res, 405, { code: "method_not_allowed", message: "Use POST to generate a prompt." });
   try {
-    const body = parseBody(req.body); const input = validate(body); const decoded = await requireUser(req); await enforceGenerationRateLimit(req, decoded.uid); if (!process.env.GEMINI_API_KEY) throw new ApiError(503, "server_configuration_error", "The generation service is not configured yet. Please try again later.");
+    const body = parseBody(req.body); const input = validate(body); const decoded = await requireUser(req); await enforceGenerationRateLimit(req, decoded.uid); if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY) throw new ApiError(503, "server_configuration_error", "The generation service is not configured yet. Please try again later.");
     const db = adminDb(); const productConfig = await getRuntimeProductConfig(db); const reservation = await reserve({ db, uid: decoded.uid, requestId: body.requestId, now: new Date(), hasImage: input.images.length > 0, operation: body.referenceCoding === true ? "referenceCoding" : input.images.length > 0 ? "image" : "standard", productConfig });
     if (reservation.status === "succeeded") return json(res, 200, reservation);
     let result;
-    try { result = await generate({ client: new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }), idea: input.idea, aiModel: body.aiModel, category: body.category, images: input.images, referenceFiles: input.referenceFiles, referenceCoding: body.referenceCoding === true }); }
-    catch (error) { console.error("Gemini generation failed", { code: error?.code || "unknown", status: error?.status || error?.statusCode || null, name: error?.name || "unknown", message: String(error?.message || "").slice(0,300) }); const quota = await rollback({ db, uid: decoded.uid, requestId: body.requestId, failureCode: "generation_failed", productConfig }); return json(res, 502, { code: "generation_failed", message: "The AI service could not generate a prompt. Your quota and credits were restored.", quota }); }
+    try { result = await generate({ client: process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null, idea: input.idea, aiModel: body.aiModel, category: body.category, images: input.images, referenceFiles: input.referenceFiles, referenceCoding: body.referenceCoding === true }); }
+    catch (error) { console.error("Prompt generation providers failed", { code: error?.code || "unknown", status: error?.status || error?.statusCode || null, name: error?.name || "unknown", message: String(error?.message || "").slice(0,300) }); const quota = await rollback({ db, uid: decoded.uid, requestId: body.requestId, failureCode: "generation_failed", productConfig }); return json(res, 502, { code: "generation_failed", message: "The AI service could not generate a prompt. Your quota and credits were restored.", quota }); }
     const userRef = db.collection("users").doc(decoded.uid); const requestRef = userRef.collection("generationRequests").doc(body.requestId); const historyRef = userRef.collection("prompts").doc(body.requestId);
     try {
       const saved = await db.runTransaction(async (tx) => { const requestSnap = await tx.get(requestRef); if (!requestSnap.exists || requestSnap.data().status !== "reserved") throw new ApiError(409, "request_not_active", "The generation request is no longer active."); const request = requestSnap.data(); tx.set(historyRef, { prompt: result.prompt, perspectives: result.perspectives, intelligence: result.intelligence, aiModel: body.aiModel, category: body.category, hasReferenceImage: input.images.length > 0, referenceImageCount: input.images.length, referenceFileCount: input.referenceFiles.length, referenceFileNames: input.referenceFiles.map((file) => file.name).slice(0,8), createdAt: FieldValue.serverTimestamp() }); tx.update(requestRef, { status: "succeeded", prompt: result.prompt, perspectives: result.perspectives, intelligence: result.intelligence, historyId: historyRef.id, refundStatus: "not_required", completedAt: FieldValue.serverTimestamp() }); return { prompt: result.prompt, perspectives: result.perspectives, intelligence: result.intelligence, historyId: historyRef.id, quota: request.quota, creditsRemaining: Math.max(Number(request.creditsRemaining ?? reservation.creditsRemaining ?? 0),0), creditCost: request.creditCost || 0 }; });
