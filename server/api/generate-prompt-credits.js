@@ -16,9 +16,11 @@ const VALID_GEMINI_MODELS = new Set(["gemini-3.8-flash", "gemini-3.7-flash", "ge
 const configuredModel = String(process.env.GEMINI_MODEL || "").trim();
 const configuredFallbackModel = String(process.env.GEMINI_FALLBACK_MODEL || "").trim();
 const PRIMARY_MODEL = VALID_GEMINI_MODELS.has(configuredModel) ? configuredModel : "gemini-3.8-flash";
-const FALLBACK_MODEL = VALID_GEMINI_MODELS.has(configuredFallbackModel) && configuredFallbackModel !== PRIMARY_MODEL ? configuredFallbackModel : "gemini-2.5-flash";
+const FALLBACK_MODEL = VALID_GEMINI_MODELS.has(configuredFallbackModel) && configuredFallbackModel !== PRIMARY_MODEL ? configuredFallbackModel : "gemini-3.7-flash";
+const SECONDARY_MODEL = PRIMARY_MODEL === "gemini-3.6-flash" || FALLBACK_MODEL === "gemini-3.6-flash" ? "gemini-3.5-flash" : "gemini-3.6-flash";
 const CODING_PRIMARY_MODEL = "gemini-3.7-flash";
 const CODING_FALLBACK_MODEL = "gemini-3.6-flash";
+const CODING_SECONDARY_MODEL = "gemini-3.5-flash";
 
 class ApiError extends Error { constructor(status, code, message, quota) { super(message); this.status = status; this.code = code; this.quota = quota; } }
 const parseBody = (body) => { if (!body) return {}; if (typeof body === "string") { try { return JSON.parse(body); } catch { throw new ApiError(400, "invalid_request", "The request body must be valid JSON."); } } return body; };
@@ -83,7 +85,6 @@ PRECISION: Separate facts, assumptions, and recommendations. Resolve ambiguity c
 CONTEXT USE: Treat the user's brief as the primary source of truth. Use reference files/images as evidence. If a live/current fact is required but not supplied, do not fabricate it; state that fresh verification is required. Do not claim to have inspected or executed an attached application. Keep the final prompt directly usable in ChatGPT, Claude, Gemini, Grok, Cursor, Lovable, Replit or another relevant tool.
 
 OUTPUT: Return exactly three perspectives: Precision Build, Expert Strategy, and Creative Alternative. Each perspective must materially differ in approach while preserving the same core intent. The main prompt should be the strongest default. Return valid JSON only: {"prompt":"...","perspectives":[{"id":"precision-build","label":"Precision Build","prompt":"..."},{"id":"expert-strategy","label":"Expert Strategy","prompt":"..."},{"id":"creative-alternative","label":"Creative Alternative","prompt":"..."}],"intent":"...","outputType":"...","assumptions":["..."],"missing":["..."],"recommendations":["..."]}.`;
-
 const CODING_INSTRUCTION = `You are PromptStudio's Reference Coding intelligence engine. Convert the user's intent and supplied visual/file evidence into a production-ready coding prompt. Preserve exact requirements, existing behavior, named entities and constraints. Analyze product purpose, information architecture, visible UI, interaction states, responsive behavior, accessibility, implementation constraints and acceptance criteria. Infer only what evidence supports; clearly separate assumptions. Never claim to have executed or behaviorally inspected supplied source files. Avoid unnecessary rewrites. Return valid JSON with exactly three perspectives: Faithful Recreation, UX Improvement, Production Implementation, plus intent, outputType, assumptions, missing and recommendations.`;
 const IMAGE_INSTRUCTION = `You are PromptStudio's reference-aware visual prompt architect. Convert visible evidence and the user's intent into a high-quality prompt for the selected AI. Analyze subject, composition, geometry, camera/view, lighting, materials, color, typography and distinctive details. Never invent hidden facts. If text is uncertain, describe placement/style rather than fabricate wording. Return valid JSON with exactly three perspectives: Faithful Recreation, Professional Production, Creative Variation, plus intent, outputType, assumptions, missing and recommendations.`;
 
@@ -94,11 +95,24 @@ const generate = async ({ client, idea, aiModel, category, images, referenceFile
   const isCoding = referenceCoding || category === "coding";
   const systemInstruction = isCoding ? CODING_INSTRUCTION : category === "image" ? IMAGE_INSTRUCTION : PROMPT_LAB_INSTRUCTION;
   const config = { systemInstruction, responseMimeType: "application/json", maxOutputTokens: 3600, ...(isCoding ? { thinkingConfig: { thinkingLevel: "medium" } } : { thinkingConfig: { thinkingLevel: "high" } }) };
-  const primaryModel = isCoding ? CODING_PRIMARY_MODEL : PRIMARY_MODEL; const fallbackModel = isCoding ? CODING_FALLBACK_MODEL : FALLBACK_MODEL;
+  const primaryModel = isCoding ? CODING_PRIMARY_MODEL : PRIMARY_MODEL;
+  const fallbackModel = isCoding ? CODING_FALLBACK_MODEL : FALLBACK_MODEL;
+  const secondaryModel = isCoding ? CODING_SECONDARY_MODEL : SECONDARY_MODEL;
   const call = async (model, timeoutMs) => { const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), timeoutMs); try { return await client.models.generateContent({ model, contents, config: { ...config, abortSignal: controller.signal } }); } finally { clearTimeout(timeout); } };
-  const transient = (error) => { const status = Number(error?.status || error?.statusCode || 0); const message = String(error?.message || "").toLowerCase(); const code = String(error?.code || "").toLowerCase(); return [408,429,500,502,503,504].includes(status) || code.includes("resource_exhausted") || code.includes("unavailable") || code.includes("internal") || message.includes("temporar") || message.includes("overload") || message.includes("timeout") || message.includes("aborted") || message.includes("deadline") || message.includes("incomplete_response") || message.includes("json"); };
-  let lastError; const attempts = [[primaryModel, isCoding ? 14000 : 16000], [fallbackModel, isCoding ? 9000 : 10000]];
-  for (const [model, timeoutMs] of attempts) { try { const response = await call(model, timeoutMs); const raw = String(response.text || "").trim(); const parsed = JSON.parse(raw || "{}"); const perspectives = Array.isArray(parsed.perspectives) ? parsed.perspectives.filter((item) => item?.label && item?.prompt).slice(0,3) : []; if (!parsed.prompt || perspectives.length < 3) { const error = new Error("incomplete_response"); error.code = "incomplete_response"; throw error; } return { prompt: String(parsed.prompt).trim(), perspectives, intelligence: { intent: parsed.intent || "", outputType: parsed.outputType || category, assumptions: Array.isArray(parsed.assumptions) ? parsed.assumptions.slice(0,5) : [], missing: Array.isArray(parsed.missing) ? parsed.missing.slice(0,5) : [], recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations.slice(0,5) : [] } }; } catch (error) { lastError = error; console.warn("Prompt generation model attempt failed", { model, reason: error?.name || error?.code || "unknown", status: error?.status || error?.statusCode || null }); if (!transient(error)) throw error; } }
+  const retryable = (error) => { const status = Number(error?.status || error?.statusCode || 0); const message = String(error?.message || "").toLowerCase(); const code = String(error?.code || "").toLowerCase(); const modelNotFound = status === 404 && (message.includes("model") || message.includes("models/")); return [408,429,500,502,503,504].includes(status) || modelNotFound || code.includes("resource_exhausted") || code.includes("unavailable") || code.includes("internal") || message.includes("temporar") || message.includes("overload") || message.includes("timeout") || message.includes("aborted") || message.includes("deadline") || message.includes("incomplete_response") || message.includes("invalid json"); };
+  let lastError;
+  const attempts = [[primaryModel, isCoding ? 14000 : 16000], [fallbackModel, isCoding ? 10000 : 11000], [secondaryModel, isCoding ? 9000 : 10000]];
+  for (const [model, timeoutMs] of attempts) {
+    if (!model || attempts.slice(0, attempts.indexOf([model, timeoutMs])).some(([used]) => used === model)) continue;
+    try {
+      const response = await call(model, timeoutMs);
+      const raw = String(response.text || "").trim();
+      const parsed = JSON.parse(raw || "{}");
+      const perspectives = Array.isArray(parsed.perspectives) ? parsed.perspectives.filter((item) => item?.label && item?.prompt).slice(0,3) : [];
+      if (!parsed.prompt || perspectives.length < 3) { const error = new Error("incomplete_response"); error.code = "incomplete_response"; throw error; }
+      return { prompt: String(parsed.prompt).trim(), perspectives, intelligence: { intent: parsed.intent || "", outputType: parsed.outputType || category, assumptions: Array.isArray(parsed.assumptions) ? parsed.assumptions.slice(0,5) : [], missing: Array.isArray(parsed.missing) ? parsed.missing.slice(0,5) : [], recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations.slice(0,5) : [] } };
+    } catch (error) { lastError = error; console.warn("Prompt generation model attempt failed", { model, reason: error?.name || error?.code || "unknown", status: error?.status || error?.statusCode || null }); if (!retryable(error)) throw error; }
+  }
   throw lastError || new Error("generation_failed");
 };
 
