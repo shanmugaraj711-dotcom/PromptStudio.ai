@@ -39,6 +39,8 @@
     { "src": "/api/admin-support", "dest": "/api/index.js?route=admin&action=support" },
     { "src": "/api/admin-coupons", "dest": "/api/index.js?route=admin&action=coupons" },
     { "src": "/api/reference-coding", "dest": "/api/index.js?route=reference-coding" },
+    { "src": "/api/generate-prompt-credits", "dest": "/api/index.js?route=generate-prompt-credits" },
+    { "src": "/api/generate-prompt", "dest": "/api/index.js?route=generate-prompt" },
     { "src": "/api/apk-forge", "dest": "/api/index.js?route=apk-forge" },
     { "src": "/api/apk-forge-accept", "dest": "/api/index.js?route=apk-forge-accept" },
     { "src": "/api/apk-forge-order", "dest": "/api/index.js?route=apk-forge-order" },
