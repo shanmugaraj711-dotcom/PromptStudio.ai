@@ -28,12 +28,11 @@ const encode = (registers) => Buffer.from(registers).toString("base64");
 const rank = (hash) => {
   let value = BigInt(0);
   for (let i = 3; i < 10; i += 1) value = (value << BigInt(8)) | BigInt(hash[i]);
-  const bits = BigInt(56);
-  if (value === BigInt(0)) return Number(bits) + 1;
+  if (value === BigInt(0)) return 57;
   let width = BigInt(0);
   let cursor = value;
   while (cursor > BigInt(0)) { width += BigInt(1); cursor >>= BigInt(1); }
-  return Number(bits - width + BigInt(1));
+  return Number(BigInt(56) - width + BigInt(1));
 };
 
 const updateSketch = (encoded, ip, day) => {
@@ -51,62 +50,51 @@ const estimate = (encoded) => {
   let zeros = 0;
   for (const value of registers) { sum += 2 ** (-value); if (value === 0) zeros += 1; }
   const alpha = 0.7213 / (1 + 1.079 / m);
-  let estimateValue = alpha * m * m / sum;
-  if (estimateValue <= 2.5 * m && zeros > 0) estimateValue = m * Math.log(m / zeros);
-  return Math.max(0, Math.round(estimateValue));
+  let result = alpha * m * m / sum;
+  if (result <= 2.5 * m && zeros > 0) result = m * Math.log(m / zeros);
+  return Math.max(0, Math.round(result));
 };
 
 export const recordVisitorAttempt = async ({ ip, day = dayKey() }) => {
-  const db = adminDb();
-  const ref = docRef(db, day);
-  const hash = hashFor(ip, day);
-  const visitorSketch = updateSketch(null, ip, day);
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    const current = snap.exists ? snap.data() || {} : {};
-    const nextSketch = updateSketch(current.visitorSketch, ip, day);
-    tx.set(ref, {
-      day,
-      visitorSketch: nextSketch,
-      visitors: estimate(nextSketch),
-      updatedAt: FieldValue.serverTimestamp()
-    }, { merge: true });
-  });
-  return { day, hash: hash.toString("hex"), visitorSketch };
+  try {
+    const db = adminDb();
+    const ref = docRef(db, day);
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const current = snap.exists ? snap.data() || {} : {};
+      const nextSketch = updateSketch(current.visitorSketch, ip, day);
+      tx.set(ref, { day, visitorSketch: nextSketch, visitors: estimate(nextSketch), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    });
+  } catch {
+    // Telemetry must never block or fail a public optimization.
+  }
 };
 
 export const recordSuccessfulOptimization = async ({ ip, day = dayKey(), limitReached = false }) => {
-  const db = adminDb();
-  const ref = docRef(db, day);
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    const current = snap.exists ? snap.data() || {} : {};
-    const update = {
-      day,
-      optimizations: Number(current.optimizations || 0) + 1,
-      updatedAt: FieldValue.serverTimestamp(),
-      lastSuccessAt: FieldValue.serverTimestamp()
-    };
-    if (limitReached) {
-      const nextSketch = updateSketch(current.hitLimitSketch, ip, day);
-      update.hitLimitSketch = nextSketch;
-      update.hitLimitCount = estimate(nextSketch);
-    }
-    tx.set(ref, update, { merge: true });
-  });
+  try {
+    const db = adminDb();
+    const ref = docRef(db, day);
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const current = snap.exists ? snap.data() || {} : {};
+      const update = { day, optimizations: Number(current.optimizations || 0) + 1, updatedAt: FieldValue.serverTimestamp(), lastSuccessAt: FieldValue.serverTimestamp() };
+      if (limitReached) {
+        const nextSketch = updateSketch(current.hitLimitSketch, ip, day);
+        update.hitLimitSketch = nextSketch;
+        update.hitLimitCount = estimate(nextSketch);
+      }
+      tx.set(ref, update, { merge: true });
+    });
+  } catch {
+    // Telemetry must never block or fail a public optimization.
+  }
 };
 
 export const recordPublicError = async ({ code, day = dayKey() }) => {
   try {
-    const db = adminDb();
-    await docRef(db, day).set({
-      day,
-      lastErrorAt: FieldValue.serverTimestamp(),
-      lastErrorCode: String(code || "unknown").slice(0, 80),
-      updatedAt: FieldValue.serverTimestamp()
-    }, { merge: true });
+    await docRef(adminDb(), day).set({ day, lastErrorAt: FieldValue.serverTimestamp(), lastErrorCode: String(code || "unknown").slice(0, 80), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   } catch {
-    // Telemetry must never break the public optimizer response.
+    // Telemetry is best-effort only.
   }
 };
 
