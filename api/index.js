@@ -23,6 +23,7 @@ import studioBuildOrderHandler from "../server/api/studio-build-order.js";
 import studioBuildVerifyHandler from "../server/api/studio-build-verify.js";
 import supportMessageHandler from "../server/api/support-message.js";
 import v1PromptHandler from "../server/api/v1/prompt.js";
+import v1OptimizeHandler from "../server/api/v1/optimize.js";
 import v1SupportHandler from "../server/api/v1/support.js";
 import v1TransactionsHandler from "../server/api/v1/transactions.js";
 import v1ImageToPromptHandler from "../server/api/v1/plugin/image-to-prompt.js";
@@ -57,6 +58,7 @@ const STATIC_HANDLERS = {
   "/api/studio-build-verify": studioBuildVerifyHandler,
   "/api/support-message": supportMessageHandler,
   "/api/v1/prompt": v1PromptHandler,
+  "/api/v1/optimize": v1OptimizeHandler,
   "/api/v1/support": v1SupportHandler,
   "/api/v1/transactions": v1TransactionsHandler,
   "/api/v1/plugin/image-to-prompt": v1ImageToPromptHandler,
