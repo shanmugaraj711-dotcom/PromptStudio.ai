@@ -1,6 +1,7 @@
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import Hero from './Hero';
+import PublicOptimizer from './PublicOptimizer';
 import HowItWorks from './HowItWorks';
 import Features from './Features';
 import WorksWith from './WorksWith';
@@ -12,6 +13,7 @@ function Landing() {
     <div className="min-h-screen bg-white">
       <Navbar />
       <Hero />
+      <PublicOptimizer />
       <HowItWorks />
       <Features />
       <ExampleGallery />
