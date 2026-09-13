@@ -5,7 +5,7 @@ import { recordVisitorAttempt, recordSuccessfulOptimization, recordPublicError }
 
 const MAX_PROMPT_LENGTH = 6000;
 const MAX_BODY_BYTES = 32_000;
-const DAILY_IP_LIMIT = 5;
+const DAILY_IP_LIMIT = 2;
 const RATE_LIMIT_COLLECTION = 'publicOptimizerDailyLimits';
 const PROVIDER_TIMEOUT_MS = 15_000;
 
@@ -54,7 +54,7 @@ const enforceDailyIpLimit = async (req) => {
   try { await recordVisitorAttempt({ ip, day }); } catch {}
 
   if (count >= DAILY_IP_LIMIT) {
-    const error = new Error("You've used today's 5 free optimizations — sign up for more.");
+    const error = new Error("You've used today's 2 free optimizations — sign up for more.");
     error.status = 429;
     error.code = 'free_daily_limit';
     error.retryAfter = getRetryAfter();
