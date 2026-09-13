@@ -75,7 +75,7 @@ export default function AdminMvp() {
           <Metric icon="👀" label="Visitors today" value={metrics?.visitorsToday} />
           <Metric icon="⚡" label="Optimizations today" value={metrics?.optimizationsToday} />
           <Metric icon="👤" label="Signups today" value={metrics?.signupsToday} />
-          <Metric icon="🚫" label="Hit 5/day limit" value={metrics?.hitLimitToday} />
+          <Metric icon="🚫" label="Hit 2/day limit" value={metrics?.hitLimitToday} />
         </section>
 
         <section className="mt-8 rounded-3xl border border-slate-200 bg-slate-100 p-5">
