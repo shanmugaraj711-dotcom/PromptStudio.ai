@@ -33,6 +33,7 @@
   "routes": [
     { "src": "/api/admin-health", "dest": "/api/index.js?route=admin&action=health" },
     { "src": "/api/admin-analytics", "dest": "/api/index.js?route=admin&action=analytics" },
+    { "src": "/api/admin-public-metrics", "dest": "/api/index.js?route=admin-public-metrics" },
     { "src": "/api/admin-config", "dest": "/api/index.js?route=admin&action=config" },
     { "src": "/api/admin-inbox", "dest": "/api/index.js?route=admin&action=inbox" },
     { "src": "/api/admin-user-management", "dest": "/api/index.js?route=admin&action=users" },
