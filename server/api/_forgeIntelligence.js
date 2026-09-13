@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 const MODELS = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash"];
 const MAX_IMAGES = 4;
 const MAX_TEXT = 100000;
+const TOTAL_AI_BUDGET_MS = 8500;
 
 const PREVIEW_SCHEMA = {
   type: "object",
@@ -82,22 +83,23 @@ CUSTOMER REQUEST:\n${clean(description, 12000)}\n\nREFERENCE FILE TEXT:\n${textR
 };
 
 const generateModel = async ({ client, model, contents }) => {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), model === MODELS[0] ? 14000 : 9000);
-  try {
-    const response = await client.models.generateContent({
-      model,
-      contents,
-      config: {
-        responseMimeType: "application/json",
-        responseJsonSchema: PREVIEW_SCHEMA,
-        maxOutputTokens: 1800,
-        thinkingConfig: { thinkingLevel: model === MODELS[0] ? "high" : "medium" }
-      }
-    });
-    return JSON.parse(String(response.text || "{}"));
-  } finally { clearTimeout(timer); }
+  const response = await client.models.generateContent({
+    model,
+    contents,
+    config: {
+      responseMimeType: "application/json",
+      responseJsonSchema: PREVIEW_SCHEMA,
+      maxOutputTokens: 1800,
+      thinkingConfig: { thinkingLevel: model === MODELS[0] ? "high" : "medium" }
+    }
+  });
+  return JSON.parse(String(response.text || "{}"));
 };
+
+const withTimeout = (promise, ms) => new Promise((resolve, reject) => {
+  const timer = setTimeout(() => reject(Object.assign(new Error("Forge preview intelligence timed out."), { code: "forge_preview_timeout", status: 504 })), ms);
+  promise.then(resolve, reject).finally(() => clearTimeout(timer));
+});
 
 const normalize = (preview, description) => {
   const fallback = fallbackPreview(description);
@@ -128,9 +130,14 @@ export async function createForgePreview({ description, references = [] }) {
   const contents = [{ text: buildPrompt({ description, references }) }, ...imageRefs.map((file) => ({ inlineData: { mimeType: file.mimeType, data: file.data } }))];
   const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   let lastError;
-  for (const model of MODELS) {
+  const startedAt = Date.now();
+  for (let index = 0; index < MODELS.length; index += 1) {
+    const remaining = TOTAL_AI_BUDGET_MS - (Date.now() - startedAt);
+    if (remaining <= 500) break;
+    const model = MODELS[index];
+    const attemptBudget = Math.min(remaining - 250, index === 0 ? 5000 : 2500);
     try {
-      const preview = normalize(await generateModel({ client, model, contents }), description);
+      const preview = normalize(await withTimeout(generateModel({ client, model, contents }), attemptBudget), description);
       return { ...preview, intelligenceStatus: "ai", model };
     } catch (error) {
       lastError = error;
