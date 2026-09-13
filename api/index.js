@@ -1,6 +1,7 @@
 import adminBootstrapHandler from "../server/api/admin-bootstrap.js";
 import adminHandler from "../server/api/admin.js";
 import adminPublicMetricsHandler from "../server/api/admin-public-metrics.js";
+import publicVisitHandler from "../server/api/public-visit.js";
 import apkForgeHandler from "../server/api/apk-forge.js";
 import apkForgeAcceptHandler from "../server/api/apk-forge-accept.js";
 import apkForgeOrderHandler from "../server/api/apk-forge-order.js";
@@ -36,6 +37,7 @@ const STATIC_HANDLERS = {
   "/api/admin-bootstrap": adminBootstrapHandler,
   "/api/admin": adminHandler,
   "/api/admin-public-metrics": adminPublicMetricsHandler,
+  "/api/public-visit": publicVisitHandler,
   "/api/apk-forge": apkForgeHandler,
   "/api/apk-forge-accept": apkForgeAcceptHandler,
   "/api/apk-forge-order": apkForgeOrderHandler,
