@@ -74,7 +74,7 @@ function PublicOptimizer() {
             <textarea id="public-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') optimize(); }} maxLength={6000} rows={6} placeholder="e.g. Make a marketing post for my restaurant" className="mt-5 min-h-44 w-full resize-y rounded-2xl border border-white/10 bg-black/30 px-4 py-4 text-sm leading-6 text-white outline-none placeholder:text-slate-600 focus:border-blue-400/50 focus:ring-2 focus:ring-blue-400/10" />
 
             <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-xs text-slate-500">{prompt.length}/6000 · 5 free optimizations per day</span>
+              <span className="text-xs text-slate-500">{prompt.length}/6000 · 2 free optimizations per day</span>
               <button type="button" onClick={optimize} disabled={prompt.trim().length < 3 || loading} className="rounded-xl bg-white px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40">{loading ? 'Optimizing…' : 'Optimize my prompt →'}</button>
             </div>
 
