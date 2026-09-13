@@ -6,6 +6,7 @@ const MAX_PROMPT_LENGTH = 6000;
 const MAX_BODY_BYTES = 32_000;
 const DAILY_IP_LIMIT = 5;
 const RATE_LIMIT_COLLECTION = 'publicOptimizerDailyLimits';
+const PROVIDER_TIMEOUT_MS = 15_000;
 
 const sendJson = (res, status, payload, headers = {}) => {
   res.status(status);
@@ -102,42 +103,130 @@ const validate = (body) => {
 
 const clampScore = (value) => Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
 
-const generateOptimizedPrompt = async ({ prompt, target }) => {
+const systemInstruction = (target) => `You are PromptStudio's prompt optimization engine. Improve the user's rough prompt so a target AI can understand and execute it more reliably. Preserve the user's intent. Do not invent business facts, names, prices, claims, requirements, or hidden context. Add useful specificity, structure, constraints, output requirements, and success criteria only when they follow from the request. Remove ambiguity and unnecessary verbosity. The result must be ready to paste into the target AI.\n\nReturn JSON only with exactly this shape: {"optimized_prompt":"string","score":0}. The score is the quality of the ORIGINAL prompt before optimization, from 0 to 100. Do not score the optimized prompt. The optimized prompt must not mention PromptStudio or this optimization process. Target AI: ${target}.`;
+
+const parseModelResult = (raw) => {
+  if (!raw) throw new Error('The AI service returned an empty response.');
+  const parsed = JSON.parse(raw);
+  const optimizedPrompt = typeof parsed.optimized_prompt === 'string' ? parsed.optimized_prompt.trim() : '';
+  if (!optimizedPrompt) throw new Error('The AI service returned an incomplete response.');
+  return { optimizedPrompt, score: clampScore(parsed.score) };
+};
+
+const isProviderFailure = (error) => {
+  const status = Number(error?.status || error?.statusCode || 0);
+  const message = String(error?.message || '').toLowerCase();
+  return [408, 409, 429, 500, 502, 503, 504].includes(status)
+    || /high demand|rate.?limit|temporar|unavailable|overload|timeout|aborted|deadline|quota|resource exhausted/.test(message);
+};
+
+const withTimeout = async (promiseFactory, ms = PROVIDER_TIMEOUT_MS) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ms);
+  try {
+    return await promiseFactory(controller.signal);
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+const callGemini = async ({ prompt, target }) => {
   if (!process.env.GEMINI_API_KEY) {
-    const error = new Error('The optimization service is not configured.');
+    const error = new Error('Gemini is not configured.');
     error.status = 503;
-    error.code = 'service_unavailable';
     throw error;
   }
 
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  const systemInstruction = `You are PromptStudio's prompt optimization engine. Improve the user's rough prompt so a target AI can understand and execute it more reliably. Preserve the user's intent. Do not invent business facts, names, prices, claims, requirements, or hidden context. Add useful specificity, structure, constraints, output requirements, and success criteria only when they follow from the request. Remove ambiguity and unnecessary verbosity. The result must be ready to paste into the target AI.\n\nReturn JSON only with exactly this shape: {"optimized_prompt":"string","score":0}. The score is the quality of the ORIGINAL prompt before optimization, from 0 to 100. Do not score the optimized prompt. The optimized prompt must not mention PromptStudio or this optimization process. Target AI: ${target}.`;
-  const contents = `${systemInstruction}\n\nUSER PROMPT:\n${prompt}`;
+  const contents = `${systemInstruction(target)}\n\nUSER PROMPT:\n${prompt}`;
   const models = [
     process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
     process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.6-flash'
-  ];
+  ].filter((model, index, list) => model && list.indexOf(model) === index);
   let lastError;
 
   for (const model of models) {
     try {
-      const response = await ai.models.generateContent({
+      const response = await withTimeout(() => ai.models.generateContent({
         model,
         contents,
         config: { responseMimeType: 'application/json', maxOutputTokens: 1800 }
-      });
-      const raw = response.text?.trim();
-      if (!raw) throw new Error('The AI service returned an empty response.');
-      const parsed = JSON.parse(raw);
-      const optimizedPrompt = typeof parsed.optimized_prompt === 'string' ? parsed.optimized_prompt.trim() : '';
-      if (!optimizedPrompt) throw new Error('The AI service returned an incomplete response.');
-      return { optimizedPrompt, score: clampScore(parsed.score) };
+      }));
+      return parseModelResult(response.text?.trim());
     } catch (error) {
       lastError = error;
-      const status = Number(error?.status || error?.statusCode || 0);
-      const message = String(error?.message || '').toLowerCase();
-      const transient = [408, 429, 500, 502, 503, 504].includes(status) || /high demand|temporar|unavailable|overload|timeout|aborted|deadline/.test(message);
-      if (!transient || model === models[models.length - 1]) break;
+      if (!isProviderFailure(error) || model === models[models.length - 1]) break;
+    }
+  }
+
+  throw lastError || new Error('Gemini failed.');
+};
+
+const callGroq = async ({ prompt, target }) => {
+  if (!process.env.GROQ_API_KEY) {
+    const error = new Error('Groq is not configured.');
+    error.status = 503;
+    throw error;
+  }
+
+  const model = process.env.GROQ_MODEL || 'openai/gpt-oss-20b';
+  const response = await withTimeout((signal) => fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    signal,
+    headers: {
+      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemInstruction(target) },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.2,
+      max_completion_tokens: 1800,
+      response_format: { type: 'json_object' }
+    })
+  }));
+
+  const rawBody = await response.text();
+  if (!response.ok) {
+    let detail = rawBody;
+    try {
+      detail = JSON.parse(rawBody)?.error?.message || rawBody;
+    } catch {}
+    const error = new Error(`Groq request failed: ${detail}`);
+    error.status = response.status;
+    throw error;
+  }
+
+  let data;
+  try {
+    data = JSON.parse(rawBody);
+  } catch {
+    const error = new Error('Groq returned invalid JSON.');
+    error.status = 502;
+    throw error;
+  }
+
+  return parseModelResult(data?.choices?.[0]?.message?.content?.trim());
+};
+
+const generateOptimizedPrompt = async ({ prompt, target }) => {
+  const providerOrder = String(process.env.AI_PROVIDER_ORDER || 'gemini,groq')
+    .split(',')
+    .map((provider) => provider.trim().toLowerCase())
+    .filter((provider, index, list) => ['gemini', 'groq'].includes(provider) && list.indexOf(provider) === index);
+
+  const providers = { gemini: callGemini, groq: callGroq };
+  let lastError;
+
+  for (const provider of providerOrder) {
+    try {
+      return await providers[provider]({ prompt, target });
+    } catch (error) {
+      lastError = error;
+      if (!isProviderFailure(error)) break;
     }
   }
 
