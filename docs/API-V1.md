@@ -2,69 +2,71 @@
 
 ## Purpose
 
-The first integration surface is deliberately narrow: **Image → Prompt**. Web, WhatsApp and future plugins should use the same PromptStudio generation core rather than implementing their own prompt, credit or billing logic.
+PromptStudio exposes a narrow, versioned integration surface. The existing `/api/v1/prompt` endpoint remains the authenticated, credit-aware generation boundary. A separate stateless optimizer is provided for lightweight external AI integrations such as a GPT Action.
 
-## Endpoint
+## Stateless optimize endpoint
 
-`POST /api/v1/prompt`
+`POST /api/v1/optimize`
 
-The v1 endpoint is a thin compatibility boundary over the existing credit-aware generation handler. This keeps behavior identical while giving integrations a stable versioned path.
+This endpoint is deliberately separate from the logged-in product flow. It does not create users, save prompts, write history, reserve quota, deduct credits, or require Firebase authentication.
 
-## Authentication
-
-Use the same authenticated user context currently required by the core generation handler. The current implementation verifies the Firebase-authenticated request server-side. A future external-plugin credential/OAuth layer can be added at this boundary without moving business logic into the client.
-
-## Request
+### Request
 
 JSON body:
 
 ```json
 {
-  "idea": "optional user intent",
-  "image": {
-    "name": "reference.jpg",
-    "mimeType": "image/jpeg",
-    "data": "base64-image-data"
-  },
-  "aiModel": "gemini",
-  "category": "image",
-  "requestId": "unique-client-request-id"
+  "prompt": "make a marketing post for my restaurant",
+  "target": "ChatGPT"
 }
 ```
 
-Rules inherited from the core:
-- `idea` is optional when a reference image is supplied.
-- supported models/categories are validated server-side;
-- request IDs are required for idempotency;
-- reference images are currently JPEG and bounded in size;
-- rate limiting is enforced before generation;
-- credits/quota are reserved transactionally before the AI call.
+Rules:
+- `prompt` is required, 3–6000 characters;
+- `target` is optional and defaults to `general AI`;
+- `Content-Type: application/json` is required;
+- no user account or Firebase ID token is required;
+- requests are best-effort rate-limited by source IP at 12 requests per 60 seconds per warm serverless instance;
+- the endpoint never writes to Firestore or any PromptStudio user/history collection;
+- the Gemini credential remains server-only in Vercel.
 
-## Response
+### Response
 
-Successful responses contain:
-- `prompt`
-- `perspectives` (three useful prompt variants)
-- `intelligence`
-- `historyId`
-- `quota`
-- `creditsRemaining`
-- `creditCost`
+Successful responses intentionally contain only the funnel payload:
 
-Failures use a stable `code` + `message` shape and may include the current `quota` state where appropriate.
+```json
+{
+  "optimized_prompt": "Create a concise marketing post for a restaurant...",
+  "score": 41,
+  "link": "https://promptstudioai.in/"
+}
+```
 
-## Safety guarantees
+`score` is the model's 0–100 assessment of the **original** prompt before optimization.
 
-The integration endpoint does **not** write credits directly and does **not** accept client-supplied balances. It delegates to the existing server-authoritative generation flow, which uses Firebase transactions for reservation/rollback and server-side product configuration.
+Failures use:
 
-## Future v1.x additions
+```json
+{
+  "error": {
+    "code": "invalid_prompt",
+    "message": "Provide a prompt with at least 3 characters."
+  }
+}
+```
 
-Only after the core endpoint is proven:
-- transaction lookup;
-- support ticket creation;
-- prompt history lookup;
-- share-link creation.
+### Integration boundary
 
-## Future v2
+The optimize endpoint is read-only from the product's data perspective and stateless with respect to users. It is intentionally a funnel into PromptStudio rather than a parallel account/history product. Saving, history, credits, billing, and authenticated generation stay behind the main website login.
 
-A separate external integration authentication layer may introduce scoped API keys/OAuth, but it must still terminate in the same PromptStudio core services. Never give plugins or WhatsApp direct Firestore access.
+## Existing authenticated generation endpoint
+
+`POST /api/v1/prompt`
+
+The existing v1 endpoint remains a thin compatibility boundary over the credit-aware generation handler. It requires the authenticated Firebase user context and preserves quota, credit, history, request-ID/idempotency, and rate-limit behavior.
+
+## Existing plugin adapter
+
+`POST /api/v1/plugin/image-to-prompt`
+
+This adapter intentionally uses the authenticated v1 generation contract. It is separate from the stateless `/api/v1/optimize` endpoint.
