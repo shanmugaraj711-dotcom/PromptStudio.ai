@@ -36,32 +36,28 @@ const getIpKey = (ip, day) => createHash('sha256')
 const enforceDailyIpLimit = async (req) => {
   const day = getUtcDay();
   const docId = getIpKey(getClientIp(req), day);
-  const ref = adminDb().collection(RATE_LIMIT_COLLECTION).doc(docId);
+  const db = adminDb();
+  const ref = db.collection(RATE_LIMIT_COLLECTION).doc(docId);
   let count = 0;
+  let limited = false;
 
-  await adminDb().runTransaction(async (transaction) => {
+  await db.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(ref);
     count = Number(snapshot.data()?.count || 0);
-    if (count >= DAILY_IP_LIMIT) return;
-    transaction.set(ref, {
-      day,
-      count: count + 1,
-      updatedAt: new Date()
-    }, { merge: true });
+    if (count >= DAILY_IP_LIMIT) {
+      limited = true;
+      return;
+    }
     count += 1;
+    transaction.set(ref, { day, count, updatedAt: new Date() }, { merge: true });
   });
 
-  if (count > DAILY_IP_LIMIT) count = DAILY_IP_LIMIT;
-  if (count >= DAILY_IP_LIMIT && count > 0) {
-    const snapshot = await ref.get();
-    const storedCount = Number(snapshot.data()?.count || count);
-    if (storedCount > DAILY_IP_LIMIT) {
-      const error = new Error("You've used your 5 free prompt optimizations for today. Sign up to continue with PromptStudio.");
-      error.status = 429;
-      error.code = 'free_daily_limit';
-      error.retryAfter = getRetryAfter();
-      throw error;
-    }
+  if (limited) {
+    const error = new Error("You've used your 5 free prompt optimizations for today. Sign up to continue with PromptStudio.");
+    error.status = 429;
+    error.code = 'free_daily_limit';
+    error.retryAfter = getRetryAfter();
+    throw error;
   }
 
   return { remaining: Math.max(0, DAILY_IP_LIMIT - count) };
