@@ -1,6 +1,7 @@
 /**
  * PromptStudio single product configuration.
- * Product limits, pricing, credit costs and payment policy live here.
+ * Credits are the only internal spendable currency. INR is only used when
+ * purchasing credits through the payment gateway.
  */
 export const PRODUCT_CONFIG = Object.freeze({
   defaultPlan: 'free',
@@ -12,12 +13,12 @@ export const PRODUCT_CONFIG = Object.freeze({
     proMonthlyInr: 79,
     proAnnualInr: 499,
     creditPacks: Object.freeze({
-      starter: Object.freeze({ id: 'starter', name: 'Starter Credits', priceInr: 49, credits: 25 }),
-      creator: Object.freeze({ id: 'creator', name: 'Creator Credits', priceInr: 99, credits: 60 }),
+      starter: Object.freeze({ id: 'starter', name: 'Starter Credits', priceInr: 50, credits: 25 }),
+      creator: Object.freeze({ id: 'creator', name: 'Creator Credits', priceInr: 100, credits: 50 }),
     }),
     customCredits: Object.freeze({ minInr: 10, maxInr: 1000, inrPerCredit: 2 }),
-    studioBuild: Object.freeze({ enabled: true, buildPriceInr: 299, currency: 'INR' }),
-    apkForge: Object.freeze({ enabled: true, buildPriceInr: 299, currency: 'INR' }),
+    studioBuild: Object.freeze({ enabled: true, creditCost: 100 }),
+    apkForge: Object.freeze({ enabled: true, creditCost: 100, dailyBuildLimit: 3 }),
   }),
   creditCosts: Object.freeze({
     standardGeneration: 2,

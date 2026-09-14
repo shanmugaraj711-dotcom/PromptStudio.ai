@@ -5,9 +5,9 @@ import { getRuntimeProductConfig } from "./_productConfig.js";
 const getPack = (config, packId) => { const packs = config.pricing.creditPacks; return packs[packId] || packs.creator; };
 const getCreditPurchase = (body, config) => {
   if (body?.customAmountInr !== undefined && body?.customAmountInr !== null) {
-    const amount = Number(body.customAmountInr); const { minInr, maxInr, inrPerCredit } = config.pricing.customCredits;
-    if (!Number.isInteger(amount) || amount < minInr || amount > maxInr) throw Object.assign(new Error(`Choose a custom amount between ₹${minInr} and ₹${maxInr}.`), { status: 400 });
-    const credits = Math.floor(amount / inrPerCredit); if (credits < 1) throw Object.assign(new Error("The custom amount is too small for credits."), { status: 400 });
+    const amount = Number(body.customAmountInr); const { minInr, maxInr } = config.pricing.customCredits;
+    if (!Number.isInteger(amount) || amount < minInr || amount > maxInr || amount % 2 !== 0) throw Object.assign(new Error(`Choose an even custom amount between ₹${minInr} and ₹${maxInr}; credits are fixed at ₹2 each.`), { status: 400 });
+    const credits = amount / 2;
     return { id: `custom_${amount}`, name: "Custom Creator Credits", priceInr: amount, credits, custom: true };
   }
   const pack = getPack(config, body?.packId); return { ...pack, custom: false };

@@ -1,21 +1,14 @@
 import { adminDb, json, requireUser } from "./_firebaseAdmin.js";
-import { isConfigured, razorpayRequest, verifyOrderSignature } from "./_razorpay.js";
-import { assertRevisionBinding } from "../studio/acceptedRevision.js";
-import { finalizeVerifiedPayment } from "../studio/paymentVerification.js";
+import { finalizeCreditCheckout } from "../studio/paymentVerification.js";
 
 const fail = (status, code, message) => { const error = new Error(message); error.status = status; error.code = code; throw error; };
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return json(res, 405, { code: "method_not_allowed", message: "Studio payment verification accepts POST requests only." });
-  if (!isConfigured()) return json(res, 503, { code: "payment_not_configured", message: "Razorpay is not configured." });
+  if (req.method !== "POST") return json(res, 405, { code: "method_not_allowed", message: "Studio credit checkout confirmation accepts POST requests only." });
   try {
     const user = await requireUser(req);
-    const body = req.body && typeof req.body === "object" ? req.body : {};
-    const orderId = String(body.razorpay_order_id || body.orderId || "").trim();
-    const paymentId = String(body.razorpay_payment_id || body.paymentId || "").trim();
-    const signature = String(body.razorpay_signature || body.signature || "").trim();
-    const studioBuildRequestId = String(body.studioBuildRequestId || "").trim();
-    if (!orderId || !paymentId || !signature || !studioBuildRequestId) return json(res, 400, { code: "incomplete_payment_response", message: "Incomplete Studio payment response." });
+    const studioBuildRequestId = String(req.body?.studioBuildRequestId || "").trim();
+    if (!studioBuildRequestId) return json(res, 400, { code: "invalid_studio_build_request", message: "A Studio preview request is required." });
 
     const db = adminDb();
     const ref = db.collection("studioBuildPayments").doc(studioBuildRequestId);
@@ -24,28 +17,24 @@ export default async function handler(req, res) {
     const request = snapshot.data() || {};
     if (request.uid !== user.uid) return json(res, 403, { code: "studio_build_forbidden", message: "Studio build payment does not belong to this account." });
     const revisionId = request.acceptedRevisionId;
-    if (!/^[a-f0-9]{64}$/.test(revisionId || "")) return json(res, 409, { code: "accepted_revision_missing", message: "This checkout predates saved previews. Please contact support; do not pay again." });
+    if (!/^[a-f0-9]{64}$/.test(revisionId || "")) return json(res, 409, { code: "accepted_revision_missing", message: "The approved Studio revision is missing. Please regenerate the preview." });
     const revisionSnap = await db.collection("studioAcceptedRevisions").doc(revisionId).get();
     if (!revisionSnap.exists) return json(res, 409, { code: "accepted_revision_missing", message: "The accepted Studio revision is no longer available." });
-    const revision = revisionSnap.data();
-    assertRevisionBinding(request, revision, user.uid);
-    if (request.razorpayOrderId !== orderId) return json(res, 409, { code: "studio_order_mismatch", message: "The submitted Razorpay order does not match this Studio build request." });
-    if (!verifyOrderSignature({ orderId, paymentId, signature })) return json(res, 400, { code: "invalid_signature", message: "Studio payment verification failed." });
 
-    const order = await razorpayRequest(`/orders/${encodeURIComponent(orderId)}`);
-    if (order.id !== orderId || order.currency !== request.currency || Number(order.amount) !== Number(request.amountPaise)) return json(res, 409, { code: "payment_amount_mismatch", message: "Payment amount or currency does not match the Studio build request." });
-    if (order.status !== "paid") return json(res, 409, { code: "payment_not_captured", message: "Payment is not captured yet. Please wait a moment and retry." });
-
-    const payments = await razorpayRequest(`/orders/${encodeURIComponent(orderId)}/payments`);
-    const payment = Array.isArray(payments?.items) ? payments.items.find((item) => item.id === paymentId) : null;
-    if (!payment || payment.order_id !== orderId || payment.status !== "captured" || Number(payment.amount) !== Number(order.amount) || payment.currency !== order.currency) return json(res, 409, { code: "payment_not_captured", message: "The submitted payment is not a captured payment for this Studio order." });
-
-    const result = await finalizeVerifiedPayment({ db, ref, uid: user.uid, orderId, paymentId, revision });
-
-    console.info("Studio build payment verified", { studioBuildRequestId, uid: user.uid, orderId, paymentId, amountInr: request.amountInr });
-    return json(res, 200, { ok: true, studioBuildRequestId, acceptedRevisionId: result.acceptedRevisionId, status: result.status, orderId, paymentId, amountInr: request.amountInr, paidAt: result.paidAt?.toDate?.()?.toISOString?.() || result.paidAt?.toISOString?.() || new Date().toISOString() });
+    const result = await finalizeCreditCheckout({ db, ref, uid: user.uid, revision: revisionSnap.data() });
+    return json(res, 200, {
+      ok: true,
+      studioBuildRequestId,
+      acceptedRevisionId: result.acceptedRevisionId,
+      status: result.status,
+      paymentMethod: "credits",
+      creditCost: Number(result.creditCost || 0),
+      creditsRemaining: Number(result.creditsRemaining ?? 0),
+      equivalentInr: Number(result.equivalentInr || Number(result.creditCost || 0) * 2),
+      paidAt: result.paidAt?.toDate?.()?.toISOString?.() || result.paidAt?.toISOString?.() || new Date().toISOString(),
+    });
   } catch (error) {
-    console.error("Studio build payment verification failed", { code: error?.code || "unknown", status: error?.status });
-    return json(res, error.status || 500, { code: error.code || "studio_payment_verification_failed", message: error.message || "Studio payment verification failed." });
+    console.error("Studio credit checkout confirmation failed", { code: error?.code || "unknown", status: error?.status });
+    return json(res, error.status || 500, { code: error.code || "studio_credit_checkout_failed", message: error.message || "Studio credit checkout failed." });
   }
 }

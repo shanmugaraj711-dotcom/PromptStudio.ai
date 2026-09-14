@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { adminDb, json, requireUser } from "./_firebaseAdmin.js";
-import { isConfigured, razorpayRequest, verifyOrderSignature } from "./_razorpay.js";
+import { getRuntimeProductConfig } from "./_productConfig.js";
+import { debitCreditsInTransaction } from "./_creditWallet.js";
 import { dispatchForgeBuild } from "./_forgeGitHub.js";
 
 const buildableStates = new Set(["PAYMENT_PENDING"]);
@@ -9,14 +10,10 @@ const buildConfig = () => {
   const configuredOrigin = String(process.env.FORGE_WEB_ORIGIN || "").trim().replace(/\/$/, "");
   const vercelProductionUrl = String(process.env.VERCEL_PROJECT_PRODUCTION_URL || "").trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
   const forgeWebOrigin = configuredOrigin || (vercelProductionUrl ? `https://${vercelProductionUrl}` : "https://promptstudioai.in");
-  return {
-    appName: String(process.env.FORGE_APP_NAME || "PromptStudio AI").trim() || "PromptStudio AI",
-    forgeWebOrigin,
-    packageId: String(process.env.FORGE_PACKAGE_ID || "in.promptstudio.ai").trim(),
-    versionName: String(process.env.FORGE_VERSION_NAME || "0.1.0").trim() || "0.1.0"
-  };
+  return { appName: String(process.env.FORGE_APP_NAME || "PromptStudio AI").trim() || "PromptStudio AI", forgeWebOrigin, packageId: String(process.env.FORGE_PACKAGE_ID || "in.promptstudio.ai").trim(), versionName: String(process.env.FORGE_VERSION_NAME || "0.1.0").trim() || "0.1.0" };
 };
 const fail = (status, code, message) => { const error = new Error(message); error.status = status; error.code = code; throw error; };
+
 const startBuild = async ({ db, ref, forgeRequestId, uid }) => {
   const buildId = crypto.randomUUID().replace(/-/g, "");
   const config = buildConfig();
@@ -52,58 +49,58 @@ const startBuild = async ({ db, ref, forgeRequestId, uid }) => {
 };
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return json(res, 405, { code: "method_not_allowed", message: "Forge payment verification accepts POST requests only." });
-  if (!isConfigured()) return json(res, 503, { code: "payment_not_configured", message: "Razorpay is not configured." });
+  if (req.method !== "POST") return json(res, 405, { code: "method_not_allowed", message: "Forge credit checkout confirmation accepts POST requests only." });
   try {
-    const user = await requireUser(req); const body = req.body && typeof req.body === "object" ? req.body : {};
-    const orderId = String(body.razorpay_order_id || body.orderId || "").trim(); const paymentId = String(body.razorpay_payment_id || body.paymentId || "").trim(); const signature = String(body.razorpay_signature || body.signature || "").trim();
-    if (!orderId || !paymentId || !signature) return json(res, 400, { code: "incomplete_payment_response", message: "Incomplete payment response." });
-    const db = adminDb(); const snap = await db.collection("apkForgeRequests").where("razorpayOrderId", "==", orderId).limit(1).get();
-    if (snap.empty) return json(res, 404, { code: "forge_order_not_found", message: "Forge payment order was not found." });
-    const ref = snap.docs[0].ref; const request = snap.docs[0].data() || {};
-    if (request.uid !== user.uid) return json(res, 403, { code: "forge_order_forbidden", message: "Forge payment does not belong to this account." });
-    if (!verifyOrderSignature({ orderId, paymentId, signature })) return json(res, 400, { code: "invalid_signature", message: "Payment verification failed." });
-    const order = await razorpayRequest(`/orders/${encodeURIComponent(orderId)}`);
-    if (order.id !== orderId || order.currency !== "INR" || Number(order.amount) !== Number(request.amountPaise || Number(request.amountInr) * 100)) return json(res, 409, { code: "payment_amount_mismatch", message: "Payment amount does not match the Forge request." });
-    if (order.status !== "paid") return json(res, 409, { code: "payment_not_captured", message: "Payment is not captured yet. Please wait a moment and retry." });
-    const payments = await razorpayRequest(`/orders/${encodeURIComponent(orderId)}/payments`); const payment = Array.isArray(payments?.items) ? payments.items.find((item) => item.id === paymentId) : null;
-    if (!payment || payment.order_id !== orderId || payment.status !== "captured" || Number(payment.amount) !== Number(order.amount)) return json(res, 409, { code: "payment_not_captured", message: "The submitted payment is not a captured payment for this Forge order." });
+    const user = await requireUser(req);
+    const forgeRequestId = String(req.body?.forgeRequestId || "").trim();
+    if (!forgeRequestId) return json(res, 400, { code: "invalid_forge_request_id", message: "A Forge request ID is required." });
+    const db = adminDb();
+    const ref = db.collection("apkForgeRequests").doc(forgeRequestId);
+    const config = await getRuntimeProductConfig(db);
+    const forgePricing = config.pricing.apkForge || {};
+    const creditCost = Number(forgePricing.creditCost);
+    if (!Number.isInteger(creditCost) || creditCost < 1) return json(res, 503, { code: "invalid_credit_cost", message: "Forge credit pricing is not configured correctly." });
 
-    const currentSnap = await ref.get();
-    const current = currentSnap.data() || {};
-    if (current.status === "READY") return json(res, 200, { ok: true, forgeRequestId: current.forgeRequestId, status: "READY", orderId, paymentId, buildId: current.buildId || null });
-    if (current.status === "BUILDING" || current.status === "VERIFYING") return json(res, 200, { ok: true, forgeRequestId: current.forgeRequestId, status: current.status, orderId, paymentId, buildId: current.buildId || null });
-    if (current.status === "BUILD_FAILED") {
-      if (!retryableBuildFailures.has(String(current.buildFailureCode || ""))) return json(res, 409, { code: "build_failed", message: current.buildFailureMessage || "The previous Forge build failed. Start a new Forge request before trying again.", forgeRequestId: current.forgeRequestId, status: current.status, buildId: current.buildId || null });
-      try {
-        const buildResult = await startBuild({ db, ref, forgeRequestId: current.forgeRequestId, uid: user.uid });
-        return json(res, 200, { ok: true, forgeRequestId: current.forgeRequestId, status: "BUILDING", orderId, paymentId, buildId: buildResult.buildId, recoveredPaidBuild: true });
-      } catch (error) {
-        const failedSnap = await ref.get(); const failed = failedSnap.data() || {};
-        return json(res, 502, { code: error.code || "forge_build_dispatch_failed", message: error.message || "Payment succeeded but the real APK build could not be started.", forgeRequestId: current.forgeRequestId, status: failed.status || "BUILD_FAILED", buildId: failed.buildId || null });
-      }
+    const snapshot = await ref.get();
+    if (!snapshot.exists) return json(res, 404, { code: "forge_request_not_found", message: "Forge request was not found." });
+    const request = snapshot.data() || {};
+    if (request.uid !== user.uid) return json(res, 403, { code: "forge_request_forbidden", message: "Forge request does not belong to this account." });
+    if (!request.previewAcceptedAt) return json(res, 409, { code: "forge_preview_not_accepted", message: "Review and accept the Forge preview before checkout." });
+
+    const paidStates = new Set(["BUILDING", "VERIFYING", "READY", "BUILD_FAILED"]);
+    if (paidStates.has(request.status)) return json(res, 200, { ok: true, forgeRequestId, status: request.status, paymentMethod: "credits", creditCost: Number(request.creditCost || creditCost), creditsRemaining: Number(request.creditsRemaining ?? 0), buildId: request.buildId || null });
+
+    if (request.status === "CREDIT_PENDING") {
+      await db.runTransaction(async (tx) => {
+        const latest = await tx.get(ref);
+        const latestData = latest.data() || {};
+        if (!latest.exists || latestData.uid !== user.uid) fail(404, "forge_request_not_found", "Forge request was not found.");
+        if (paidStates.has(latestData.status) || latestData.paymentId) return;
+        if (latestData.status !== "CREDIT_PENDING") fail(409, "forge_credit_state_invalid", `Forge request is currently ${latestData.status}.`);
+        if (Number(latestData.creditCost) !== creditCost) fail(409, "forge_credit_price_changed", "The Forge credit cost changed. Please start a new request.");
+        const userRef = db.collection("users").doc(user.uid);
+        const userSnap = await tx.get(userRef);
+        const debit = await debitCreditsInTransaction({ tx, userRef, userSnapshot: userSnap, amount: creditCost, operation: "APK Forge build" });
+        const now = new Date();
+        tx.update(ref, { status: "PAYMENT_PENDING", paymentId: `credit_${forgeRequestId}`, paidAt: now, paymentVerifiedAt: now, creditCost: debit.creditsCharged, creditsRemaining: debit.creditsRemaining, equivalentInr: debit.equivalentInr, paymentMethod: "credits", updatedAt: now });
+      });
     }
-    if (!buildableStates.has(current.status)) fail(409, "forge_request_not_buildable", `Forge request is currently ${current.status}.`);
 
-    await db.runTransaction(async (tx) => {
-      const latest = await tx.get(ref); if (!latest.exists) fail(404, "forge_request_not_found", "Forge request was not found.");
-      const latestData = latest.data() || {};
-      if (latestData.uid !== user.uid) fail(403, "forge_order_forbidden", "Forge payment does not belong to this account.");
-      if (latestData.status !== "PAYMENT_PENDING") return;
-      const ts = new Date();
-      tx.update(ref, { paymentId, paidAt: ts, paymentVerifiedAt: ts, razorpayOrderStatus: order.status, updatedAt: ts });
-    });
+    const latestSnap = await ref.get();
+    const latest = latestSnap.data() || {};
+    if (latest.status === "BUILDING" || latest.status === "VERIFYING" || latest.status === "READY") return json(res, 200, { ok: true, forgeRequestId, status: latest.status, paymentMethod: "credits", creditCost: Number(latest.creditCost || creditCost), creditsRemaining: Number(latest.creditsRemaining ?? 0), buildId: latest.buildId || null });
+    if (latest.status === "BUILD_FAILED" && !retryableBuildFailures.has(String(latest.buildFailureCode || ""))) return json(res, 409, { code: "build_failed", message: latest.buildFailureMessage || "The previous Forge build failed. Start a new Forge request before trying again.", forgeRequestId, status: latest.status, buildId: latest.buildId || null });
+    if (!buildableStates.has(latest.status) && !(latest.status === "BUILD_FAILED" && retryableBuildFailures.has(String(latest.buildFailureCode || "")))) fail(409, "forge_request_not_buildable", `Forge request is currently ${latest.status}.`);
 
     try {
-      const buildResult = await startBuild({ db, ref, forgeRequestId: request.forgeRequestId, uid: user.uid });
-      return json(res, 200, { ok: true, forgeRequestId: request.forgeRequestId, status: "BUILDING", orderId, paymentId, buildId: buildResult.buildId });
+      const buildResult = await startBuild({ db, ref, forgeRequestId, uid: user.uid });
+      return json(res, 200, { ok: true, forgeRequestId, status: "BUILDING", paymentMethod: "credits", creditCost: Number(latest.creditCost || creditCost), creditsRemaining: Number(latest.creditsRemaining ?? 0), buildId: buildResult.buildId });
     } catch (error) {
-      const failedSnap = await ref.get();
-      const failed = failedSnap.data() || {};
-      return json(res, 502, { code: error.code || "forge_build_dispatch_failed", message: error.message || "Payment succeeded but the real APK build could not be started.", forgeRequestId: request.forgeRequestId, status: failed.status || "BUILD_FAILED", buildId: failed.buildId || null });
+      const failedSnap = await ref.get(); const failed = failedSnap.data() || {};
+      return json(res, 502, { code: error.code || "forge_build_dispatch_failed", message: error.message || "Credits were charged but the real APK build could not be started.", forgeRequestId, status: failed.status || "BUILD_FAILED", buildId: failed.buildId || null });
     }
   } catch (error) {
-    console.error("APK Forge payment verification failed", { code: error?.code || "unknown", status: error?.status });
-    return json(res, error.status || 500, { code: error.code || "apk_forge_payment_verification_failed", message: error.message || "Payment verification failed." });
+    console.error("APK Forge credit checkout confirmation failed", { code: error?.code || "unknown", status: error?.status });
+    return json(res, error.status || 500, { code: error.code || "apk_forge_credit_checkout_failed", message: error.message || "Forge credit checkout failed." });
   }
 }
