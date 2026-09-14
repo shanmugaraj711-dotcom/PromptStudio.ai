@@ -16,8 +16,7 @@ export const PRODUCT_CONFIG = Object.freeze({
       creator: Object.freeze({ id: 'creator', name: 'Creator Credits', priceInr: 99, credits: 60 }),
     }),
     customCredits: Object.freeze({ minInr: 10, maxInr: 1000, inrPerCredit: 2 }),
-    studioBuild: Object.freeze({ enabled: true, buildPriceInr: 299, currency: 'INR' }),
-    apkForge: Object.freeze({ enabled: true, buildPriceInr: 299, currency: 'INR' }),
+    studioBuild: Object.freeze({ enabled: true, creditCost: 100 }),
   }),
   creditCosts: Object.freeze({
     standardGeneration: 2,
