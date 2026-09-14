@@ -200,7 +200,9 @@ export default async function handler(req, res) {
     return sendJson(res, 200, { optimized_prompt: result.optimizedPrompt, score: result.score, link: 'https://promptstudioai.in/' }, { 'X-RateLimit-Limit': String(DAILY_IP_LIMIT), 'X-RateLimit-Remaining': String(rate.remaining) });
   } catch (error) {
     if (rate?.docId && error.code !== 'free_daily_limit') await rollbackDailyReservation({ docId: rate.docId, day: rate.day });
-    try { await recordPublicError({ code: error.code || 'optimization_failed' }); } catch {}
+    if (error.code && !['free_daily_limit', 'invalid_prompt', 'invalid_request', 'unsupported_media_type', 'payload_too_large', 'method_not_allowed'].includes(error.code)) {
+      try { await recordPublicError({ code: error.code }); } catch {}
+    }
     if (error.retryAfter) res.setHeader('Retry-After', String(error.retryAfter));
     const headers = error.code === 'free_daily_limit' ? { 'X-RateLimit-Limit': String(DAILY_IP_LIMIT), 'X-RateLimit-Remaining': '0' } : {};
     return sendJson(res, Number(error.status) || 500, { error: { code: error.code || 'optimization_failed', message: error.message || 'Unable to optimize the prompt right now.' } }, headers);

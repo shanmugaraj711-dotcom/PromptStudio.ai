@@ -26,6 +26,16 @@ const checkPublicEndpoint = (stats) => {
   const hasProvider = Boolean(String(process.env.GEMINI_API_KEY || "").trim() || String(process.env.GROQ_API_KEY || "").trim());
   if (!hasProvider) return false;
 
+  const nonHealthErrorCodes = new Set([
+    "free_daily_limit",
+    "invalid_prompt",
+    "invalid_request",
+    "unsupported_media_type",
+    "payload_too_large",
+    "method_not_allowed"
+  ]);
+  if (nonHealthErrorCodes.has(String(stats.lastErrorCode || ""))) return true;
+
   const errorAt = stats.lastErrorAt ? Date.parse(stats.lastErrorAt) : 0;
   const successAt = stats.lastSuccessAt ? Date.parse(stats.lastSuccessAt) : 0;
   if (errorAt && errorAt > successAt && Date.now() - errorAt < 15 * 60 * 1000) return false;
