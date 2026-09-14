@@ -22,24 +22,14 @@ const checkGemini = async () => {
   }
 };
 
-const checkPublicEndpoint = async (req, stats) => {
-  const host = String(req.headers?.["x-forwarded-host"] || req.headers?.host || "promptstudioai.in").split(",")[0].trim();
-  const proto = String(req.headers?.["x-forwarded-proto"] || "https").split(",")[0].trim();
-  const origin = `${proto === "http" ? "http" : "https"}://${host}`;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 5000);
-  try {
-    const response = await fetch(`${origin}/api/v1/optimize`, { method: "GET", signal: controller.signal, headers: { Accept: "application/json" } });
-    if (!response.ok) return false;
-    const errorAt = stats.lastErrorAt ? Date.parse(stats.lastErrorAt) : 0;
-    const successAt = stats.lastSuccessAt ? Date.parse(stats.lastSuccessAt) : 0;
-    if (errorAt && errorAt > successAt && Date.now() - errorAt < 15 * 60 * 1000) return false;
-    return true;
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timer);
-  }
+const checkPublicEndpoint = (stats) => {
+  const hasProvider = Boolean(String(process.env.GEMINI_API_KEY || "").trim() || String(process.env.GROQ_API_KEY || "").trim());
+  if (!hasProvider) return false;
+
+  const errorAt = stats.lastErrorAt ? Date.parse(stats.lastErrorAt) : 0;
+  const successAt = stats.lastSuccessAt ? Date.parse(stats.lastSuccessAt) : 0;
+  if (errorAt && errorAt > successAt && Date.now() - errorAt < 15 * 60 * 1000) return false;
+  return true;
 };
 
 export default async function handler(req, res) {
@@ -52,10 +42,9 @@ export default async function handler(req, res) {
     const day = new Date().toISOString().slice(0, 10);
     const since = utcStartOfToday();
     const stats = await readDailyStats(day);
-    const [signupSnap, gemini, publicEndpoint] = await Promise.all([
+    const [signupSnap, gemini] = await Promise.all([
       db.collection("users").where("createdAt", ">=", since).count().get(),
-      checkGemini(),
-      checkPublicEndpoint(req, stats)
+      checkGemini()
     ]);
 
     return json(res, 200, {
@@ -65,7 +54,7 @@ export default async function handler(req, res) {
       optimizationsToday: stats.optimizations,
       signupsToday: signupSnap.data().count,
       hitLimitToday: stats.hitLimitCount,
-      publicOptimizer: publicEndpoint,
+      publicOptimizer: checkPublicEndpoint(stats),
       gemini
     });
   } catch (error) {
