@@ -82,17 +82,80 @@ const unsupportedProvider = (providerName) => {
   return error;
 };
 
+const hasProviderKey = (provider) => provider === "gemini"
+  ? Boolean(String(process.env.GEMINI_API_KEY || "").trim())
+  : Boolean(String(process.env.GROQ_API_KEY || "").trim());
+
+const isFailoverCandidate = (error) => {
+  const status = Number(error?.status || error?.statusCode || error?.httpStatus || 0);
+  const code = String(error?.code || "").toLowerCase();
+  const message = String(error?.message || "").toLowerCase();
+  if ([408, 429, 500, 502, 503, 504].includes(status)) return true;
+  if ([
+    "ai_model_unavailable",
+    "server_configuration_error",
+    "resource_exhausted",
+    "rate_limit_exceeded",
+    "service_unavailable",
+    "provider_unavailable",
+    "internal_server_error",
+  ].includes(code)) return true;
+  return /quota|rate limit|temporar|unavailable|overload|high demand|resource exhausted|deadline|timeout|aborted/.test(message);
+};
+
+const createProvider = (providerName) => {
+  if (providerName === "groq") return createGroqProvider();
+  if (providerName === "gemini") return createGeminiProvider();
+  throw unsupportedProvider(providerName);
+};
+
 export const createAIProvider = () => {
-  const providerName = String(process.env.STUDIO_AI_PROVIDER || "gemini").trim().toLowerCase();
-  if (providerName === "groq") {
-    console.info("Studio AI provider selected", { provider: "groq" });
-    return createGroqProvider();
-  }
-  if (providerName === "gemini") {
-    console.info("Studio AI provider selected", { provider: "gemini" });
-    return createGeminiProvider();
-  }
-  const error = unsupportedProvider(providerName);
-  console.error("Studio AI provider is unsupported", { provider: providerName, code: error.code });
-  throw error;
+  const configuredProvider = String(process.env.STUDIO_AI_PROVIDER || "gemini").trim().toLowerCase();
+  if (!["gemini", "groq"].includes(configuredProvider)) throw unsupportedProvider(configuredProvider);
+
+  const primary = createProvider(configuredProvider);
+  const fallbackName = configuredProvider === "gemini" ? "groq" : "gemini";
+  const fallback = hasProviderKey(fallbackName) ? createProvider(fallbackName) : null;
+
+  console.info("Studio AI provider router selected", {
+    primary: primary.name,
+    fallback: fallback?.name || null,
+  });
+
+  return {
+    name: primary.name,
+    async listAvailableModels() {
+      return primary.listAvailableModels();
+    },
+    async resolveModel(capability = STUDIO_AI_CAPABILITIES.STRUCTURED_JSON_SPEC) {
+      try {
+        return await primary.resolveModel(capability);
+      } catch (error) {
+        if (!fallback || !isFailoverCandidate(error)) throw error;
+        console.warn("Studio AI primary model unavailable; checking fallback provider", {
+          primary: primary.name,
+          fallback: fallback.name,
+          capability,
+          code: error?.code || null,
+          status: Number(error?.status || error?.statusCode || error?.httpStatus || 0) || null,
+        });
+        return fallback.resolveModel(capability);
+      }
+    },
+    async generateStructuredSpec(args) {
+      try {
+        return await primary.generateStructuredSpec(args);
+      } catch (error) {
+        if (!fallback || !isFailoverCandidate(error)) throw error;
+        console.warn("Studio AI primary generation failed; failing over", {
+          primary: primary.name,
+          fallback: fallback.name,
+          capability: args?.capability || STUDIO_AI_CAPABILITIES.STRUCTURED_JSON_SPEC,
+          code: error?.code || null,
+          status: Number(error?.status || error?.statusCode || error?.httpStatus || 0) || null,
+        });
+        return fallback.generateStructuredSpec(args);
+      }
+    },
+  };
 };
