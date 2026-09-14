@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     if (!REQUEST_ID_RE.test(studioBuildRequestId)) return json(res, 400, { code: "invalid_studio_build_request", message: "A valid Studio preview request is required before checkout." });
 
     // Freeze the exact approved source and atomically consume credits + bind delivery.
-    const { payment, alreadyPaid } = await reserveAcceptedCheckout({
+    const { payment } = await reserveAcceptedCheckout({
       db,
       uid: user.uid,
       studioJobId: studioBuildRequestId,
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
       return json(res, 200, {
         ok: true,
         ...identity,
-        alreadyPaid: Boolean(alreadyPaid),
+        alreadyPaid: true,
         status: payment.status,
         paymentMethod: payment.paymentMethod || "credits",
         creditCost: payment.creditCost,
