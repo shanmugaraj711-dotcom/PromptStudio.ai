@@ -1,0 +1,9 @@
+{
+  "forgeRequestId": "smoke-test-20260912",
+  "buildId": "smoke-20260912",
+  "appName": "PromptStudio Forge Smoke Test",
+  "forgeWebOrigin": "https://prompt-studio-yoavm8822-prompt-studioai.vercel.app",
+  "packageId": "in.promptstudio.ai",
+  "versionName": "0.1.0-smoke",
+  "versionCode": "20260912"
+}

@@ -1,7 +1,7 @@
 {
   "version": 2,
   "functions": {
-    "api/index.js": { "maxDuration": 30 }
+    "api/index.js": { "maxDuration": 60 }
   },
   "headers": [
     {
@@ -33,12 +33,24 @@
   "routes": [
     { "src": "/api/admin-health", "dest": "/api/index.js?route=admin&action=health" },
     { "src": "/api/admin-analytics", "dest": "/api/index.js?route=admin&action=analytics" },
+    { "src": "/api/admin-public-metrics", "dest": "/api/index.js?route=admin-public-metrics" },
     { "src": "/api/admin-config", "dest": "/api/index.js?route=admin&action=config" },
     { "src": "/api/admin-inbox", "dest": "/api/index.js?route=admin&action=inbox" },
     { "src": "/api/admin-user-management", "dest": "/api/index.js?route=admin&action=users" },
     { "src": "/api/admin-support", "dest": "/api/index.js?route=admin&action=support" },
     { "src": "/api/admin-coupons", "dest": "/api/index.js?route=admin&action=coupons" },
     { "src": "/api/reference-coding", "dest": "/api/index.js?route=reference-coding" },
+    { "src": "/api/generate-prompt-credits", "dest": "/api/index.js?route=generate-prompt-credits" },
+    { "src": "/api/generate-prompt", "dest": "/api/index.js?route=generate-prompt" },
+    { "src": "/api/apk-forge", "dest": "/api/index.js?route=apk-forge" },
+    { "src": "/api/apk-forge-accept", "dest": "/api/index.js?route=apk-forge-accept" },
+    { "src": "/api/apk-forge-order", "dest": "/api/index.js?route=apk-forge-order" },
+    { "src": "/api/apk-forge-verify", "dest": "/api/index.js?route=apk-forge-verify" },
+    { "src": "/api/apk-forge-build-status", "dest": "/api/index.js?route=apk-forge-build-status" },
+    { "src": "/api/apk-forge-history", "dest": "/api/index.js?route=apk-forge-history" },
+    { "src": "/api/apk-forge-download", "dest": "/api/index.js?route=apk-forge-download" },
+    { "src": "/api/live-signal", "dest": "/api/index.js?route=live-signal" },
+    { "src": "/api/public-visit", "dest": "/api/index.js?route=public-visit" },
     { "src": "/api/(.*)", "dest": "/api/index.js?route=$1" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }

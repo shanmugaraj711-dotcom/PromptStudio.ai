@@ -4,14 +4,11 @@ import { createQuotaState } from "../../constants/quota";
 import { useAuth } from "../../context/AuthContext";
 import { fetchRuntimeProductConfig } from "../../services/runtimeProductConfig";
 
-const baseNavItems = [
-  { to: "/dashboard", label: "⌂ Dashboard" },
-  { to: "/builder", label: "🪄 Builder" },
-  { to: "/history", label: "📜 History", feature: "promptHistory" },
-  { to: "/account", label: "⚙️ Account" },
-  { to: "/transactions", label: "💳 Transactions" },
-  { to: "/referral", label: "🎁 Refer & Earn" },
-  { to: "/help", label: "❓ Help" },
+const CORE_NAV = [
+  { to: "/dashboard", label: "Dashboard" },
+  { to: "/account#plans", label: "Manage Plan" },
+  { to: "/help", label: "Help" },
+  { to: "/history", label: "History", feature: "promptHistory" },
 ];
 
 export default function AppLayout({ children }) {
@@ -19,62 +16,31 @@ export default function AppLayout({ children }) {
   const { user, plan, promptsToday, lastPromptDate, logout } = useAuth();
   const [productConfig, setProductConfig] = useState(null);
   const quota = createQuotaState({ plan, promptsToday, lastPromptDate }, new Date(), productConfig);
-  const quotaLabel = quota.remaining === null ? "∞ left" : `${quota.remaining}/${quota.dailyLimit} left`;
-  const navItems = baseNavItems.filter((item) => !item.feature || productConfig?.features?.[item.feature]?.enabled !== false);
+  const quotaLabel = quota.remaining === null ? "∞" : String(quota.remaining);
+  const navItems = CORE_NAV.filter((item) => !item.feature || productConfig?.features?.[item.feature]?.enabled !== false);
 
   useEffect(() => {
     let active = true;
-    fetchRuntimeProductConfig(user)
-      .then((config) => { if (active) setProductConfig(config); })
-      .catch((error) => console.error("Unable to load runtime product config", error));
+    fetchRuntimeProductConfig(user).then((config) => { if (active) setProductConfig(config); }).catch((error) => console.error("Unable to load current product configuration", error));
     return () => { active = false; };
   }, [user]);
 
-  const handleLogout = async () => {
-    await logout();
-    navigate("/", { replace: true });
-  };
+  const handleLogout = async () => { await logout(); navigate("/", { replace: true }); };
 
-  return (
-    <div className="min-h-screen overflow-x-hidden bg-slate-50 text-slate-900">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-[0_8px_30px_-18px_rgba(15,23,42,0.35)] backdrop-blur-xl">
-        <div className="mx-auto flex min-h-[4.5rem] max-w-7xl items-center gap-3 px-3 sm:gap-4 sm:px-6 lg:px-8">
-          <Link to="/dashboard" className="group flex shrink-0 items-center gap-2 rounded-xl px-2 py-1.5 transition hover:bg-slate-50" aria-label="PromptStudio AI dashboard">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-600 text-base text-white shadow-md shadow-blue-600/20">⌂</span>
-            <div>
-              <div className="text-lg font-black tracking-[-0.04em] text-slate-950 sm:text-2xl">PromptStudio <span className="text-blue-600 transition group-hover:text-blue-400">AI</span></div>
-              <div className="mt-0.5 hidden text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 sm:block">Creative Intelligence</div>
-            </div>
-          </Link>
-          <div className="hidden h-8 w-px bg-slate-200 xl:block" />
-          <nav className="hidden items-center gap-1 xl:flex" aria-label="Primary navigation">
-            {navItems.map((item) => (
-              <NavLink key={item.to} to={item.to} className={({ isActive }) => `relative shrink-0 whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-bold transition-all duration-200 ${isActive ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"}`}>
-                {item.label}
-              </NavLink>
-            ))}
-            <Link to="/contact" className="shrink-0 whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-950">Contact</Link>
-          </nav>
-          <div className="ml-auto flex items-center gap-2">
-            <button type="button" onClick={() => navigate("/account#plans")} className="group rounded-full border border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 px-3 py-2 text-xs font-extrabold text-blue-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md sm:px-4 sm:text-sm" title="View your plan and usage" aria-label={`View usage: ${quotaLabel}`}>
-              <span className="mr-1">⚡</span>{quotaLabel}
-            </button>
-            <button type="button" onClick={handleLogout} className="hidden rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 xl:inline-flex">Logout</button>
-          </div>
-        </div>
-        <div className="border-t border-slate-100 xl:hidden">
-          <div className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-3 py-2.5 touch-pan-x sm:px-6">
-            {navItems.map((item) => (
-              <NavLink key={item.to} to={item.to} className={({ isActive }) => `shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-bold transition ${isActive ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"}`}>
-                {item.label}
-              </NavLink>
-            ))}
-            <Link to="/contact" className="shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100">Contact</Link>
-            <button type="button" onClick={handleLogout} className="shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-900">Logout</button>
-          </div>
-        </div>
-      </header>
-      <main>{children}</main>
-    </div>
-  );
+  return <div className="min-h-screen overflow-x-hidden bg-slate-950 text-slate-100">
+    <header className="sticky top-0 z-50 border-b border-white/8 bg-[#070b12]/92 shadow-[0_14px_50px_-28px_rgba(34,211,238,0.45)] backdrop-blur-2xl">
+      <div className="mx-auto flex min-h-[4.25rem] max-w-[1400px] items-center gap-3 px-3 sm:px-5 lg:px-7">
+        <Link to="/dashboard" className="group flex min-w-0 shrink-0 items-center gap-2.5 rounded-xl py-1.5" aria-label="PromptStudio AI Dashboard">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-300 shadow-[0_0_24px_rgba(34,211,238,0.12)] transition group-hover:scale-[1.03]">✦</span>
+          <span className="min-w-0"><span className="block truncate text-[15px] font-black tracking-[-0.03em] text-white sm:text-lg">PromptStudio <span className="text-cyan-300">AI</span></span><span className="hidden text-[8px] font-bold uppercase tracking-[0.2em] text-slate-600 sm:block">Intelligence workspace</span></span>
+        </Link>
+        <nav className="ml-auto flex min-w-0 items-center gap-1 overflow-x-auto" aria-label="Primary">
+          {navItems.map((item) => <NavLink key={item.to} to={item.to} className={({ isActive }) => `shrink-0 rounded-lg px-2.5 py-2 text-[10px] font-black transition sm:px-3 sm:text-[11px] ${isActive ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:bg-white/[0.05] hover:text-white"}`}>{item.label}</NavLink>)}
+          <button type="button" onClick={handleLogout} className="shrink-0 rounded-lg px-2.5 py-2 text-[10px] font-black text-slate-500 transition hover:bg-white/[0.05] hover:text-white sm:px-3 sm:text-[11px]">Logout</button>
+        </nav>
+        <button type="button" onClick={() => navigate("/account#plans")} className="hidden shrink-0 items-center gap-1.5 rounded-full border border-cyan-300/20 bg-cyan-300/[0.06] px-2.5 py-1.5 text-[10px] font-black text-white transition hover:border-cyan-300/40 sm:inline-flex" title="Manage plan and credits" aria-label={`${quotaLabel} credits. Manage plan`}><span className="text-cyan-300">✦</span><span>{quotaLabel}</span></button>
+      </div>
+    </header>
+    <main>{children}</main>
+  </div>;
 }

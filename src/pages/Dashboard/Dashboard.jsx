@@ -1,94 +1,32 @@
-import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import { createQuotaState } from "../../constants/quota";
-import { fetchRuntimeProductConfig } from "../../services/runtimeProductConfig";
-import AccountHeader from "../../components/layout/AccountHeader";
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { createQuotaState } from '../../constants/quota';
+import { fetchRuntimeProductConfig } from '../../services/runtimeProductConfig';
+import { fetchLiveSignal } from '../../services/liveSignal';
+import LucideIcon from '../../components/ui/LucideIcon';
+import WorkspaceSurface, { MODES } from '../../components/workspace/WorkspaceSurface';
 
-export const Dashboard = () => {
-  const { user, userProfile, plan, promptsToday, lastPromptDate } = useAuth();
-  const [productConfig, setProductConfig] = useState(null);
-
-  useEffect(() => {
-    let active = true;
-    fetchRuntimeProductConfig(user)
-      .then((config) => { if (active) setProductConfig(config); })
-      .catch((error) => console.error("Unable to load runtime product config", error));
-    return () => { active = false; };
-  }, [user]);
-
-  const displayName = userProfile?.name || user?.displayName || "Creator";
-  const userEmail = userProfile?.email || user?.email || "N/A";
-  const photoURL = userProfile?.photoURL || user?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=4F46E5&color=fff`;
-  const credits = Math.max(Number(userProfile?.credits || 0), 0);
-  const isPro = plan === "pro";
-  const quota = createQuotaState(
-    { plan, promptsToday, lastPromptDate, imageAnalysesToday: userProfile?.imageAnalysesToday, lastImageAnalysisDate: userProfile?.lastImageAnalysisDate, imageAnalysesThisMonth: userProfile?.imageAnalysesThisMonth, lastImageAnalysisMonth: userProfile?.lastImageAnalysisMonth },
-    new Date(),
-    productConfig
-  );
-
-  const referenceCoding = productConfig?.creditCosts?.referenceCoding || { creditCost: 5, maxReferences: 8, maxImages: 4 };
-  const quotaPercent = Math.min(100, (quota.remaining / Math.max(1, quota.dailyLimit)) * 100);
-
-  return (
-    <div className="min-h-[calc(100vh-4.75rem)] overflow-x-hidden bg-gray-950 text-gray-100">
-      <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
-        <section className="relative overflow-hidden rounded-[1.75rem] border border-blue-900/60 bg-gradient-to-br from-gray-900 via-gray-900 to-blue-950/70 p-6 shadow-2xl sm:p-9">
-          <div className="pointer-events-none absolute -right-24 -top-32 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-indigo-600/10 blur-3xl" />
-          <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-700/50 bg-blue-950/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-blue-300">✨ Your PromptStudio workspace</div>
-              <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">Welcome, {displayName}! 👋</h1>
-              <p className="mt-2 text-sm text-gray-400">Your creative workspace is ready. See your limits, credits and next best action below.</p>
-            </div>
-            <Link to="/builder" className="inline-flex shrink-0 items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-500">🪄 Create New Prompt</Link>
-          </div>
-        </section>
-
-        <section className="mt-7" aria-labelledby="workspace-overview">
-          <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-400">Workspace overview</p><h2 id="workspace-overview" className="mt-1 text-xl font-extrabold text-white">Your usage at a glance</h2></div>
-            <Link to="/account#plans" className="group flex w-full items-center justify-between gap-4 rounded-2xl border border-blue-500/50 bg-gradient-to-r from-blue-950/90 via-indigo-950/80 to-blue-900/60 px-5 py-3.5 shadow-lg shadow-blue-950/30 transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-blue-900/40 sm:w-auto sm:min-w-[230px]">
-              <span><span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-blue-300">Plan & credits</span><span className="mt-0.5 block text-sm font-black text-white">{isPro ? "Pro" : "Free"} · {credits} credits</span></span>
-              <span className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-black text-white shadow-md">Manage Plan →</span>
-            </Link>
-          </div>
-
-          <AccountHeader displayName={displayName} email={userEmail} photoURL={photoURL} plan={plan} quota={quota} credits={credits} isPro={isPro} className="border-blue-900/40 shadow-blue-950/20" />
-
-          <div className="mt-5 grid min-w-0 grid-cols-1 gap-4 md:grid-cols-3">
-            <Link to="/builder" className="group min-w-0 rounded-2xl border border-gray-800 bg-gray-900 p-5 transition hover:-translate-y-0.5 hover:border-blue-600/60 hover:bg-gray-900/90">
-              <p className="text-lg">✨</p><h3 className="mt-3 font-black text-white">Build a Prompt</h3><p className="mt-1 text-xs leading-5 text-gray-400">Turn an idea into a ready-to-use prompt with your preferred AI.</p><span className="mt-4 inline-block text-xs font-bold text-blue-400 group-hover:text-blue-300">Open Builder →</span>
-            </Link>
-            <Link to="/reference-coding" className="group min-w-0 rounded-2xl border border-teal-500/30 bg-gradient-to-br from-teal-950/50 via-gray-900 to-indigo-950/50 p-5 transition hover:-translate-y-0.5 hover:border-teal-400/60">
-              <div className="flex items-center justify-between gap-2"><p className="text-lg">💻</p><span className="rounded-full border border-teal-500/30 bg-teal-950/60 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-teal-300">{referenceCoding.creditCost} credits</span></div>
-              <h3 className="mt-3 font-black text-white">Reference → Code Prompt</h3><p className="mt-1 text-xs leading-5 text-gray-400">Show AI your existing UI or files and get a coding-ready implementation prompt.</p><span className="mt-4 inline-block text-xs font-bold text-teal-300 group-hover:text-teal-200">Open Reference Coding →</span>
-            </Link>
-            <Link to="/history" className="group min-w-0 rounded-2xl border border-gray-800 bg-gray-900 p-5 transition hover:-translate-y-0.5 hover:border-indigo-600/60">
-              <p className="text-lg">🕘</p><h3 className="mt-3 font-black text-white">Prompt History</h3><p className="mt-1 text-xs leading-5 text-gray-400">Review prompts you have already created and quickly reuse your work.</p><span className="mt-4 inline-block text-xs font-bold text-indigo-400 group-hover:text-indigo-300">View History →</span>
-            </Link>
-          </div>
-        </section>
-
-        <section className="mt-6 grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-5">
-          <div className="min-w-0 rounded-2xl border border-gray-800 bg-gray-900 p-6 lg:col-span-3">
-            <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-400">Today</p><h2 className="mt-1 text-lg font-black text-white">Prompt usage</h2></div><span className="text-sm font-black text-white">{quota.remaining} left</span></div>
-            <div className="mt-5 h-3 overflow-hidden rounded-full bg-gray-800"><div className="h-full rounded-full bg-blue-500 transition-all" style={{ width: `${quotaPercent}%` }} /></div>
-            <div className="mt-3 flex justify-between text-xs text-gray-400"><span>{quota.dailyLimit - quota.remaining} used</span><span>{quota.dailyLimit} daily limit</span></div>
-            {!isPro && quota.remaining === 0 && <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-950/20 p-4"><p className="text-sm font-bold text-amber-100">Today's free prompts are used.</p><p className="mt-1 text-xs text-amber-200/70">Upgrade to Pro or use credits to keep creating.</p><Link to="/account#plans" className="mt-3 inline-flex rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white">See options →</Link></div>}
-          </div>
-
-          <div className="min-w-0 rounded-2xl border border-teal-500/25 bg-gradient-to-br from-gray-900 to-teal-950/40 p-6 lg:col-span-2">
-            <div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-300">Reference Coding</p><h2 className="mt-1 text-lg font-black text-white">Built for existing products</h2></div><span className="text-2xl">💻</span></div>
-            <div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl border border-white/10 bg-black/20 p-3"><p className="text-[10px] uppercase tracking-wider text-gray-500">Per generation</p><p className="mt-1 text-lg font-black text-white">{referenceCoding.creditCost} credits</p></div><div className="rounded-xl border border-white/10 bg-black/20 p-3"><p className="text-[10px] uppercase tracking-wider text-gray-500">References</p><p className="mt-1 text-lg font-black text-white">Up to {referenceCoding.maxReferences}</p></div></div>
-            <p className="mt-4 text-xs leading-5 text-gray-400">Use screenshots, source files or an existing application reference. Your purchased credits never expire.</p>
-            <Link to="/account#plans" className="mt-4 inline-flex text-xs font-bold text-teal-300 hover:text-teal-200">See credit packs & pricing →</Link>
-          </div>
-        </section>
-      </main>
-    </div>
-  );
-};
-export default Dashboard;
+const FALLBACK_LOCATIONS = ['Tamil Nadu', 'Kerala', 'Karnataka', 'Maharashtra', 'Delhi', 'India'];
+function CreditPill({ credits, onClick, flash }) { return <button type="button" onClick={onClick} className={`group inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] font-black text-white transition ${flash ? 'border-emerald-300/50 bg-emerald-300/10' : 'border-cyan-300/20 bg-white/[0.06] hover:border-cyan-300/40 hover:bg-white/[0.09]'}`} aria-label={`${credits} credits available`}><span className="text-cyan-300">✦</span><span>{credits}</span>{flash && <span className="text-[9px] font-bold text-emerald-300">updated</span>}</button>; }
+function LiveSignal({ user, onUseSignal }) {
+  const [location, setLocation] = useState('Tamil Nadu'); const [custom, setCustom] = useState(''); const [signal, setSignal] = useState(null); const [loading, setLoading] = useState(true); const [locating, setLocating] = useState(false); const [error, setError] = useState('');
+  const load = async (nextLocation = location, coordinates = {}) => { setLoading(true); setError(''); try { const result = await fetchLiveSignal({ user, location: nextLocation, ...coordinates }); setSignal(result); setLocation(result.location || nextLocation); } catch (cause) { setError(cause.message || 'Live Signal is temporarily unavailable. Please try again shortly.'); } finally { setLoading(false); } };
+  useEffect(() => { if (user) void load(); }, [user]);
+  const useMyLocation = () => { if (!navigator.geolocation) { setError('Location services are not supported by this browser. Choose a location manually.'); return; } setLocating(true); setError(''); navigator.geolocation.getCurrentPosition((position) => { setLocating(false); void load(location, { latitude: position.coords.latitude, longitude: position.coords.longitude }); }, () => { setLocating(false); setError('Location permission was not granted. Choose a location manually instead.'); }, { enableHighAccuracy: false, timeout: 7000, maximumAge: 300000 }); };
+  const applyCustom = (event) => { event.preventDefault(); const next = custom.trim(); if (next) { setLocation(next); void load(next); } };
+  const retry = () => void load(location);
+  const sourceLabel = signal?.source === 'google-trends' ? 'Google Trends' : signal?.source === 'google-news-fallback' ? 'Google News · fallback' : 'Google News';
+  return <section className="relative overflow-hidden rounded-2xl border border-cyan-300/15 bg-[radial-gradient(circle_at_90%_0%,rgba(34,211,238,0.13),transparent_34%),linear-gradient(145deg,rgba(14,24,39,0.98),rgba(7,11,18,0.98))] p-3.5 shadow-[0_24px_70px_-45px_rgba(34,211,238,0.6)] sm:p-4" aria-label="Live Signal intelligence"><div className="absolute right-5 top-5 h-20 w-20 rounded-full border border-cyan-300/10 opacity-60" /><div className="absolute right-10 top-10 h-10 w-10 rounded-full border border-indigo-300/10" /><div className="relative flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex items-center gap-2"><span className="relative grid h-7 w-7 place-items-center rounded-lg border border-cyan-300/20 bg-cyan-300/10 text-cyan-300"><span className="absolute h-2 w-2 animate-ping rounded-full bg-cyan-300/70" /><span className="relative h-1.5 w-1.5 rounded-full bg-cyan-300" /></span><div><p className="text-[9px] font-black uppercase tracking-[0.18em] text-cyan-300">Live Signal</p><p className="text-[11px] font-bold text-white">What is moving in your market right now</p></div></div><p className="mt-2 max-w-xl text-[10px] leading-4 text-slate-500">Location-aware intelligence. Supported regions use live Google Trends data; custom locations use live Google News topics.</p></div><div className="flex flex-wrap items-center gap-1.5"><select value={FALLBACK_LOCATIONS.includes(location) ? location : ''} onChange={(event) => { const next = event.target.value; setLocation(next); void load(next); }} className="rounded-lg border border-white/10 bg-black/20 px-2.5 py-2 text-[10px] font-bold text-slate-300 outline-none"><option value="">Custom location…</option>{FALLBACK_LOCATIONS.map((item) => <option key={item} value={item}>{item}</option>)}</select><button type="button" onClick={useMyLocation} disabled={locating} className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-2 text-[10px] font-bold text-slate-300 transition hover:border-cyan-300/20 hover:text-white">{locating ? 'Locating…' : '⌖ My location'}</button></div></div><form onSubmit={applyCustom} className="relative mt-3 flex gap-1.5"><input value={custom} onChange={(event) => setCustom(event.target.value)} placeholder="Try Chennai, Coimbatore, Bengaluru…" className="min-w-0 flex-1 rounded-lg border border-white/8 bg-black/20 px-3 py-2 text-[11px] text-white outline-none placeholder:text-slate-700 focus:border-cyan-300/30"/><button type="submit" className="rounded-lg bg-cyan-300 px-3 py-2 text-[10px] font-black text-slate-950 transition hover:bg-cyan-200">Signal</button></form>{error ? <div className="relative mt-3 flex flex-col gap-2 rounded-xl border border-amber-300/15 bg-amber-300/5 p-3 text-[10px] leading-4 text-amber-100 sm:flex-row sm:items-center sm:justify-between"><span role="alert">{error}</span><button type="button" onClick={retry} disabled={loading} className="shrink-0 rounded-lg border border-amber-200/20 bg-black/10 px-2.5 py-1.5 text-[9px] font-black text-amber-100 hover:bg-amber-200/10 disabled:opacity-40">{loading ? 'Retrying…' : 'Try again'}</button></div> : <div className="relative mt-3 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">{loading ? Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-[68px] animate-pulse rounded-xl border border-white/6 bg-white/[0.03]" />) : signal?.topics?.slice(0, 4).map((topic) => <button key={`${topic.rank}-${topic.title}`} type="button" onClick={() => onUseSignal(`${topic.title}. Create content or a product concept that responds intelligently to this current topic.`)} className="group rounded-xl border border-white/7 bg-black/15 p-2.5 text-left transition duration-200 hover:-translate-y-0.5 hover:border-cyan-300/20 hover:bg-cyan-300/[0.04]"><div className="flex items-center justify-between gap-2"><span className="text-[9px] font-black text-cyan-300">0{topic.rank}</span><span className="truncate text-[8px] font-bold uppercase tracking-wider text-slate-600">{topic.traffic}</span></div><p className="mt-1 line-clamp-2 text-[11px] font-black leading-4 text-white group-hover:text-cyan-50">{topic.title}</p><p className="mt-1 line-clamp-1 text-[9px] text-slate-600">Use as creative signal →</p></button>)}</div>}{signal && !loading && !error && <div className="relative mt-2 flex items-center justify-between gap-2 text-[9px] text-slate-600"><span>● {sourceLabel} · {signal.location}</span><span>{new Date(signal.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>}</section>;
+}
+export default function Dashboard() {
+  const navigate = useNavigate(); const { user, userProfile, plan, promptsToday, lastPromptDate } = useAuth(); const [productConfig, setProductConfig] = useState(null); const [idea, setIdea] = useState(''); const [workspace, setWorkspace] = useState('prompt'); const [creditFlash, setCreditFlash] = useState(false); const surfaceRef = useRef(null); const goButtonRef = useRef(null); const previousCreditsRef = useRef(null);
+  useEffect(() => { let active = true; fetchRuntimeProductConfig(user).then((config) => { if (active) setProductConfig(config); }).catch((error) => console.error('Unable to load current product configuration', error)); return () => { active = false; }; }, [user]);
+  const displayName = userProfile?.name || user?.displayName || 'Creator'; const credits = Math.max(Number(userProfile?.credits || 0), 0); const quota = createQuotaState({ plan, promptsToday, lastPromptDate, imageAnalysesToday: userProfile?.imageAnalysesToday, lastImageAnalysisDate: userProfile?.lastImageAnalysisDate, imageAnalysesThisMonth: userProfile?.imageAnalysesThisMonth, lastImageAnalysisMonth: userProfile?.lastImageAnalysisMonth }, new Date(), productConfig); const activeMode = useMemo(() => MODES.find((item) => item.id === workspace) || MODES[0], [workspace]);
+  useEffect(() => { if (previousCreditsRef.current === null) { previousCreditsRef.current = credits; return; } if (credits !== previousCreditsRef.current) { previousCreditsRef.current = credits; setCreditFlash(true); const timer = window.setTimeout(() => setCreditFlash(false), 1800); return () => window.clearTimeout(timer); } }, [credits]);
+  const reveal = () => requestAnimationFrame(() => surfaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  const go = () => { if (!idea.trim()) return; reveal(); };
+  const injectSignal = (text) => { setIdea(text); reveal(); };
+  const handleBriefKey = (event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); go(); } if (event.key === 'Tab' && !idea.trim()) { event.preventDefault(); goButtonRef.current?.focus({ preventScroll: true }); } };
+  return <main className="min-h-[calc(100vh-4.25rem)] overflow-x-hidden bg-[#070b12] text-slate-100"><div className="pointer-events-none fixed inset-0 -z-0 bg-[radial-gradient(circle_at_15%_0%,rgba(34,211,238,0.07),transparent_28%),radial-gradient(circle_at_88%_8%,rgba(99,102,241,0.10),transparent_30%)]"/><div className="relative z-10 mx-auto w-full max-w-7xl px-3 pb-10 pt-4 sm:px-5 lg:px-7"><section className="rounded-[1.35rem] border border-white/8 bg-white/[0.025] p-4 shadow-[0_24px_80px_-55px_rgba(34,211,238,0.45)] sm:p-5"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div className="min-w-0"><div className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-xl bg-cyan-300/10 text-cyan-300"><LucideIcon name="sparkles" size={16}/></span><p className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-300">PromptStudio intelligence</p></div><h1 className="mt-2 text-2xl font-black tracking-[-0.04em] text-white sm:text-3xl">Good to see you, {displayName.split(' ')[0]}. <span className="text-slate-600">What are we making?</span></h1><p className="mt-1.5 max-w-2xl text-[11px] leading-5 text-slate-500">One brief. Five creation engines. Choose an engine, then explicitly Generate.</p></div><div className="flex items-center gap-2"><span className="hidden rounded-full border border-emerald-300/15 bg-emerald-300/5 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-wider text-emerald-300 sm:inline-flex">● Systems online</span><CreditPill credits={credits} onClick={() => navigate('/account#plans')} flash={creditFlash} /></div></div><div className="mt-4 flex items-center gap-1.5 overflow-x-auto pb-0.5" aria-label="Creation engines">{MODES.map((item) => <button key={item.id} type="button" aria-pressed={workspace === item.id} onClick={() => { setWorkspace(item.id); reveal(); }} className={`group flex shrink-0 items-center gap-2 rounded-xl border px-2.5 py-2 transition duration-200 ${workspace === item.id ? 'border-cyan-300/30 bg-cyan-300/10 text-white' : 'border-white/7 bg-black/10 text-slate-500 hover:border-white/15 hover:text-white'}`}><span className={`grid h-6 w-6 place-items-center rounded-lg ${workspace === item.id ? 'bg-cyan-300 text-slate-950' : 'bg-white/[0.04]'}`}><LucideIcon name={item.icon} size={13}/></span><span className="text-[10px] font-black">{item.label}</span></button>)}</div><div className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto]"><div className="rounded-xl border border-white/8 bg-[#070b12] p-3"><div className="mb-1.5 flex items-center justify-between gap-2"><label htmlFor="master-idea" className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">One shared brief</label><span className="text-[9px] text-slate-700">{idea.length}/6000</span></div><textarea id="master-idea" value={idea} onChange={(event) => setIdea(event.target.value)} onKeyDown={handleBriefKey} rows={3} maxLength={6000} placeholder="Describe what you want to create…  Press Enter to reveal the workspace · Shift+Enter for a new line" className="w-full resize-none bg-transparent text-sm leading-6 text-white outline-none placeholder:text-slate-700"/><div className="mt-1.5 flex items-center justify-between gap-2"><span className="text-[9px] text-slate-700">Go only opens the selected engine. It never spends credits or starts AI.</span>{idea && <button type="button" onClick={() => setIdea('')} className="text-[9px] font-bold text-slate-500 hover:text-white">Clear</button>}</div></div><button ref={goButtonRef} type="button" onClick={go} aria-disabled={!idea.trim()} className={`group min-h-[88px] rounded-xl border border-cyan-300/20 bg-cyan-300 px-5 py-3 text-left text-slate-950 shadow-[0_18px_35px_-22px_rgba(34,211,238,0.9)] transition hover:-translate-y-0.5 hover:bg-cyan-200 ${!idea.trim() ? 'cursor-not-allowed opacity-40' : ''}`}><span className="block text-[9px] font-black uppercase tracking-[0.16em] opacity-60">{activeMode.label}</span><span className="mt-1 block text-lg font-black">Go <span className="inline-block transition group-hover:translate-x-1">→</span></span><span className="mt-0.5 block text-[9px] font-bold opacity-60">Reveal workspace only</span></button></div></section><div className="mt-3"><LiveSignal user={user} onUseSignal={injectSignal}/></div><div ref={surfaceRef} className="scroll-mt-24"><WorkspaceSurface workspace={workspace} idea={idea} setIdea={setIdea}/></div><div className="mt-3 flex items-center justify-between px-1 text-[9px] text-slate-700"><span>{quota.remaining === null ? 'Unlimited generation' : `${quota.remaining} prompts remaining today`}</span><span>Active: {activeMode.label}</span></div></div></main>;
+}

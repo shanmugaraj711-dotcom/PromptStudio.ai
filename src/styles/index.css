@@ -2,226 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
-html {
-  scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }
+body { @apply bg-white text-gray-900 antialiased; }
+textarea:focus, select:focus, input:focus { outline: none; }
 
-body {
-  @apply bg-white text-gray-900 antialiased;
-}
-
-textarea:focus,
-select:focus,
-input:focus {
-  outline: none;
-}
-
-/* Builder UX: preserve the existing generation logic while making the journey feel linear. */
 @media (min-width: 1024px) {
-  #prompt-builder form {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 1rem;
-    align-items: start;
-  }
-
-  #prompt-builder form > div {
-    grid-column: 1 / -1;
-    margin-top: 0;
-  }
-
-  #prompt-builder form > .builder-ai-panel,
-  #prompt-builder form > div:has(#category) {
-    grid-column: 1 / -1;
-  }
-
-  #prompt-builder form > div:has(#idea) {
-    grid-column: 1;
-  }
-
-  #prompt-builder form > div:has(input[type="file"]) {
-    grid-column: 2;
-  }
+  #prompt-builder form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+  #prompt-builder form > div { grid-column: 1 / -1; margin-top: 0; }
+  #prompt-builder form > .builder-ai-panel, #prompt-builder form > div:has(#category) { grid-column: 1 / -1; }
+  #prompt-builder form > div:has(#idea) { grid-column: 1; }
+  #prompt-builder form > div:has(input[type="file"]) { grid-column: 2; }
 }
 
-/* Keep the result heading visible when a user switches between generated approaches. */
-#prompt-builder .builder-result-anchor {
-  scroll-margin-top: 6.5rem;
+#prompt-builder .builder-result-anchor { scroll-margin-top: 6.5rem; }
+
+/* Unified workspace motion: subtle, fast, and disabled for reduced-motion users. */
+.workspace-panel-enter { animation: workspace-panel-enter 260ms cubic-bezier(.2,.8,.2,1) both; transform-origin: top center; }
+@keyframes workspace-panel-enter { from { opacity: 0; transform: translateY(8px) scale(.995); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .workspace-panel-enter { animation: none; }
+  *, *::before, *::after { scroll-behavior: auto !important; }
 }
 
 /* Reference Coding: soft-light workspace — readable without the glare of pure white. */
-div[class*="bg-[#070A11]"] {
-  background: #eef2f6 !important;
-  color: #1e293b !important;
-}
-
-div[class*="bg-[#070A11]"] main [class*="bg-[#0E1322]"] {
-  background: #f7f9fc !important;
-  border-color: #d8e0e8 !important;
-  box-shadow: 0 18px 48px -34px rgba(15, 23, 42, 0.22) !important;
-}
-
-div[class*="bg-[#070A11]"] main [class*="bg-[#0B0F19]"] {
-  background: #f5f7fa !important;
-  border-color: #d8e0e8 !important;
-  box-shadow: 0 14px 40px -34px rgba(15, 23, 42, 0.2) !important;
-}
-
-div[class*="bg-[#070A11]"] main [class*="bg-zinc-950/70"] {
-  background: #f8fafc !important;
-  color: #1e293b !important;
-  border-color: #cbd5e1 !important;
-}
-
-div[class*="bg-[#070A11]"] main [class*="bg-white/5"] {
-  background: #eef2f6 !important;
-  border-color: #d8e0e8 !important;
-}
-
-div[class*="bg-[#070A11]"] main [class*="bg-white/[0.02]"] {
-  background: #f7f9fc !important;
-  border-color: #cbd5e1 !important;
-}
-
-div[class*="bg-[#070A11]"] main [class*="bg-white/[0.03]"] {
-  background: #eef2f6 !important;
-  border-color: #d8e0e8 !important;
-}
-
-div[class*="bg-[#070A11]"] main [class*="border-white/10"],
-div[class*="bg-[#070A11]"] main [class*="border-white/5"] {
-  border-color: #d8e0e8 !important;
-}
-
-div[class*="bg-[#070A11]"] main [class*="bg-teal-950/60"] {
-  background: #e5f7f5 !important;
-  border-color: #a7ddd7 !important;
-  color: #176b66 !important;
-}
-
-div[class*="bg-[#070A11]"] main [class*="bg-zinc-900/90"] {
-  background: #f7fbfb !important;
-  border-color: #a7ddd7 !important;
-  color: #176b66 !important;
-}
-
-div[class*="bg-[#070A11]"] main [class~="text-zinc-100"] {
-  color: #1e293b !important;
-}
-
-div[class*="bg-[#070A11]"] main [class~="text-zinc-200"] {
-  color: #334155 !important;
-}
-
-div[class*="bg-[#070A11]"] main [class~="text-zinc-300"] {
-  color: #475569 !important;
-}
-
-div[class*="bg-[#070A11]"] main [class~="text-zinc-400"] {
-  color: #64748b !important;
-}
-
-div[class*="bg-[#070A11]"] main [class~="text-zinc-500"] {
-  color: #64748b !important;
-}
-
-div[class*="bg-[#070A11]"] main [class~="text-white"]:not(button *) {
-  color: #1e293b !important;
-}
-
-div[class*="bg-[#070A11]"] main textarea,
-div[class*="bg-[#070A11]"] main select {
-  background: #f8fafc !important;
-  color: #1e293b !important;
-  border-color: #cbd5e1 !important;
-}
-
-div[class*="bg-[#070A11]"] main select option {
-  background: #f8fafc;
-  color: #1e293b;
-}
-
-div[class*="bg-[#070A11]"] main [class*="bg-red-950/30"] {
-  background: #fff1f2 !important;
-  border-color: #fecdd3 !important;
-  color: #be123c !important;
-}
-
-div[class*="bg-[#070A11]"] main [class*="bg-emerald-950/30"] {
-  background: #ecfdf5 !important;
-  border-color: #a7f3d0 !important;
-  color: #047857 !important;
-}
-
-/* Keep generated-result surfaces calm on Reference Coding as well. */
-div[class*="bg-[#070A11]"] main .builder-result-anchor,
-div[class*="bg-[#070A11]"] main .builder-result-anchor > div,
-div[class*="bg-[#070A11]"] main .builder-result-anchor textarea {
-  background: #f7f9fc !important;
-}
-
-div[class*="bg-[#070A11]"] main .builder-result-anchor {
-  border-color: #d8e0e8 !important;
-}
-
-div[class*="bg-[#070A11]"] main .builder-result-anchor textarea {
-  border-color: #cbd5e1 !important;
-}
-
-div[class*="bg-[#070A11]"] main [class*="bg-teal-950/30"] {
-  background: #e6f2f1 !important;
-  border-color: #b8d8d5 !important;
-}
-
-/* Reference Coding AI selector: one calm palette, with selection carrying the emphasis. */
-div[class*="bg-[#070A11]"] main button[class~="bg-zinc-700"],
-div[class*="bg-[#070A11]"] main button[class~="bg-indigo-600"],
-div[class*="bg-[#070A11]"] main button[class~="bg-orange-600"],
-div[class*="bg-[#070A11]"] main button[class~="bg-emerald-600"],
-div[class*="bg-[#070A11]"] main button[class~="bg-blue-600"],
-div[class*="bg-[#070A11]"] main button[class~="bg-slate-700"],
-div[class*="bg-[#070A11]"] main button[class~="bg-pink-600"],
-div[class*="bg-[#070A11]"] main button[class~="bg-orange-700"],
-div[class*="bg-[#070A11]"] main button[class~="bg-zinc-800"],
-div[class*="bg-[#070A11]"] main button[class~="bg-cyan-600"],
-div[class*="bg-[#070A11]"] main button[class~="bg-amber-600"],
-div[class*="bg-[#070A11]"] main button[class~="bg-teal-700"] {
-  background: #e9eef3 !important;
-  color: #334155 !important;
-  border: 1px solid #d1d9e2 !important;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
-}
-
-div[class*="bg-[#070A11]"] main button[class~="bg-zinc-700"]:hover,
-div[class*="bg-[#070A11]"] main button[class~="bg-indigo-600"]:hover,
-div[class*="bg-[#070A11]"] main button[class~="bg-orange-600"]:hover,
-div[class*="bg-[#070A11]"] main button[class~="bg-emerald-600"]:hover,
-div[class*="bg-[#070A11]"] main button[class~="bg-blue-600"]:hover,
-div[class*="bg-[#070A11]"] main button[class~="bg-slate-700"]:hover,
-div[class*="bg-[#070A11]"] main button[class~="bg-pink-600"]:hover,
-div[class*="bg-[#070A11]"] main button[class~="bg-orange-700"]:hover,
-div[class*="bg-[#070A11]"] main button[class~="bg-zinc-800"]:hover,
-div[class*="bg-[#070A11]"] main button[class~="bg-cyan-600"]:hover,
-div[class*="bg-[#070A11]"] main button[class~="bg-amber-600"]:hover,
-div[class*="bg-[#070A11]"] main button[class~="bg-teal-700"]:hover {
-  background: #dfe7ee !important;
-  color: #1e293b !important;
-}
-
-div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-zinc-700"],
-div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-indigo-600"],
-div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-orange-600"],
-div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-emerald-600"],
-div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-blue-600"],
-div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-slate-700"],
-div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-pink-600"],
-div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-orange-700"],
-div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-zinc-800"],
-div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-cyan-600"],
-div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-amber-600"],
-div[class*="bg-[#070A11]"] main button.ring-2.ring-teal-300[class~="bg-teal-700"] {
-  background: #f5f8fa !important;
-  border-color: #8aa6b8 !important;
-  box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.2), 0 2px 5px rgba(15, 23, 42, 0.07) !important;
-  color: #0f172a !important;
-}
+div[class*="bg-[#070A11]"] { background: #eef2f6 !important; color: #1e293b !important; }
+div[class*="bg-[#070A11]"] main [class*="bg-[#0E1322]"] { background: #f7f9fc !important; border-color: #d8e0e8 !important; box-shadow: 0 18px 48px -34px rgba(15, 23, 42, 0.22) !important; }
+div[class*="bg-[#070A11]"] main [class*="bg-[#0B0F19]"] { background: #f5f7fa !important; border-color: #d8e0e8 !important; box-shadow: 0 14px 40px -34px rgba(15, 23, 42, 0.2) !important; }
+div[class*="bg-[#070A11]"] main [class*="bg-zinc-950/70"] { background: #f8fafc !important; color: #1e293b !important; border-color: #cbd5e1 !important; }
+div[class*="bg-[#070A11]"] main [class*="bg-white/5"] { background: #eef2f6 !important; border-color: #d8e0e8 !important; }
+div[class*="bg-[#070A11]"] main [class*="bg-white/[0.02]"] { background: #f7f9fc !important; border-color: #cbd5e1 !important; }
+div[class*="bg-[#070A11]"] main [class*="bg-white/[0.03]"] { background: #eef2f6 !important; border-color: #d8e0e8 !important; }
+div[class*="bg-[#070A11]"] main [class*="border-white/10"], div[class*="bg-[#070A11]"] main [class*="border-white/5"] { border-color: #d8e0e8 !important; }
+div[class*="bg-[#070A11]"] main textarea, div[class*="bg-[#070A11]"] main select { background: #f8fafc !important; color: #1e293b !important; border-color: #cbd5e1 !important; }
+div[class*="bg-[#070A11]"] main select option { background: #f8fafc; color: #1e293b; }
+div[class*="bg-[#070A11]"] main [class*="bg-red-950/30"] { background: #fff1f2 !important; border-color: #fecdd3 !important; color: #be123c !important; }
+div[class*="bg-[#070A11]"] main [class*="bg-emerald-950/30"] { background: #ecfdf5 !important; border-color: #a7f3d0 !important; color: #047857 !important; }
+div[class*="bg-[#070A11]"] main .builder-result-anchor, div[class*="bg-[#070A11]"] main .builder-result-anchor > div, div[class*="bg-[#070A11]"] main .builder-result-anchor textarea { background: #f7f9fc !important; }
+div[class*="bg-[#070A11]"] main .builder-result-anchor { border-color: #d8e0e8 !important; }
+div[class*="bg-[#070A11]"] main .builder-result-anchor textarea { border-color: #cbd5e1 !important; }
+div[class*="bg-[#070A11]"] main [class*="bg-teal-950/30"] { background: #e6f2f1 !important; border-color: #b8d8d5 !important; }
+div[class*="bg-[#070A11]"] main button[class~="bg-zinc-700"], div[class*="bg-[#070A11]"] main button[class~="bg-indigo-600"], div[class*="bg-[#070A11]"] main button[class~="bg-orange-600"], div[class*="bg-[#070A11]"] main button[class~="bg-emerald-600"], div[class*="bg-[#070A11]"] main button[class~="bg-blue-600"], div[class*="bg-[#070A11]"] main button[class~="bg-slate-700"], div[class*="bg-[#070A11]"] main button[class~="bg-pink-600"], div[class*="bg-[#070A11]"] main button[class~="bg-orange-700"], div[class*="bg-[#070A11]"] main button[class~="bg-zinc-800"], div[class*="bg-[#070A11]"] main button[class~="bg-cyan-600"], div[class*="bg-[#070A11]"] main button[class~="bg-amber-600"], div[class*="bg-[#070A11]"] main button[class~="bg-teal-700"] { background: #e9eef3 !important; color: #334155 !important; border: 1px solid #d1d9e2 !important; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important; }
+div[class*="bg-[#070A11]"] main button[class~="bg-zinc-700"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-indigo-600"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-orange-600"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-emerald-600"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-blue-600"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-slate-700"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-pink-600"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-orange-700"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-zinc-800"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-cyan-600"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-amber-600"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-teal-700"]:hover { background: #dfe7ee !important; color: #1e293b !important; }

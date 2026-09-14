@@ -1,0 +1,40 @@
+name: Studio delivery checks
+on:
+  push:
+    branches: [studio/consolidated]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/studio/consolidated'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: node --test server/studio/acceptedRevision.node-check.mjs server/studio/delivery.node-check.mjs server/studio/paymentVerification.node-check.mjs server/studio/aiProvider.node-check.mjs
+      - run: npm ci
+      - run: npm run build
+      - name: Compile a frozen customer revision with the real build package
+        run: |
+          node --input-type=module <<'NODE'
+          import {deliveryFiles} from "./server/studio/deliveryBundle.js";
+          import {mkdtemp,writeFile,readFile} from "node:fs/promises";
+          import {tmpdir} from "node:os";
+          import {join} from "node:path";
+          import {execFileSync} from "node:child_process";
+          const revisionId="a".repeat(64);
+          const directory=await mkdtemp(join(tmpdir(),"studio-delivery-"));
+          const files=deliveryFiles({revisionId,files:{"/App.js":'export default function App(){return <h1>Accepted customer edit</h1>}',"/styles.css":"h1{color:blue}"}});
+          for(const file of files) await writeFile(join(directory,file.file),file.data);
+          execFileSync("npm",["install","--ignore-scripts","--no-audit","--no-fund"],{cwd:directory,stdio:"inherit"});
+          execFileSync("npm",["run","build"],{cwd:directory,stdio:"inherit"});
+          const html=await readFile(join(directory,"dist/index.html"),"utf8");
+          const js=await readFile(join(directory,"dist/app.js"),"utf8");
+          if(!html.includes(revisionId)||!js.includes("Accepted customer edit"))throw new Error("Frozen source did not survive the production build");
+          console.log("Verified frozen customer revision compiles into production HTML, JS and CSS.");
+          NODE

@@ -1,0 +1,197 @@
+name: APK Forge Build
+
+run-name: APK Forge · ${{ github.event.head_commit.message || 'manual-build' }}
+
+on:
+  push:
+    branches:
+      - master/unified-dashboard
+    paths:
+      - 'apk-forge/requests/**'
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+  FORGE_GOOGLE_WEB_CLIENT_ID: ${{ secrets.FORGE_GOOGLE_WEB_CLIENT_ID }}
+  # Firebase Android App IDs are identifiers, not credentials. Keep the existing
+  # secret as an override, but fall back to the registered PromptStudio Forge app
+  # so builds do not fail merely because the duplicate secret was never created.
+  FORGE_FIREBASE_ANDROID_APP_ID: ${{ secrets.FORGE_FIREBASE_ANDROID_APP_ID || '1:768747699651:android:1a02adda6c99f13ff65176' }}
+
+jobs:
+  build-apk:
+    name: Build and verify real APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: apk-forge/android
+    steps:
+      - name: Checkout active Forge source
+        uses: actions/checkout@v4
+
+      - name: Load Forge request marker
+        working-directory: .
+        run: |
+          set -euo pipefail
+          marker_path="$(git log -1 --pretty=%B | sed -n 's/^forge: queue //p' | head -n 1)"
+          case "$marker_path" in
+            apk-forge/requests/*.json) ;;
+            *) echo "Invalid Forge queue marker path: $marker_path" >&2; exit 1 ;;
+          esac
+          test -f "$marker_path"
+          python - "$marker_path" <<'PY'
+          import json
+          import os
+          import sys
+          path = sys.argv[1]
+          with open(path, "r", encoding="utf-8") as handle:
+              data = json.load(handle)
+          required = {
+              "forgeRequestId": "FORGE_REQUEST_ID",
+              "buildId": "FORGE_BUILD_ID",
+              "appName": "FORGE_APP_NAME",
+              "forgeWebOrigin": "FORGE_WEB_ORIGIN",
+              "packageId": "FORGE_PACKAGE_ID",
+              "versionName": "FORGE_VERSION_NAME",
+              "versionCode": "FORGE_VERSION_CODE",
+          }
+          env_path = os.environ["GITHUB_ENV"]
+          with open(env_path, "a", encoding="utf-8") as env:
+              for source, target in required.items():
+                  value = str(data.get(source, "")).strip()
+                  if not value or "\n" in value or "\r" in value:
+                      raise SystemExit(f"Invalid Forge marker field: {source}")
+                  env.write(f"{target}={value}\n")
+          PY
+
+      - name: Validate Forge build inputs
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, re
+          from urllib.parse import urlparse
+          origin = os.environ['FORGE_WEB_ORIGIN'].strip().rstrip('/')
+          parsed = urlparse(origin)
+          if parsed.scheme != 'https' or not parsed.netloc or parsed.path not in ('', '/') or parsed.query or parsed.fragment:
+              raise SystemExit('FORGE_WEB_ORIGIN must be a valid HTTPS origin without path/query/fragment')
+          package_id = os.environ['FORGE_PACKAGE_ID'].strip()
+          if not re.fullmatch(r'[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+', package_id):
+              raise SystemExit('PACKAGE_ID must be a valid Android application ID')
+          if not re.fullmatch(r'[1-9][0-9]*', os.environ['FORGE_VERSION_CODE'].strip()):
+              raise SystemExit('VERSION_CODE must be a positive integer')
+          if not os.environ['FORGE_APP_NAME'].strip() or not os.environ['FORGE_VERSION_NAME'].strip():
+              raise SystemExit('APP_NAME and VERSION_NAME are required')
+          if not os.environ['FORGE_REQUEST_ID'].strip() or not os.environ['FORGE_BUILD_ID'].strip():
+              raise SystemExit('FORGE_REQUEST_ID and FORGE_BUILD_ID are required')
+          if not os.environ['FORGE_GOOGLE_WEB_CLIENT_ID'].strip():
+              raise SystemExit('FORGE_GOOGLE_WEB_CLIENT_ID secret is required')
+          if not re.fullmatch(r'[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com', os.environ['FORGE_GOOGLE_WEB_CLIENT_ID'].strip()):
+              raise SystemExit('FORGE_GOOGLE_WEB_CLIENT_ID is not a valid Google OAuth web client ID')
+          if not re.fullmatch(r'1:[0-9]+:android:[a-z0-9]+', os.environ['FORGE_FIREBASE_ANDROID_APP_ID'].strip()):
+              raise SystemExit('FORGE_FIREBASE_ANDROID_APP_ID is not a valid Firebase Android App ID')
+          print(f'Forge request: {os.environ["FORGE_REQUEST_ID"]}')
+          print(f'Forge build: {os.environ["FORGE_BUILD_ID"]}')
+          print(f'Forge origin: {origin}')
+          print(f'Package: {package_id}')
+          PY
+
+      - name: Verify source website is reachable
+        run: |
+          set -euo pipefail
+          if [ -n "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+            curl_args=(-H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET")
+          else
+            curl_args=()
+          fi
+          curl --fail --silent --show-error --location --max-time 20 --retry 2 --retry-delay 2 "${curl_args[@]}" --output /dev/null "$FORGE_WEB_ORIGIN"
+          echo "Forge source origin is reachable: $FORGE_WEB_ORIGIN"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: sdkmanager 'platform-tools' 'platforms;android-35' 'build-tools;35.0.0'
+
+      - name: Install Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build APK
+        run: >-
+          gradle --no-daemon --stacktrace
+          -PFORGE_WEB_ORIGIN="$FORGE_WEB_ORIGIN"
+          -PAPP_NAME="$FORGE_APP_NAME"
+          -PPACKAGE_ID="$FORGE_PACKAGE_ID"
+          -PVERSION_NAME="$FORGE_VERSION_NAME"
+          -PVERSION_CODE="$FORGE_VERSION_CODE"
+          -PGOOGLE_WEB_CLIENT_ID="$FORGE_GOOGLE_WEB_CLIENT_ID"
+          -PFIREBASE_ANDROID_APP_ID="$FORGE_FIREBASE_ANDROID_APP_ID"
+          assembleDebug
+
+      - name: Sign APK with registered Forge certificate
+        env:
+          FORGE_SIGNING_BUNDLE: ${{ secrets.FORGE_SIGNING_BUNDLE }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import base64, json, os
+          from pathlib import Path
+          bundle = json.loads(os.environ["FORGE_SIGNING_BUNDLE"])
+          required = {"keystore", "password"}
+          if not required.issubset(bundle):
+              raise SystemExit('FORGE_SIGNING_BUNDLE is missing required signing fields')
+          folder = Path(os.environ["RUNNER_TEMP"]) / "forge-signing"
+          folder.mkdir(mode=0o700, exist_ok=True)
+          (folder / "forge.p12").write_bytes(base64.b64decode(bundle["keystore"], validate=True))
+          (folder / "password").write_text(bundle["password"] + "\n", encoding="utf-8")
+          (folder / "key-password").write_text(bundle["password"] + "\n", encoding="utf-8")
+          for path in folder.iterdir(): path.chmod(0o600)
+          PY
+          signing_dir="$RUNNER_TEMP/forge-signing"
+          trap 'rm -rf "$signing_dir"' EXIT
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign \
+            --ks "$signing_dir/forge.p12" --ks-type PKCS12 \
+            --ks-key-alias forge-test \
+            --ks-pass "file:$signing_dir/password" \
+            --key-pass "file:$signing_dir/key-password" \
+            app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Verify final APK before artifact upload
+        run: |
+          set -euo pipefail
+          apk="app/build/outputs/apk/debug/app-debug.apk"
+          proof="app/build/outputs/apk/debug/verification.txt"
+          test -s "$apk"
+          {
+            echo "Commit: $GITHUB_SHA"
+            echo "Forge request: $FORGE_REQUEST_ID"
+            echo "Forge build: $FORGE_BUILD_ID"
+            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$apk"
+            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk"
+            sha256sum "$apk"
+          } | tee "$proof"
+          grep -Fq "package: name='$FORGE_PACKAGE_ID'" "$proof"
+          grep -Fq 'Signer #1 certificate' "$proof"
+          grep -Fq "versionCode='$FORGE_VERSION_CODE'" "$proof"
+          grep -Fq "versionName='$FORGE_VERSION_NAME'" "$proof"
+          ls -lh "$apk"
+
+      - name: Upload verified APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: promptstudio-forge-${{ env.FORGE_BUILD_ID }}
+          path: |
+            apk-forge/android/app/build/outputs/apk/debug/app-debug.apk
+            apk-forge/android/app/build/outputs/apk/debug/verification.txt
+          if-no-files-found: error
+          retention-days: 14

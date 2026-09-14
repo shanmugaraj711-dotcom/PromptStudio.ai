@@ -1,0 +1,73 @@
+import { adminDb, json } from "./_firebaseAdmin.js";
+import { requireFounderAdmin } from "./_adminSecurity.js";
+import { readDailyStats } from "./_publicTelemetry.js";
+
+const utcStartOfToday = () => {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+};
+
+const checkGemini = async () => {
+  const key = String(process.env.GEMINI_API_KEY || "").trim();
+  if (!key) return false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`, { signal: controller.signal });
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+const checkPublicEndpoint = (stats) => {
+  const hasProvider = Boolean(String(process.env.GEMINI_API_KEY || "").trim() || String(process.env.GROQ_API_KEY || "").trim());
+  if (!hasProvider) return false;
+
+  const nonHealthErrorCodes = new Set([
+    "free_daily_limit",
+    "invalid_prompt",
+    "invalid_request",
+    "unsupported_media_type",
+    "payload_too_large",
+    "method_not_allowed"
+  ]);
+  if (nonHealthErrorCodes.has(String(stats.lastErrorCode || ""))) return true;
+
+  const errorAt = stats.lastErrorAt ? Date.parse(stats.lastErrorAt) : 0;
+  const successAt = stats.lastSuccessAt ? Date.parse(stats.lastSuccessAt) : 0;
+  if (errorAt && errorAt > successAt && Date.now() - errorAt < 15 * 60 * 1000) return false;
+  return true;
+};
+
+export default async function handler(req, res) {
+  res.setHeader("Cache-Control", "no-store");
+  if (req.method !== "GET") return json(res, 405, { message: "Method not allowed." });
+
+  try {
+    await requireFounderAdmin(req);
+    const db = adminDb();
+    const day = new Date().toISOString().slice(0, 10);
+    const since = utcStartOfToday();
+    const stats = await readDailyStats(day);
+    const [signupSnap, gemini] = await Promise.all([
+      db.collection("users").where("createdAt", ">=", since).count().get(),
+      checkGemini()
+    ]);
+
+    return json(res, 200, {
+      ok: true,
+      checkedAt: new Date().toISOString(),
+      visitorsToday: stats.visitors,
+      optimizationsToday: stats.optimizations,
+      signupsToday: signupSnap.data().count,
+      hitLimitToday: stats.hitLimitCount,
+      publicOptimizer: checkPublicEndpoint(stats),
+      gemini
+    });
+  } catch (error) {
+    return json(res, Number(error?.status) || 500, { message: error?.message || "Unable to load admin metrics." });
+  }
+}
