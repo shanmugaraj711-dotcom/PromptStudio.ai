@@ -3,6 +3,8 @@ import { createGroqProvider } from "./groqProvider.js";
 import { STUDIO_AI_CAPABILITIES, getConfiguredDefaultModel, getProviderModelConfig } from "./aiModelConfig.js";
 import { logAIUsage } from "./aiUsage.js";
 
+const STUDIO_PROVIDER_ATTEMPT_TIMEOUT_MS = 8000;
+
 const getGeminiClient = () => {
   if (!process.env.GEMINI_API_KEY) {
     const error = new Error("Studio AI is not configured yet.");
@@ -35,12 +37,7 @@ const assertAvailable = (provider, capability, model, availableModels) => {
     ? !match?.supportedActions?.length || match.supportedActions.includes("generateContent")
     : true;
   if (!match || !capabilitySupported) {
-    console.error("Studio AI configured model unavailable", {
-      provider,
-      capability,
-      configuredModel: model,
-      availableModelCount: availableModels.length,
-    });
+    console.error("Studio AI configured model unavailable", { provider, capability, configuredModel: model, availableModelCount: availableModels.length });
     const error = new Error(`Configured ${provider} model "${model}" is unavailable for capability "${capability}".`);
     error.status = 503;
     error.code = "ai_model_unavailable";
@@ -52,9 +49,7 @@ const assertAvailable = (provider, capability, model, availableModels) => {
 
 const createGeminiProvider = () => ({
   name: "gemini",
-  async listAvailableModels() {
-    return listGeminiModels();
-  },
+  async listAvailableModels() { return listGeminiModels(); },
   async resolveModel(capability = STUDIO_AI_CAPABILITIES.STRUCTURED_JSON_SPEC) {
     getProviderModelConfig("gemini", capability);
     const configuredModel = getConfiguredDefaultModel("gemini", capability);
@@ -65,13 +60,7 @@ const createGeminiProvider = () => ({
     const activeModel = await this.resolveModel(capability);
     const response = await getGeminiClient().models.generateContent({ model: activeModel, contents, config });
     logAIUsage(response, activeModel, { provider: "gemini", stage: "spec", capability });
-    return {
-      text: response?.text || "",
-      usageMetadata: response?.usageMetadata || response?.usage_metadata || {},
-      provider: "gemini",
-      model: activeModel,
-      raw: response,
-    };
+    return { text: response?.text || "", usageMetadata: response?.usageMetadata || response?.usage_metadata || {}, provider: "gemini", model: activeModel, raw: response };
   },
 });
 
@@ -91,15 +80,7 @@ const isFailoverCandidate = (error) => {
   const code = String(error?.code || "").toLowerCase();
   const message = String(error?.message || "").toLowerCase();
   if ([408, 429, 500, 502, 503, 504].includes(status)) return true;
-  if ([
-    "ai_model_unavailable",
-    "server_configuration_error",
-    "resource_exhausted",
-    "rate_limit_exceeded",
-    "service_unavailable",
-    "provider_unavailable",
-    "internal_server_error",
-  ].includes(code)) return true;
+  if (["ai_model_unavailable", "server_configuration_error", "resource_exhausted", "rate_limit_exceeded", "service_unavailable", "provider_unavailable", "internal_server_error"].includes(code)) return true;
   return /quota|rate limit|temporar|unavailable|overload|high demand|resource exhausted|deadline|timeout|aborted/.test(message);
 };
 
@@ -107,6 +88,23 @@ const createProvider = (providerName) => {
   if (providerName === "groq") return createGroqProvider();
   if (providerName === "gemini") return createGeminiProvider();
   throw unsupportedProvider(providerName);
+};
+
+const createAttemptSignal = (outerSignal) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error("Studio AI provider attempt timed out.")), STUDIO_PROVIDER_ATTEMPT_TIMEOUT_MS);
+  const forwardAbort = () => controller.abort(outerSignal.reason);
+  if (outerSignal) {
+    if (outerSignal.aborted) controller.abort(outerSignal.reason);
+    else outerSignal.addEventListener("abort", forwardAbort, { once: true });
+  }
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      clearTimeout(timer);
+      if (outerSignal) outerSignal.removeEventListener("abort", forwardAbort);
+    },
+  };
 };
 
 export const createAIProvider = () => {
@@ -117,45 +115,48 @@ export const createAIProvider = () => {
   const fallbackName = configuredProvider === "gemini" ? "groq" : "gemini";
   const fallback = hasProviderKey(fallbackName) ? createProvider(fallbackName) : null;
 
-  console.info("Studio AI provider router selected", {
-    primary: primary.name,
-    fallback: fallback?.name || null,
-  });
+  console.info("Studio AI provider router selected", { primary: primary.name, fallback: fallback?.name || null });
 
   return {
     name: primary.name,
-    async listAvailableModels() {
-      return primary.listAvailableModels();
-    },
+    async listAvailableModels() { return primary.listAvailableModels(); },
     async resolveModel(capability = STUDIO_AI_CAPABILITIES.STRUCTURED_JSON_SPEC) {
       try {
         return await primary.resolveModel(capability);
       } catch (error) {
         if (!fallback || !isFailoverCandidate(error)) throw error;
-        console.warn("Studio AI primary model unavailable; checking fallback provider", {
-          primary: primary.name,
-          fallback: fallback.name,
-          capability,
-          code: error?.code || null,
-          status: Number(error?.status || error?.statusCode || error?.httpStatus || 0) || null,
-        });
+        console.warn("Studio AI primary model unavailable; checking fallback provider", { primary: primary.name, fallback: fallback.name, capability, code: error?.code || null, status: Number(error?.status || error?.statusCode || error?.httpStatus || 0) || null });
         return fallback.resolveModel(capability);
       }
     },
-    async generateStructuredSpec(args) {
-      try {
-        return await primary.generateStructuredSpec(args);
-      } catch (error) {
-        if (!fallback || !isFailoverCandidate(error)) throw error;
-        console.warn("Studio AI primary generation failed; failing over", {
-          primary: primary.name,
-          fallback: fallback.name,
-          capability: args?.capability || STUDIO_AI_CAPABILITIES.STRUCTURED_JSON_SPEC,
-          code: error?.code || null,
-          status: Number(error?.status || error?.statusCode || error?.httpStatus || 0) || null,
-        });
-        return fallback.generateStructuredSpec(args);
+    async generateStructuredSpec(args = {}) {
+      const outerSignal = args.config?.abortSignal;
+      const providers = [primary, ...(fallback ? [fallback] : [])];
+      let lastError;
+
+      for (const provider of providers) {
+        const attempt = createAttemptSignal(outerSignal);
+        try {
+          const config = { ...(args.config || {}), abortSignal: attempt.signal };
+          return await provider.generateStructuredSpec({ ...args, config });
+        } catch (error) {
+          lastError = error;
+          if (provider === primary && fallback && isFailoverCandidate(error)) {
+            console.warn("Studio AI primary generation failed; failing over", {
+              primary: primary.name,
+              fallback: fallback.name,
+              capability: args.capability || STUDIO_AI_CAPABILITIES.STRUCTURED_JSON_SPEC,
+              code: error?.code || null,
+              status: Number(error?.status || error?.statusCode || error?.httpStatus || 0) || null,
+            });
+            continue;
+          }
+          throw error;
+        } finally {
+          attempt.cleanup();
+        }
       }
+      throw lastError;
     },
   };
 };
