@@ -23,9 +23,7 @@ const listGeminiModels = async () => {
   for await (const model of client.models.list()) {
     const id = normalizeGeminiModelName(model?.name || model?.id);
     if (!id) continue;
-    const supportedActions = Array.isArray(model?.supportedActions)
-      ? model.supportedActions
-      : Array.isArray(model?.supported_actions) ? model.supported_actions : [];
+    const supportedActions = Array.isArray(model?.supportedActions) ? model.supportedActions : Array.isArray(model?.supported_actions) ? model.supported_actions : [];
     models.push({ id, supportedActions });
   }
   return models;
@@ -33,9 +31,7 @@ const listGeminiModels = async () => {
 
 const assertAvailable = (provider, capability, model, availableModels) => {
   const match = availableModels.find((entry) => entry.id === model);
-  const capabilitySupported = provider === "gemini"
-    ? !match?.supportedActions?.length || match.supportedActions.includes("generateContent")
-    : true;
+  const capabilitySupported = provider === "gemini" ? !match?.supportedActions?.length || match.supportedActions.includes("generateContent") : true;
   if (!match || !capabilitySupported) {
     console.error("Studio AI configured model unavailable", { provider, capability, configuredModel: model, availableModelCount: availableModels.length });
     const error = new Error(`Configured ${provider} model "${model}" is unavailable for capability "${capability}".`);
@@ -53,8 +49,7 @@ const createGeminiProvider = () => ({
   async resolveModel(capability = STUDIO_AI_CAPABILITIES.STRUCTURED_JSON_SPEC) {
     getProviderModelConfig("gemini", capability);
     const configuredModel = getConfiguredDefaultModel("gemini", capability);
-    const availableModels = await listGeminiModels();
-    return assertAvailable("gemini", capability, configuredModel, availableModels);
+    return assertAvailable("gemini", capability, configuredModel, await listGeminiModels());
   },
   async generateStructuredSpec({ contents, config = {}, capability = STUDIO_AI_CAPABILITIES.STRUCTURED_JSON_SPEC }) {
     const activeModel = await this.resolveModel(capability);
@@ -71,9 +66,7 @@ const unsupportedProvider = (providerName) => {
   return error;
 };
 
-const hasProviderKey = (provider) => provider === "gemini"
-  ? Boolean(String(process.env.GEMINI_API_KEY || "").trim())
-  : Boolean(String(process.env.GROQ_API_KEY || "").trim());
+const hasProviderKey = (provider) => provider === "gemini" ? Boolean(String(process.env.GEMINI_API_KEY || "").trim()) : Boolean(String(process.env.GROQ_API_KEY || "").trim());
 
 const isFailoverCandidate = (error) => {
   const status = Number(error?.status || error?.statusCode || error?.httpStatus || 0);
@@ -98,13 +91,18 @@ const createAttemptSignal = (outerSignal) => {
     if (outerSignal.aborted) controller.abort(outerSignal.reason);
     else outerSignal.addEventListener("abort", forwardAbort, { once: true });
   }
-  return {
-    signal: controller.signal,
-    cleanup: () => {
-      clearTimeout(timer);
-      if (outerSignal) outerSignal.removeEventListener("abort", forwardAbort);
-    },
-  };
+  return { signal: controller.signal, cleanup: () => { clearTimeout(timer); if (outerSignal) outerSignal.removeEventListener("abort", forwardAbort); } };
+};
+
+const runAttempt = (provider, args, signal) => {
+  const providerPromise = provider.generateStructuredSpec({ ...args, config: { ...(args.config || {}), abortSignal: signal } });
+  if (signal.aborted) return Promise.reject(signal.reason || new Error("Studio AI provider attempt aborted."));
+  const abortPromise = new Promise((_, reject) => {
+    const onAbort = () => reject(signal.reason || new Error("Studio AI provider attempt aborted."));
+    signal.addEventListener("abort", onAbort, { once: true });
+    providerPromise.finally(() => signal.removeEventListener("abort", onAbort));
+  });
+  return Promise.race([providerPromise, abortPromise]);
 };
 
 export const createAIProvider = () => {
@@ -121,9 +119,8 @@ export const createAIProvider = () => {
     name: primary.name,
     async listAvailableModels() { return primary.listAvailableModels(); },
     async resolveModel(capability = STUDIO_AI_CAPABILITIES.STRUCTURED_JSON_SPEC) {
-      try {
-        return await primary.resolveModel(capability);
-      } catch (error) {
+      try { return await primary.resolveModel(capability); }
+      catch (error) {
         if (!fallback || !isFailoverCandidate(error)) throw error;
         console.warn("Studio AI primary model unavailable; checking fallback provider", { primary: primary.name, fallback: fallback.name, capability, code: error?.code || null, status: Number(error?.status || error?.statusCode || error?.httpStatus || 0) || null });
         return fallback.resolveModel(capability);
@@ -133,28 +130,18 @@ export const createAIProvider = () => {
       const outerSignal = args.config?.abortSignal;
       const providers = [primary, ...(fallback ? [fallback] : [])];
       let lastError;
-
       for (const provider of providers) {
         const attempt = createAttemptSignal(outerSignal);
         try {
-          const config = { ...(args.config || {}), abortSignal: attempt.signal };
-          return await provider.generateStructuredSpec({ ...args, config });
+          return await runAttempt(provider, args, attempt.signal);
         } catch (error) {
           lastError = error;
           if (provider === primary && fallback && isFailoverCandidate(error)) {
-            console.warn("Studio AI primary generation failed; failing over", {
-              primary: primary.name,
-              fallback: fallback.name,
-              capability: args.capability || STUDIO_AI_CAPABILITIES.STRUCTURED_JSON_SPEC,
-              code: error?.code || null,
-              status: Number(error?.status || error?.statusCode || error?.httpStatus || 0) || null,
-            });
+            console.warn("Studio AI primary generation failed; failing over", { primary: primary.name, fallback: fallback.name, capability: args.capability || STUDIO_AI_CAPABILITIES.STRUCTURED_JSON_SPEC, code: error?.code || null, status: Number(error?.status || error?.statusCode || error?.httpStatus || 0) || null });
             continue;
           }
           throw error;
-        } finally {
-          attempt.cleanup();
-        }
+        } finally { attempt.cleanup(); }
       }
       throw lastError;
     },
