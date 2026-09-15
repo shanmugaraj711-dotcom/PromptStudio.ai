@@ -6,6 +6,34 @@ vi.mock("@google/genai", () => ({
   GoogleGenAI: vi.fn(() => ({ models: { generateContent } }))
 }));
 
+vi.mock("../_firebaseAdmin.js", () => ({
+  adminDb: vi.fn(() => ({
+    collection: vi.fn(() => ({
+      doc: vi.fn(() => ({
+        _data: undefined,
+        async get() { return { exists: Boolean(this._data), data: () => this._data }; }
+      }))
+    })),
+    async runTransaction(callback) {
+      const store = new Map();
+      const tx = {
+        async get(ref) { return { exists: store.has(ref), data: () => store.get(ref) }; },
+        set(ref, value, options = {}) {
+          const current = store.get(ref) || {};
+          store.set(ref, options.merge ? { ...current, ...value } : value);
+        }
+      };
+      return callback(tx);
+    }
+  })),
+}));
+
+vi.mock("../_publicTelemetry.js", () => ({
+  recordVisitorAttempt: vi.fn(),
+  recordSuccessfulOptimization: vi.fn(),
+  recordPublicError: vi.fn()
+}));
+
 const loadHandler = async () => (await import("./optimize.js?test=" + Math.random())).default;
 
 const makeResponse = () => {
