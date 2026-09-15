@@ -47,7 +47,8 @@ describe("Studio template renderer", () => {
     expect(Object.keys(files)).toEqual(["/App.js", "/styles.css"]);
     expect(files["/App.js"]).toContain("const CONTENT =");
     expect(files["/App.js"]).toContain("Brew & Bean");
-    expect(files["/App.js"]).toContain("CONTENT.menu.items");
+    expect(files["/App.js"]).toContain("CONTENT.menu.title");
+    expect(files["/App.js"]).toContain("Smoked Tomato Toast");
     expect(files["/styles.css"]).toContain("grid-template-columns:repeat(3");
     expect(files["/styles.css"]).toContain("@media(max-width:768px)");
   });
