@@ -5,9 +5,11 @@ const { generateContent } = vi.hoisted(() => ({
 }));
 
 vi.mock("@google/genai", () => ({
-  GoogleGenAI: vi.fn(function GoogleGenAI() {
-    return { models: { generateContent } };
-  })
+  GoogleGenAI: class GoogleGenAI {
+    constructor() {
+      this.models = { generateContent };
+    }
+  }
 }));
 
 vi.mock("../_firebaseAdmin.js", () => ({
