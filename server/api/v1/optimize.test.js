@@ -1,9 +1,13 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-const generateContent = vi.fn();
+const { generateContent } = vi.hoisted(() => ({
+  generateContent: vi.fn()
+}));
 
 vi.mock("@google/genai", () => ({
-  GoogleGenAI: vi.fn(() => ({ models: { generateContent } }))
+  GoogleGenAI: vi.fn(function GoogleGenAI() {
+    return { models: { generateContent } };
+  })
 }));
 
 vi.mock("../_firebaseAdmin.js", () => ({
@@ -62,6 +66,8 @@ describe("POST /api/v1/optimize", () => {
     generateContent.mockReset();
     process.env.GEMINI_API_KEY = "test-key";
     process.env.GEMINI_MODEL = "test-model";
+    process.env.GROQ_API_KEY = "";
+    process.env.AI_PROVIDER_ORDER = "gemini";
     generateContent.mockResolvedValue({
       text: JSON.stringify({
         optimized_prompt: "Create a concise launch announcement for a new mobile app, with a clear CTA and three headline options.",
