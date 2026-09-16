@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 const { generateContent } = vi.hoisted(() => ({
   generateContent: vi.fn()
@@ -78,6 +78,10 @@ describe("POST /api/v1/optimize", () => {
     });
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("optimizes without Firebase auth and returns the public funnel shape", async () => {
     const handler = await loadHandler();
     const response = makeResponse();
@@ -90,6 +94,61 @@ describe("POST /api/v1/optimize", () => {
       link: "https://promptstudioai.in/"
     });
     expect(generateContent).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to Groq when Gemini fails", async () => {
+    process.env.GROQ_API_KEY = "groq-test-key";
+    process.env.AI_PROVIDER_ORDER = "gemini";
+    generateContent.mockRejectedValue(new Error("Gemini unavailable"));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      async text() {
+        return JSON.stringify({
+          choices: [{
+            message: {
+              content: JSON.stringify({ optimized_prompt: "Groq fallback result", score: 55 })
+            }
+          }]
+        });
+      }
+    }));
+
+    const handler = await loadHandler();
+    const response = makeResponse();
+    await handler(makeRequest({ prompt: "make an app launch post", target: "ChatGPT" }, "203.0.113.12"), response);
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body).optimized_prompt).toBe("Groq fallback result");
+    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("still tries Groq when the provider order only names Gemini", async () => {
+    process.env.GEMINI_API_KEY = "";
+    process.env.GROQ_API_KEY = "groq-test-key";
+    process.env.AI_PROVIDER_ORDER = "gemini";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      async text() {
+        return JSON.stringify({
+          choices: [{
+            message: {
+              content: JSON.stringify({ optimized_prompt: "Groq works when Gemini is unavailable", score: 62 })
+            }
+          }]
+        });
+      }
+    }));
+
+    const handler = await loadHandler();
+    const response = makeResponse();
+    await handler(makeRequest({ prompt: "test fallback routing", target: "ChatGPT" }, "203.0.113.13"), response);
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body).optimized_prompt).toBe("Groq works when Gemini is unavailable");
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it("rejects requests without JSON content type", async () => {
