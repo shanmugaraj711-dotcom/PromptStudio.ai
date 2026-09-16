@@ -11,6 +11,7 @@ import apkForgeHistoryHandler from "../server/api/apk-forge-history.js";
 import apkForgeDownloadHandler from "../server/api/apk-forge-download.js";
 import feedbackHandler from "../server/api/feedback.js";
 import generatePromptCreditsHandler from "../server/api/generate-prompt-credits.js";
+import promptLabGroqHandler from "../server/api/prompt-lab-groq.js";
 import generatePromptHandler from "../server/api/generate-prompt.js";
 import productConfigHandler from "../server/api/product-config.js";
 import razorpayOrderHandler from "../server/api/razorpay-order.js";
@@ -79,6 +80,11 @@ export default async function handler(req, res) {
   const requestedPath = normalizePath(req.url);
   const requestedRoute = String(req.query?.route || "").trim();
   const route = normalizePath(requestedRoute ? `/api/${requestedRoute.replace(/^\/api\//, "")}` : requestedPath);
+
+  if (route === "/api/generate-prompt-credits") {
+    return promptLabGroqHandler(req, res);
+  }
+
   const target = STATIC_HANDLERS[route];
 
   if (!target) {
