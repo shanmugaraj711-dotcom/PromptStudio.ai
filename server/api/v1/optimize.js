@@ -8,6 +8,7 @@ const MAX_BODY_BYTES = 32_000;
 const DAILY_IP_LIMIT = 2;
 const RATE_LIMIT_COLLECTION = 'publicOptimizerDailyLimits';
 const PROVIDER_TIMEOUT_MS = 15_000;
+const PROVIDERS = ['gemini', 'groq'];
 
 const sendJson = (res, status, payload, headers = {}) => {
   res.status(status);
@@ -119,12 +120,6 @@ const parseModelResult = (raw) => {
   return { optimizedPrompt, score: clampScore(parsed.score) };
 };
 
-const isProviderFailure = (error) => {
-  const status = Number(error?.status || error?.statusCode || 0);
-  const message = String(error?.message || '').toLowerCase();
-  return [408, 409, 429, 500, 502, 503, 504].includes(status) || /high demand|rate.?limit|temporar|unavailable|overload|timeout|aborted|deadline|quota|resource exhausted/.test(message);
-};
-
 const withTimeout = async (promiseFactory, ms = PROVIDER_TIMEOUT_MS) => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), ms);
@@ -143,7 +138,7 @@ const callGemini = async ({ prompt, target }) => {
       return parseModelResult(response.text?.trim());
     } catch (error) {
       lastError = error;
-      if (!isProviderFailure(error) || model === models[models.length - 1]) break;
+      if (model === models[models.length - 1]) break;
     }
   }
   throw lastError || new Error('Gemini failed.');
@@ -168,15 +163,31 @@ const callGroq = async ({ prompt, target }) => {
   return parseModelResult(data?.choices?.[0]?.message?.content?.trim());
 };
 
+const getProviderOrder = () => {
+  const configured = String(process.env.AI_PROVIDER_ORDER || '').split(',')
+    .map((provider) => provider.trim().toLowerCase())
+    .filter((provider, index, list) => PROVIDERS.includes(provider) && list.indexOf(provider) === index);
+  return [...configured, ...PROVIDERS.filter((provider) => !configured.includes(provider))];
+};
+
 const generateOptimizedPrompt = async ({ prompt, target }) => {
-  const providerOrder = String(process.env.AI_PROVIDER_ORDER || 'gemini,groq').split(',').map((provider) => provider.trim().toLowerCase()).filter((provider, index, list) => ['gemini', 'groq'].includes(provider) && list.indexOf(provider) === index);
+  const providerOrder = getProviderOrder();
   const providers = { gemini: callGemini, groq: callGroq };
   let lastError;
   for (const provider of providerOrder) {
-    try { return await providers[provider]({ prompt, target }); }
-    catch (error) { lastError = error; if (!isProviderFailure(error)) break; }
+    try {
+      return await providers[provider]({ prompt, target });
+    } catch (error) {
+      lastError = error;
+      // Any provider failure is isolated to that provider. Try the next configured/fallback provider.
+      // This includes missing credentials, auth/model errors, rate limits, timeouts and malformed output.
+    }
   }
-  const error = new Error('The AI service could not optimize the prompt right now.'); error.status = 502; error.code = 'generation_failed'; error.cause = lastError; throw error;
+  const error = new Error('The AI service could not optimize the prompt right now.');
+  error.status = 502;
+  error.code = 'generation_failed';
+  error.cause = lastError;
+  throw error;
 };
 
 export default async function handler(req, res) {
