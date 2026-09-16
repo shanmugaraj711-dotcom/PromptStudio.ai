@@ -4,7 +4,7 @@ import { createQuotaState, getUtcDateKey, getUtcMonthKey } from "../src/constant
 import { getRuntimeProductConfig } from "./_productConfig.js";
 
 const TEXT_MODEL = "openai/gpt-oss-120b";
-const VISION_MODEL = "qwen/qwen3.8-27b";
+const VISION_MODEL = "qwen/qwen3.6-27b";
 const MAX_IMAGES = 4;
 const MAX_IMAGE_DATA_LENGTH = 4_000_000;
 const MAX_REFERENCE_FILES = 8;
@@ -97,7 +97,7 @@ export default async function handler(req, res) {
     const text = `TARGET AI: ${body.aiModel}\nCATEGORY: ${body.category}\nUSER REQUEST:\n${idea || "Use the supplied references as the primary source of truth."}${fileContext}`;
     console.info("Prompt Lab using Groq-only provider", { model: images.length ? VISION_MODEL : TEXT_MODEL, hasImages: images.length > 0 });
     const result = await callGroq({ text, images });
-    const now = new Date(); const requestRef = db.collection("users").doc(uid).collection("generationRequests").doc(requestId);
+    const requestRef = db.collection("users").doc(uid).collection("generationRequests").doc(requestId);
     await requestRef.update({ status: "succeeded", prompt: result.prompt, perspectives: result.perspectives, intent: result.intent || "", outputType: result.outputType || "", assumptions: Array.isArray(result.assumptions) ? result.assumptions : [], missing: Array.isArray(result.missing) ? result.missing : [], recommendations: Array.isArray(result.recommendations) ? result.recommendations : [], refundStatus: "not_required", completedAt: FieldValue.serverTimestamp() });
     return json(res, 200, { ...result, quota: reservation.quota, creditsRemaining: reservation.creditsRemaining, creditCost: reservation.creditCost, provider: "groq" });
   } catch (error) {
