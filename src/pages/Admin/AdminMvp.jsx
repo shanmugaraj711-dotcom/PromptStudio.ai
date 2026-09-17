@@ -3,89 +3,34 @@ import { Navigate, Link } from "react-router-dom";
 import { auth } from "../../firebase";
 import { useAuth } from "../../context/AuthContext";
 
-const Metric = ({ icon, label, value }) => (
-  <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-    <div className="flex items-center gap-3 text-sm font-bold text-slate-500"><span className="text-xl">{icon}</span>{label}</div>
-    <p className="mt-3 text-4xl font-black tracking-tight text-slate-950">{value ?? "—"}</p>
-    <p className="mt-2 text-xs font-semibold text-slate-400">Today</p>
-  </div>
-);
-
-const Status = ({ label, ok }) => (
-  <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-    <span className="text-sm font-bold text-slate-800">{label}</span>
-    <span className={`inline-flex items-center gap-2 text-sm font-black ${ok ? "text-emerald-600" : "text-red-600"}`}>
-      <span className={`h-2.5 w-2.5 rounded-full ${ok ? "bg-emerald-500" : "bg-red-500"}`} />
-      {ok ? "Operational" : "Down"}
-    </span>
-  </div>
-);
+const card = "rounded-3xl border border-slate-200 bg-white p-5 shadow-sm";
+const input = "mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100";
+const Field = ({ label, value, onChange, min, max, step = 1 }) => <label className="text-sm font-bold text-slate-700">{label}<input className={input} type="number" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} /></label>;
+const Status = ({ label, value, detail }) => <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4"><div><p className="text-sm font-black text-slate-900">{label}</p><p className="mt-1 text-xs text-slate-500">{detail}</p></div><span className={`rounded-full px-3 py-1 text-xs font-black ${value ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>{value ? "Configured" : "Missing"}</span></div>;
 
 export default function AdminMvp() {
   const { user, loading } = useAuth();
-  const [metrics, setMetrics] = useState(null);
-  const [error, setError] = useState("");
-
-  const load = useCallback(async () => {
-    if (!auth.currentUser) return;
-    try {
-      const token = await auth.currentUser.getIdToken();
-      const response = await fetch("/api/admin-public-metrics", {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store"
-      });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.message || "Could not load admin metrics.");
-      setMetrics(body);
-      setError("");
-    } catch (err) {
-      setError(err.message || "Could not load admin metrics.");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!loading && user) load();
-  }, [loading, user, load]);
-
-  useEffect(() => {
-    if (!user) return undefined;
-    const timer = window.setInterval(load, 10000);
-    return () => window.clearInterval(timer);
-  }, [user, load]);
-
+  const [data, setData] = useState(null); const [metrics, setMetrics] = useState(null); const [draft, setDraft] = useState(null); const [saved, setSaved] = useState(null); const [error, setError] = useState(""); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
+  const api = useCallback(async (url, options = {}) => { const token = await auth.currentUser?.getIdToken(); const response = await fetch(url, { ...options, headers: { ...(options.headers || {}), Authorization: `Bearer ${token}`, ...(options.body ? { "Content-Type": "application/json" } : {}) }, cache: "no-store" }); const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.message || "Request failed."); return body; }, []);
+  const load = useCallback(async () => { setError(""); try { const [ops, publicMetrics] = await Promise.all([api("/api/admin-operations"), api("/api/admin-public-metrics")]); setData(ops); setDraft(ops.config); setSaved(ops.config); setMetrics(publicMetrics); } catch (e) { setError(e.message || "Could not load operations control center."); } }, [api]);
+  useEffect(() => { if (!loading && user) load(); }, [loading, user, load]);
   if (!loading && !user) return <Navigate to="/login?next=/admin" replace />;
   if (loading) return <div className="min-h-screen bg-slate-950 p-8 text-white">Checking founder access…</div>;
-
-  return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-950 sm:px-6">
-      <div className="mx-auto max-w-5xl">
-        <header className="rounded-3xl bg-slate-950 p-7 text-white shadow-xl">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-300">PromptStudio · Founder</p>
-              <h1 className="mt-2 text-3xl font-black tracking-tight">Today</h1>
-            </div>
-            <Link to="/dashboard" className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-bold hover:bg-slate-900">Dashboard</Link>
-          </div>
-        </header>
-
-        {error && <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
-
-        <section className="mt-6 grid gap-4 sm:grid-cols-2">
-          <Metric icon="👀" label="Visitors today" value={metrics?.visitorsToday} />
-          <Metric icon="⚡" label="Optimizations today" value={metrics?.optimizationsToday} />
-          <Metric icon="👤" label="Signups today" value={metrics?.signupsToday} />
-          <Metric icon="🚫" label="Hit 2/day limit" value={metrics?.hitLimitToday} />
-        </section>
-
-        <section className="mt-8 rounded-3xl border border-slate-200 bg-slate-100 p-5">
-          <h2 className="px-1 text-lg font-black text-slate-950">System Status</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <Status label="Public Optimizer" ok={metrics?.publicOptimizer === true} />
-            <Status label="Gemini" ok={metrics?.gemini === true} />
-          </div>
-        </section>
-      </div>
-    </main>
-  );
+  const set = (section, key, value) => setDraft((current) => ({ ...current, [section]: { ...current[section], [key]: value } }));
+  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  const save = async () => { if (!draft || !dirty) return; if (!window.confirm("Apply these operational limits to backend enforcement?")) return; setBusy(true); setError(""); setMessage(""); try { const body = await api("/api/admin-operations", { method: "PUT", body: JSON.stringify({ config: draft, requestId: `${Date.now()}_${Math.random().toString(36).slice(2, 10)}` }) }); setDraft(body.config); setSaved(body.config); setMessage("Operational controls saved. New requests use the updated backend limits."); await load(); } catch (e) { setError(e.message || "Could not save operational controls."); } finally { setBusy(false); } };
+  const reset = () => { if (data?.defaults) setDraft(data.defaults); };
+  return <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-950 sm:px-6"><div className="mx-auto max-w-7xl">
+    <header className="rounded-3xl bg-slate-950 p-7 text-white shadow-xl"><div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-300">PromptStudio · Private Founder Area</p><h1 className="mt-2 text-4xl font-black tracking-tight">Operations Control Center</h1><p className="mt-2 max-w-3xl text-sm text-slate-400">One place to monitor API availability and control runtime limits, rate limits and alert thresholds. Secrets are never displayed.</p></div><div className="flex gap-2"><Link to="/dashboard" className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-bold hover:bg-slate-900">Dashboard</Link><button onClick={load} className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold hover:bg-indigo-500">Refresh</button></div></div></header>
+    {error && <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">{error}</div>}{message && <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">{message}</div>}
+    <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><div className={card}><p className="text-xs font-black uppercase text-slate-500">Visitors today</p><p className="mt-2 text-3xl font-black">{metrics?.visitorsToday ?? "—"}</p></div><div className={card}><p className="text-xs font-black uppercase text-slate-500">Optimizations today</p><p className="mt-2 text-3xl font-black">{metrics?.optimizationsToday ?? "—"}</p></div><div className={card}><p className="text-xs font-black uppercase text-slate-500">Signups today</p><p className="mt-2 text-3xl font-black">{metrics?.signupsToday ?? "—"}</p></div><div className={card}><p className="text-xs font-black uppercase text-slate-500">Limit hits today</p><p className="mt-2 text-3xl font-black">{metrics?.hitLimitToday ?? "—"}</p></div></section>
+    <section className="mt-6 grid gap-4 lg:grid-cols-3"><Status label="Public Optimizer" value={metrics?.publicOptimizer === true} detail="Public endpoint availability" /><Status label="Gemini" value={data?.providers?.gemini?.configured} detail={data?.providers?.gemini?.model || "Provider key"} /><Status label="Groq" value={data?.providers?.groq?.configured} detail={data?.providers?.groq?.model || "Provider key"} /></section>
+    {draft && <><div className="mt-6 grid gap-6 lg:grid-cols-2">
+      <section className={card}><h2 className="text-xl font-black">Generation rate limits</h2><p className="mt-1 text-sm text-slate-500">Applied server-side to authenticated generation requests.</p><div className="mt-5 grid gap-4 sm:grid-cols-2"><Field label="User requests / minute" value={draft.generation.userPerMinute} min={1} max={1000} onChange={(v) => set("generation","userPerMinute",v)} /><Field label="IP requests / minute" value={draft.generation.ipPerMinute} min={1} max={5000} onChange={(v) => set("generation","ipPerMinute",v)} /></div></section>
+      <section className={card}><h2 className="text-xl font-black">Public optimizer</h2><p className="mt-1 text-sm text-slate-500">Abuse protection and provider budget controls.</p><div className="mt-5 grid gap-4 sm:grid-cols-2"><Field label="Free optimizations / IP / day" value={draft.publicOptimizer.dailyIpLimit} min={0} max={1000} onChange={(v) => set("publicOptimizer","dailyIpLimit",v)} /><Field label="Provider timeout (ms)" value={draft.publicOptimizer.providerTimeoutMs} min={1000} max={60000} step={1000} onChange={(v) => set("publicOptimizer","providerTimeoutMs",v)} /><Field label="Max request body (bytes)" value={draft.publicOptimizer.maxBodyBytes} min={4096} max={1000000} step={1024} onChange={(v) => set("publicOptimizer","maxBodyBytes",v)} /><Field label="Max prompt length" value={draft.publicOptimizer.maxPromptLength} min={100} max={20000} onChange={(v) => set("publicOptimizer","maxPromptLength",v)} /></div></section>
+      <section className={card}><h2 className="text-xl font-black">Runtime limits</h2><p className="mt-1 text-sm text-slate-500">Operational targets used by the application. Vercel function max duration remains infrastructure-controlled.</p><div className="mt-5 grid gap-4 sm:grid-cols-2"><Field label="API max duration (sec)" value={draft.runtime.apiMaxDurationSeconds} min={1} max={300} onChange={(v) => set("runtime","apiMaxDurationSeconds",v)} /><Field label="Provider attempt timeout (ms)" value={draft.runtime.providerAttemptTimeoutMs} min={1000} max={60000} step={1000} onChange={(v) => set("runtime","providerAttemptTimeoutMs",v)} /><Field label="Studio generation timeout (ms)" value={draft.runtime.studioGenerationTimeoutMs} min={1000} max={120000} step={1000} onChange={(v) => set("runtime","studioGenerationTimeoutMs",v)} /><Field label="Studio job lease (ms)" value={draft.runtime.studioJobLeaseMs} min={5000} max={600000} step={5000} onChange={(v) => set("runtime","studioJobLeaseMs",v)} /></div></section>
+      <section className={card}><h2 className="text-xl font-black">Warning thresholds</h2><p className="mt-1 text-sm text-slate-500">Threshold values are stored for the monitoring layer and do not expose provider secrets.</p><div className="mt-5 grid gap-4 sm:grid-cols-2"><Field label="Error rate warning (%)" value={draft.thresholds.errorRatePercent} min={1} max={100} onChange={(v) => set("thresholds","errorRatePercent",v)} /><Field label="Timeout rate warning (%)" value={draft.thresholds.timeoutRatePercent} min={1} max={100} onChange={(v) => set("thresholds","timeoutRatePercent",v)} /><Field label="Rate-limit hits / hour" value={draft.thresholds.rateLimitHitsPerHour} min={1} max={100000} onChange={(v) => set("thresholds","rateLimitHitsPerHour",v)} /><Field label="Provider failures / hour" value={draft.thresholds.providerFailureCountPerHour} min={1} max={100000} onChange={(v) => set("thresholds","providerFailureCountPerHour",v)} /></div></section>
+    </div><section className={`${card} mt-6`}><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-xl font-black">Provider routing</h2><p className="mt-1 text-sm text-slate-500">Current environment routing: <strong>{data?.providers?.order || "gemini,groq"}</strong>. Provider keys are intentionally hidden.</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">Read-only routing</span></div></section>
+    <div className="sticky bottom-4 mt-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur sm:flex-row sm:items-center sm:justify-between"><div className="text-xs font-bold text-slate-500">{dirty ? "Unsaved operational changes" : "All operational controls saved"}</div><div className="flex gap-2"><button onClick={reset} disabled={!data?.defaults || busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-black disabled:opacity-40">Reset defaults</button><button onClick={save} disabled={!dirty || busy} className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-black text-white disabled:opacity-40">{busy ? "Saving…" : "Apply controls"}</button></div></div></>}
+  </div></main>;
 }
