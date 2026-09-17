@@ -1,6 +1,7 @@
 import adminBootstrapHandler from "../server/api/admin-bootstrap.js";
 import adminHandler from "../server/api/admin.js";
 import adminPublicMetricsHandler from "../server/api/admin-public-metrics.js";
+import adminOperationsHandler from "../server/api/admin-operations.js";
 import publicVisitHandler from "../server/api/public-visit.js";
 import apkForgeHandler from "../server/api/apk-forge.js";
 import apkForgeAcceptHandler from "../server/api/apk-forge-accept.js";
@@ -37,6 +38,7 @@ const STATIC_HANDLERS = {
   "/api/admin-bootstrap": adminBootstrapHandler,
   "/api/admin": adminHandler,
   "/api/admin-public-metrics": adminPublicMetricsHandler,
+  "/api/admin-operations": adminOperationsHandler,
   "/api/public-visit": publicVisitHandler,
   "/api/apk-forge": apkForgeHandler,
   "/api/apk-forge-accept": apkForgeAcceptHandler,
@@ -70,32 +72,9 @@ const STATIC_HANDLERS = {
   "/api/live-signal": liveSignalHandler,
 };
 
-const normalizePath = (value) => {
-  const path = String(value || "").split("?")[0].replace(/\/+$/, "");
-  return path || "/";
-};
-
+const normalizePath = (value) => { const path = String(value || "").split("?")[0].replace(/\/+$/, ""); return path || "/"; };
 export default async function handler(req, res) {
-  const requestedPath = normalizePath(req.url);
-  const requestedRoute = String(req.query?.route || "").trim();
-  const route = normalizePath(requestedRoute ? `/api/${requestedRoute.replace(/^\/api\//, "")}` : requestedPath);
-  const target = STATIC_HANDLERS[route];
-
-  if (!target) {
-    res.statusCode = 404;
-    res.setHeader("Content-Type", "application/json; charset=utf-8");
-    return res.end(JSON.stringify({ error: "api_route_not_found" }));
-  }
-
-  try {
-    return await target(req, res);
-  } catch (error) {
-    console.error("PromptStudio API gateway failed", { route, code: error?.code || "unknown", message: error?.message, stack: error?.stack });
-    if (!res.headersSent) {
-      res.statusCode = Number(error?.status) || 500;
-      res.setHeader("Content-Type", "application/json; charset=utf-8");
-      return res.end(JSON.stringify({ error: "api_request_failed" }));
-    }
-    return undefined;
-  }
+  const requestedPath = normalizePath(req.url); const requestedRoute = String(req.query?.route || "").trim(); const route = normalizePath(requestedRoute ? `/api/${requestedRoute.replace(/^\/api\//, "")}` : requestedPath); const target = STATIC_HANDLERS[route];
+  if (!target) { res.statusCode = 404; res.setHeader("Content-Type", "application/json; charset=utf-8"); return res.end(JSON.stringify({ error: "api_route_not_found" })); }
+  try { return await target(req, res); } catch (error) { console.error("PromptStudio API gateway failed", { route, code: error?.code || "unknown", message: error?.message, stack: error?.stack }); if (!res.headersSent) { res.statusCode = Number(error?.status) || 500; res.setHeader("Content-Type", "application/json; charset=utf-8"); return res.end(JSON.stringify({ error: "api_request_failed" })); } return undefined; }
 }
