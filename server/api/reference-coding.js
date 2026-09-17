@@ -65,27 +65,34 @@ export default async function handler(req, res) {
 
   if (res.statusCode !== 200 || !requestId) return;
 
-  const db = adminDb();
-  const images = Array.isArray(body.images) ? body.images : [];
-  const files = Array.isArray(body.referenceFiles) ? body.referenceFiles : [];
-  const eventRef = db.collection("referenceCodingEvents").doc(`${user.uid}_${requestId}`);
+  try {
+    const db = adminDb();
+    const images = Array.isArray(body.images) ? body.images : [];
+    const files = Array.isArray(body.referenceFiles) ? body.referenceFiles : [];
+    const eventRef = db.collection("referenceCodingEvents").doc(`${user.uid}_${requestId}`);
 
-  await eventRef.set({
-    event: "reference_coding_generation",
-    uid: user.uid,
-    requestId,
-    referenceCount: files.length + (images.length ? 1 : 0),
-    imageReferenceCount: images.length,
-    fileReferenceCount: files.length,
-    referenceKinds: files.map((file) => String(file.detectedType || file.kind || "unknown")).slice(0, 8),
-    outputFormat: body.outputFormat,
-    targetAI: body.targetAI,
-    createdAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
+    await eventRef.set({
+      event: "reference_coding_generation",
+      uid: user.uid,
+      requestId,
+      referenceCount: files.length + (images.length ? 1 : 0),
+      imageReferenceCount: images.length,
+      fileReferenceCount: files.length,
+      referenceKinds: files.map((file) => String(file.detectedType || file.kind || "unknown")).slice(0, 8),
+      outputFormat: body.outputFormat,
+      targetAI: body.targetAI,
+      createdAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
 
-  await db.collection("users").doc(user.uid).collection("prompts").doc(requestId).set({
-    referenceCoding: true,
-    referenceCodingReferenceCount: files.length + (images.length ? 1 : 0),
-    referenceCodingGeneratedAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
+    await db.collection("users").doc(user.uid).collection("prompts").doc(requestId).set({
+      referenceCoding: true,
+      referenceCodingReferenceCount: files.length + (images.length ? 1 : 0),
+      referenceCodingGeneratedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  } catch (telemetryError) {
+    console.error("Reference Coding telemetry write failed", {
+      requestId,
+      code: telemetryError?.code || "unknown",
+    });
+  }
 }
