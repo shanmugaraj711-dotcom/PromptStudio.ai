@@ -2,220 +2,57 @@ import { createHash } from 'node:crypto';
 import { GoogleGenAI } from '@google/genai';
 import { adminDb } from '../_firebaseAdmin.js';
 import { recordVisitorAttempt, recordSuccessfulOptimization, recordPublicError } from '../_publicTelemetry.js';
+import { getOperationsConfig } from '../_operationsConfig.js';
 
-const MAX_PROMPT_LENGTH = 6000;
-const MAX_BODY_BYTES = 32_000;
-const DAILY_IP_LIMIT = 2;
+const DEFAULT_MAX_PROMPT_LENGTH = 6000;
+const DEFAULT_MAX_BODY_BYTES = 32_000;
 const RATE_LIMIT_COLLECTION = 'publicOptimizerDailyLimits';
-const PROVIDER_TIMEOUT_MS = 15_000;
+const DEFAULT_PROVIDER_TIMEOUT_MS = 15_000;
 const PROVIDERS = ['gemini', 'groq'];
 
-const sendJson = (res, status, payload, headers = {}) => {
-  res.status(status);
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  for (const [key, value] of Object.entries(headers)) res.setHeader(key, value);
-  return res.end(JSON.stringify(payload));
-};
-
-const getClientIp = (req) => {
-  const forwarded = String(req.headers?.['x-forwarded-for'] || '').split(',')[0].trim();
-  return (forwarded || String(req.socket?.remoteAddress || 'unknown')).slice(0, 100);
-};
-
+const sendJson = (res, status, payload, headers = {}) => { res.status(status); res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff'); for (const [key, value] of Object.entries(headers)) res.setHeader(key, value); return res.end(JSON.stringify(payload)); };
+const getClientIp = (req) => { const forwarded = String(req.headers?.['x-forwarded-for'] || '').split(',')[0].trim(); return (forwarded || String(req.socket?.remoteAddress || 'unknown')).slice(0, 100); };
 const getUtcDay = () => new Date().toISOString().slice(0, 10);
+const getRetryAfter = () => { const now = new Date(); const nextDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)); return Math.max(1, Math.ceil((nextDay.getTime() - now.getTime()) / 1000)); };
+const getIpKey = (ip, day) => createHash('sha256').update(`${process.env.PUBLIC_OPTIMIZER_RATE_LIMIT_SALT || process.env.GEMINI_API_KEY || 'promptstudio'}:${day}:${ip}`).digest('hex');
 
-const getRetryAfter = () => {
-  const now = new Date();
-  const nextDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
-  return Math.max(1, Math.ceil((nextDay.getTime() - now.getTime()) / 1000));
-};
-
-const getIpKey = (ip, day) => createHash('sha256')
-  .update(`${process.env.PUBLIC_OPTIMIZER_RATE_LIMIT_SALT || process.env.GEMINI_API_KEY || 'promptstudio'}:${day}:${ip}`)
-  .digest('hex');
-
-const enforceDailyIpLimit = async (req) => {
-  const day = getUtcDay();
-  const ip = getClientIp(req);
-  const docId = getIpKey(ip, day);
-  const db = adminDb();
-  const ref = db.collection(RATE_LIMIT_COLLECTION).doc(docId);
-  let count = 0;
-
-  await db.runTransaction(async (transaction) => {
-    const snapshot = await transaction.get(ref);
-    count = Number(snapshot.data()?.count || 0);
-    if (count >= DAILY_IP_LIMIT) return;
-    count += 1;
-    transaction.set(ref, { day, count, updatedAt: new Date() }, { merge: true });
-  });
-
+const enforceDailyIpLimit = async (req, limit) => {
+  const day = getUtcDay(); const ip = getClientIp(req); const docId = getIpKey(ip, day); const db = adminDb(); const ref = db.collection(RATE_LIMIT_COLLECTION).doc(docId); let count = 0;
+  await db.runTransaction(async (transaction) => { const snapshot = await transaction.get(ref); count = Number(snapshot.data()?.count || 0); if (count >= limit) return; count += 1; transaction.set(ref, { day, count, updatedAt: new Date() }, { merge: true }); });
   try { await recordVisitorAttempt({ ip, day }); } catch {}
-
-  if (count >= DAILY_IP_LIMIT) {
-    const error = new Error("You've used today's 2 free optimizations — sign up for more.");
-    error.status = 429;
-    error.code = 'free_daily_limit';
-    error.retryAfter = getRetryAfter();
-    throw error;
-  }
-
-  return { ip, day, docId, count, remaining: Math.max(0, DAILY_IP_LIMIT - count) };
+  if (count >= limit) { const error = new Error(`You've used today's ${limit} free optimizations — sign up for more.`); error.status = 429; error.code = 'free_daily_limit'; error.retryAfter = getRetryAfter(); throw error; }
+  return { ip, day, docId, count, remaining: Math.max(0, limit - count) };
 };
-
-const rollbackDailyReservation = async ({ docId, day }) => {
-  try {
-    const db = adminDb();
-    const ref = db.collection(RATE_LIMIT_COLLECTION).doc(docId);
-    await db.runTransaction(async (transaction) => {
-      const snapshot = await transaction.get(ref);
-      if (!snapshot.exists) return;
-      const current = Number(snapshot.data()?.count || 0);
-      if (current > 0) transaction.set(ref, { day, count: current - 1, updatedAt: new Date() }, { merge: true });
-    });
-  } catch {}
-};
-
-const parseBody = (body) => {
-  if (!body) return {};
-  if (typeof body === 'string') {
-    try { return JSON.parse(body); } catch {
-      const error = new Error('The request body must be valid JSON.');
-      error.status = 400;
-      error.code = 'invalid_request';
-      throw error;
-    }
-  }
-  return body;
-};
-
-const validate = (body) => {
-  const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : '';
-  if (prompt.length < 3) {
-    const error = new Error('Provide a prompt with at least 3 characters.');
-    error.status = 400;
-    error.code = 'invalid_prompt';
-    throw error;
-  }
-  if (prompt.length > MAX_PROMPT_LENGTH) {
-    const error = new Error(`Prompt must be ${MAX_PROMPT_LENGTH} characters or fewer.`);
-    error.status = 400;
-    error.code = 'prompt_too_long';
-    throw error;
-  }
-  const target = typeof body.target === 'string' && body.target.trim() ? body.target.trim().slice(0, 80) : 'general AI';
-  return { prompt, target };
-};
-
+const rollbackDailyReservation = async ({ docId, day }) => { try { const db = adminDb(); const ref = db.collection(RATE_LIMIT_COLLECTION).doc(docId); await db.runTransaction(async (transaction) => { const snapshot = await transaction.get(ref); if (!snapshot.exists) return; const current = Number(snapshot.data()?.count || 0); if (current > 0) transaction.set(ref, { day, count: current - 1, updatedAt: new Date() }, { merge: true }); }); } catch {} };
+const parseBody = (body) => { if (!body) return {}; if (typeof body === 'string') { try { return JSON.parse(body); } catch { const error = new Error('The request body must be valid JSON.'); error.status = 400; error.code = 'invalid_request'; throw error; } } return body; };
+const validate = (body, maxPromptLength) => { const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : ''; if (prompt.length < 3) { const error = new Error('Provide a prompt with at least 3 characters.'); error.status = 400; error.code = 'invalid_prompt'; throw error; } if (prompt.length > maxPromptLength) { const error = new Error(`Prompt must be ${maxPromptLength} characters or fewer.`); error.status = 400; error.code = 'prompt_too_long'; throw error; } const target = typeof body.target === 'string' && body.target.trim() ? body.target.trim().slice(0, 80) : 'general AI'; return { prompt, target }; };
 const clampScore = (value) => Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
 const systemInstruction = (target) => `You are PromptStudio's prompt optimization engine. Improve the user's rough prompt so a target AI can understand and execute it more reliably. Preserve the user's intent. Do not invent business facts, names, prices, claims, requirements, or hidden context. Add useful specificity, structure, constraints, output requirements, and success criteria only when they follow from the request. Remove ambiguity and unnecessary verbosity. The result must be ready to paste into the target AI.\n\nReturn JSON only with exactly this shape: {"optimized_prompt":"string","score":0}. The score is the quality of the ORIGINAL prompt before optimization, from 0 to 100. Do not score the optimized prompt. The optimized prompt must not mention PromptStudio or this optimization process. Target AI: ${target}.`;
-
-const parseModelResult = (raw) => {
-  if (!raw) throw new Error('The AI service returned an empty response.');
-  const parsed = JSON.parse(raw);
-  const optimizedPrompt = typeof parsed.optimized_prompt === 'string' ? parsed.optimized_prompt.trim() : '';
-  if (!optimizedPrompt) throw new Error('The AI service returned an incomplete response.');
-  return { optimizedPrompt, score: clampScore(parsed.score) };
-};
-
-const withTimeout = async (promiseFactory, ms = PROVIDER_TIMEOUT_MS) => {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), ms);
-  try { return await promiseFactory(controller.signal); } finally { clearTimeout(timeout); }
-};
-
-const callGemini = async ({ prompt, target }) => {
-  if (!process.env.GEMINI_API_KEY) { const error = new Error('Gemini is not configured.'); error.status = 503; throw error; }
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  const contents = `${systemInstruction(target)}\n\nUSER PROMPT:\n${prompt}`;
-  const models = [process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite', process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.6-flash'].filter((model, index, list) => model && list.indexOf(model) === index);
-  let lastError;
-  for (const model of models) {
-    try {
-      const response = await withTimeout(() => ai.models.generateContent({ model, contents, config: { responseMimeType: 'application/json', maxOutputTokens: 1800 } }));
-      return parseModelResult(response.text?.trim());
-    } catch (error) {
-      lastError = error;
-      if (model === models[models.length - 1]) break;
-    }
-  }
-  throw lastError || new Error('Gemini failed.');
-};
-
-const callGroq = async ({ prompt, target }) => {
-  if (!process.env.GROQ_API_KEY) { const error = new Error('Groq is not configured.'); error.status = 503; throw error; }
-  const model = process.env.GROQ_MODEL || 'openai/gpt-oss-20b';
-  const response = await withTimeout((signal) => fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST', signal,
-    headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, messages: [{ role: 'system', content: systemInstruction(target) }, { role: 'user', content: prompt }], temperature: 0.2, max_completion_tokens: 1800, response_format: { type: 'json_object' } })
-  }));
-  const rawBody = await response.text();
-  if (!response.ok) {
-    let detail = rawBody;
-    try { detail = JSON.parse(rawBody)?.error?.message || rawBody; } catch {}
-    const error = new Error(`Groq request failed: ${detail}`); error.status = response.status; throw error;
-  }
-  let data;
-  try { data = JSON.parse(rawBody); } catch { const error = new Error('Groq returned invalid JSON.'); error.status = 502; throw error; }
-  return parseModelResult(data?.choices?.[0]?.message?.content?.trim());
-};
-
-const getProviderOrder = () => {
-  const configured = String(process.env.AI_PROVIDER_ORDER || '').split(',')
-    .map((provider) => provider.trim().toLowerCase())
-    .filter((provider, index, list) => PROVIDERS.includes(provider) && list.indexOf(provider) === index);
-  return [...configured, ...PROVIDERS.filter((provider) => !configured.includes(provider))];
-};
-
-const generateOptimizedPrompt = async ({ prompt, target }) => {
-  const providerOrder = getProviderOrder();
-  const providers = { gemini: callGemini, groq: callGroq };
-  let lastError;
-  for (const provider of providerOrder) {
-    try {
-      return await providers[provider]({ prompt, target });
-    } catch (error) {
-      lastError = error;
-      // Any provider failure is isolated to that provider. Try the next configured/fallback provider.
-      // This includes missing credentials, auth/model errors, rate limits, timeouts and malformed output.
-    }
-  }
-  const error = new Error('The AI service could not optimize the prompt right now.');
-  error.status = 502;
-  error.code = 'generation_failed';
-  error.cause = lastError;
-  throw error;
-};
+const parseModelResult = (raw) => { if (!raw) throw new Error('The AI service returned an empty response.'); const parsed = JSON.parse(raw); const optimizedPrompt = typeof parsed.optimized_prompt === 'string' ? parsed.optimized_prompt.trim() : ''; if (!optimizedPrompt) throw new Error('The AI service returned an incomplete response.'); return { optimizedPrompt, score: clampScore(parsed.score) }; };
+const withTimeout = async (promiseFactory, ms) => { const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), ms); try { return await promiseFactory(controller.signal); } finally { clearTimeout(timeout); } };
+const callGemini = async ({ prompt, target, timeoutMs }) => { if (!process.env.GEMINI_API_KEY) { const error = new Error('Gemini is not configured.'); error.status = 503; throw error; } const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }); const contents = `${systemInstruction(target)}\n\nUSER PROMPT:\n${prompt}`; const models = [process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite', process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.6-flash'].filter((model, index, list) => model && list.indexOf(model) === index); let lastError; for (const model of models) { try { const response = await withTimeout(() => ai.models.generateContent({ model, contents, config: { responseMimeType: 'application/json', maxOutputTokens: 1800 } }), timeoutMs); return parseModelResult(response.text?.trim()); } catch (error) { lastError = error; if (model === models[models.length - 1]) break; } } throw lastError || new Error('Gemini failed.'); };
+const callGroq = async ({ prompt, target, timeoutMs }) => { if (!process.env.GROQ_API_KEY) { const error = new Error('Groq is not configured.'); error.status = 503; throw error; } const model = process.env.GROQ_MODEL || 'openai/gpt-oss-20b'; const response = await withTimeout((signal) => fetch('https://api.groq.com/openai/v1/chat/completions', { method: 'POST', signal, headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model, messages: [{ role: 'system', content: systemInstruction(target) }, { role: 'user', content: prompt }], temperature: 0.2, max_completion_tokens: 1800, response_format: { type: 'json_object' } }) }), timeoutMs); const rawBody = await response.text(); if (!response.ok) { let detail = rawBody; try { detail = JSON.parse(rawBody)?.error?.message || rawBody; } catch {} const error = new Error(`Groq request failed: ${detail}`); error.status = response.status; throw error; } let data; try { data = JSON.parse(rawBody); } catch { const error = new Error('Groq returned invalid JSON.'); error.status = 502; throw error; } return parseModelResult(data?.choices?.[0]?.message?.content?.trim()); };
+const getProviderOrder = () => { const configured = String(process.env.AI_PROVIDER_ORDER || '').split(',').map((provider) => provider.trim().toLowerCase()).filter((provider, index, list) => PROVIDERS.includes(provider) && list.indexOf(provider) === index); return [...configured, ...PROVIDERS.filter((provider) => !configured.includes(provider))]; };
+const generateOptimizedPrompt = async ({ prompt, target, timeoutMs }) => { const providerOrder = getProviderOrder(); const providers = { gemini: callGemini, groq: callGroq }; let lastError; for (const provider of providerOrder) { try { return await providers[provider]({ prompt, target, timeoutMs }); } catch (error) { lastError = error; } } const error = new Error('The AI service could not optimize the prompt right now.'); error.status = 502; error.code = 'generation_failed'; error.cause = lastError; throw error; };
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Request-ID');
+  res.setHeader('Access-Control-Allow-Origin', '*'); res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Request-ID');
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method === 'GET') return sendJson(res, 200, { ok: true, service: 'public-optimizer', status: 'operational' });
   if (req.method !== 'POST') return sendJson(res, 405, { error: { code: 'method_not_allowed', message: 'Use POST to optimize a prompt.' } });
-
   let rate;
   try {
-    const contentType = String(req.headers?.['content-type'] || '').toLowerCase();
-    if (!contentType.includes('application/json')) return sendJson(res, 415, { error: { code: 'unsupported_media_type', message: 'Content-Type must be application/json.' } });
-    const length = Number(req.headers?.['content-length'] || 0);
-    if (Number.isFinite(length) && length > MAX_BODY_BYTES) return sendJson(res, 413, { error: { code: 'payload_too_large', message: 'Request payload is too large.' } });
-    const { prompt, target } = validate(parseBody(req.body));
-    rate = await enforceDailyIpLimit(req);
-    const result = await generateOptimizedPrompt({ prompt, target });
-    try { await recordSuccessfulOptimization({ ip: rate.ip, day: rate.day, limitReached: rate.count === DAILY_IP_LIMIT }); } catch {}
-    return sendJson(res, 200, { optimized_prompt: result.optimizedPrompt, score: result.score, link: 'https://promptstudioai.in/' }, { 'X-RateLimit-Limit': String(DAILY_IP_LIMIT), 'X-RateLimit-Remaining': String(rate.remaining) });
+    const operations = await getOperationsConfig(adminDb()); const { dailyIpLimit, providerTimeoutMs, maxBodyBytes, maxPromptLength } = operations.publicOptimizer;
+    const contentType = String(req.headers?.['content-type'] || '').toLowerCase(); if (!contentType.includes('application/json')) return sendJson(res, 415, { error: { code: 'unsupported_media_type', message: 'Content-Type must be application/json.' } });
+    const length = Number(req.headers?.['content-length'] || 0); if (Number.isFinite(length) && length > maxBodyBytes) return sendJson(res, 413, { error: { code: 'payload_too_large', message: 'Request payload is too large.' } });
+    const { prompt, target } = validate(parseBody(req.body), maxPromptLength); rate = await enforceDailyIpLimit(req, dailyIpLimit); const result = await generateOptimizedPrompt({ prompt, target, timeoutMs: providerTimeoutMs });
+    try { await recordSuccessfulOptimization({ ip: rate.ip, day: rate.day, limitReached: rate.count === dailyIpLimit }); } catch {}
+    return sendJson(res, 200, { optimized_prompt: result.optimizedPrompt, score: result.score, link: 'https://promptstudioai.in/' }, { 'X-RateLimit-Limit': String(dailyIpLimit), 'X-RateLimit-Remaining': String(rate.remaining) });
   } catch (error) {
     if (rate?.docId && error.code !== 'free_daily_limit') await rollbackDailyReservation({ docId: rate.docId, day: rate.day });
-    if (error.code && !['free_daily_limit', 'invalid_prompt', 'invalid_request', 'unsupported_media_type', 'payload_too_large', 'method_not_allowed'].includes(error.code)) {
-      try { await recordPublicError({ code: error.code }); } catch {}
-    }
+    if (error.code && !['free_daily_limit', 'invalid_prompt', 'invalid_request', 'unsupported_media_type', 'payload_too_large', 'method_not_allowed'].includes(error.code)) { try { await recordPublicError({ code: error.code }); } catch {} }
     if (error.retryAfter) res.setHeader('Retry-After', String(error.retryAfter));
-    const headers = error.code === 'free_daily_limit' ? { 'X-RateLimit-Limit': String(DAILY_IP_LIMIT), 'X-RateLimit-Remaining': '0' } : {};
+    const headers = error.code === 'free_daily_limit' ? { 'X-RateLimit-Limit': String(rate?.limit || 0), 'X-RateLimit-Remaining': '0' } : {};
     return sendJson(res, Number(error.status) || 500, { error: { code: error.code || 'optimization_failed', message: error.message || 'Unable to optimize the prompt right now.' } }, headers);
   }
 }
