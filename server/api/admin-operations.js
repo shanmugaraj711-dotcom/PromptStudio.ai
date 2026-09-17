@@ -21,7 +21,7 @@ const providerStatus = async () => {
   const groqKey = String(process.env.GROQ_API_KEY || "").trim();
   const [geminiHealth, groqHealth] = await Promise.all([
     geminiKey
-      ? withTimeout(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(geminiKey)}`)
+      ? withTimeout("https://generativelanguage.googleapis.com/v1beta/models", { "x-goog-api-key": geminiKey })
       : { reachable: false, status: null },
     groqKey
       ? withTimeout("https://api.groq.com/openai/v1/models", { Authorization: `Bearer ${groqKey}` })
