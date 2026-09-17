@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb, json } from "./_firebaseAdmin.js";
 import { verifyWebhookSignature } from "./_razorpay.js";
@@ -10,6 +11,18 @@ const readRawBody = async (req) => {
   for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   return Buffer.concat(chunks).toString("utf8");
 };
+
+const getEventId = (req, payload, rawBody) => {
+  const headerId = String(req.headers["x-razorpay-event-id"] || "").trim();
+  if (headerId) return headerId;
+  const paymentId = payload?.payload?.payment?.entity?.id;
+  const subscriptionId = payload?.payload?.subscription?.entity?.id;
+  const entityId = paymentId || subscriptionId;
+  if (entityId) return `${payload.event || "unknown"}:${entityId}`;
+  return `${payload.event || "unknown"}:body_${createHash("sha256").update(rawBody).digest("hex")}`;
+};
+
+const eventKey = (eventId) => String(eventId).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 150);
 
 const fulfillCreditWebhook = async (orderId, paymentId) => {
   if (!orderId) {
@@ -30,9 +43,7 @@ const fulfillCreditWebhook = async (orderId, paymentId) => {
     }
 
     const payment = snap.data() || {};
-    if (payment.fulfilled === true) {
-      return { fulfilled: false, alreadyFulfilled: true };
-    }
+    if (payment.fulfilled === true) return { fulfilled: false, alreadyFulfilled: true };
 
     const userRef = db.collection("users").doc(payment.uid);
     const userSnap = await tx.get(userRef);
@@ -97,13 +108,16 @@ export default async function handler(req, res) {
   const signature = req.headers["x-razorpay-signature"] || "";
   if (!signature || !verifyWebhookSignature(rawBody, signature)) return json(res, 400, { message: "Invalid webhook signature." });
 
+  let payload;
+  let eventId;
+  let key;
+
   try {
-    const payload = JSON.parse(rawBody);
-    const event = payload.event || "";
-    const eventId = req.headers["x-razorpay-event-id"] || `${event}:${payload?.payload?.payment?.entity?.id || payload?.payload?.subscription?.entity?.id || Date.now()}`;
-    const eventKey = String(eventId).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 150);
+    payload = JSON.parse(rawBody);
+    eventId = getEventId(req, payload, rawBody);
+    key = eventKey(eventId);
     const db = adminDb();
-    const eventRef = db.collection("paymentWebhookEvents").doc(eventKey);
+    const eventRef = db.collection("paymentWebhookEvents").doc(key);
     const existing = await eventRef.get();
 
     if (existing.exists && existing.data()?.status === "processed") {
@@ -111,12 +125,13 @@ export default async function handler(req, res) {
     }
 
     await eventRef.set({
-      event,
+      event: payload.event || "",
       status: "processing",
       attempts: FieldValue.increment(1),
       lastAttemptAt: new Date(),
     }, { merge: true });
 
+    const event = payload.event || "";
     if (event === "payment.captured") {
       const payment = payload?.payload?.payment?.entity;
       await fulfillCreditWebhook(payment?.order_id, payment?.id);
@@ -141,16 +156,19 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error("Razorpay webhook failed", { code: error?.code || "unknown" });
 
+    if (!key && payload) {
+      eventId = getEventId(req, payload, rawBody);
+      key = eventKey(eventId);
+    }
+
     try {
-      const payload = JSON.parse(rawBody);
-      const event = payload.event || "";
-      const eventId = req.headers["x-razorpay-event-id"] || `${event}:${payload?.payload?.payment?.entity?.id || payload?.payload?.subscription?.entity?.id || "unknown"}`;
-      const eventKey = String(eventId).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 150);
-      await adminDb().collection("paymentWebhookEvents").doc(eventKey).set({
-        status: "failed",
-        lastErrorCode: error?.code || "unknown",
-        lastFailedAt: new Date(),
-      }, { merge: true });
+      if (key) {
+        await adminDb().collection("paymentWebhookEvents").doc(key).set({
+          status: "failed",
+          lastErrorCode: error?.code || "unknown",
+          lastFailedAt: new Date(),
+        }, { merge: true });
+      }
     } catch (auditError) {
       console.error("Razorpay webhook audit update failed", { code: auditError?.code || "unknown" });
     }
