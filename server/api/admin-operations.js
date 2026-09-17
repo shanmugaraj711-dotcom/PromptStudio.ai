@@ -3,7 +3,7 @@ import { requireFounderAdmin } from "./_adminSecurity.js";
 import { defaultOperationsConfig, getOperationsConfig, saveOperationsConfig } from "./_operationsConfig.js";
 import { readDailyStats } from "./_publicTelemetry.js";
 
-const withTimeout = async (url, headers, timeoutMs = 5000) => {
+const withTimeout = async (url, headers = {}, timeoutMs = 5000) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -21,7 +21,7 @@ const providerStatus = async () => {
   const groqKey = String(process.env.GROQ_API_KEY || "").trim();
   const [geminiHealth, groqHealth] = await Promise.all([
     geminiKey
-      ? withTimeout("https://generativelanguage.googleapis.com/v1beta/models", { Authorization: `Bearer ${geminiKey}` })
+      ? withTimeout(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(geminiKey)}`)
       : { reachable: false, status: null },
     groqKey
       ? withTimeout("https://api.groq.com/openai/v1/models", { Authorization: `Bearer ${groqKey}` })
