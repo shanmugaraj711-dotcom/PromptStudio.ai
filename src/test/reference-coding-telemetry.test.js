@@ -16,8 +16,9 @@ vi.mock('firebase-admin/firestore', () => ({
 vi.mock('../../server/api/_firebaseAdmin.js', () => ({
   adminDb: mocks.adminDb,
   requireUser: mocks.requireUser,
+  json: (res, status, payload) => { res.statusCode = status; res.body = payload; return res; },
 }));
-vi.mock('../../server/api/generate-prompt.js', () => ({
+vi.mock('../../server/api/generate-prompt-credits.js', () => ({
   default: mocks.generatePromptHandler,
 }));
 
@@ -178,6 +179,7 @@ describe('reference-coding telemetry', () => {
       fileReferenceCount: 1,
     });
     expect(promptRows.size).toBe(1);
-    expect(userDocs.get('test-user').credits).toBe(95);
+    // Credits are charged inside generate-prompt-credits (mocked here); this route only delegates.
+    expect(mocks.generatePromptHandler).toHaveBeenCalledTimes(1);
   });
 });

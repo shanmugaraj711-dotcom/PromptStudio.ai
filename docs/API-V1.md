@@ -32,17 +32,25 @@ Rules:
 
 ### Response
 
-Successful responses intentionally contain only the funnel payload:
+Successful responses contain the funnel payload plus the Prompt Doctor report:
 
 ```json
 {
   "optimized_prompt": "Create a concise marketing post for a restaurant...",
   "score": 41,
+  "optimized_score": 88,
+  "breakdown": { "goal": 12, "context": 6, "specificity": 9, "format": 6, "constraints": 8 },
+  "improvements": ["Defined the audience as local families", "Asked for three caption options under 60 words"],
   "link": "https://promptstudioai.in/"
 }
 ```
 
-`score` is the model's 0–100 assessment of the **original** prompt before optimization.
+- `score` is the 0–100 assessment of the **original** prompt before optimization. When `breakdown` is present, `score` is its sum.
+- `breakdown` grades the original prompt on five 0–20 dimensions: `goal`, `context`, `specificity`, `format`, `constraints`.
+- `optimized_score` is the estimated quality of the optimized prompt on the same rubric (never lower than `score`).
+- `improvements` lists 2–5 concrete fixes that were applied.
+
+`optimized_score`, `breakdown` and `improvements` are additive and omitted when the provider does not return them, so older clients that read only `optimized_prompt` and `score` keep working.
 
 Failures use:
 

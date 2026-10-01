@@ -96,6 +96,31 @@ describe("POST /api/v1/optimize", () => {
     expect(generateContent).toHaveBeenCalledTimes(1);
   });
 
+  it("returns the Prompt Doctor report when the provider supplies it", async () => {
+    generateContent.mockResolvedValue({
+      text: JSON.stringify({
+        optimized_prompt: "Write a 120-word launch post for [app name] aimed at college students.",
+        score: 30,
+        optimized_score: 86,
+        breakdown: { goal: 9, context: 3, specificity: 5, format: 2, constraints: 4 },
+        improvements: ["Named the audience", "Set a 120-word length"]
+      })
+    });
+    const handler = await loadHandler();
+    const response = makeResponse();
+    await handler(makeRequest({ prompt: "make an app launch post", target: "ChatGPT" }, "203.0.113.14"), response);
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body)).toEqual({
+      optimized_prompt: "Write a 120-word launch post for [app name] aimed at college students.",
+      score: 23,
+      optimized_score: 86,
+      breakdown: { goal: 9, context: 3, specificity: 5, format: 2, constraints: 4 },
+      improvements: ["Named the audience", "Set a 120-word length"],
+      link: "https://promptstudioai.in/"
+    });
+  });
+
   it("falls back to Groq when Gemini fails", async () => {
     process.env.GROQ_API_KEY = "groq-test-key";
     process.env.AI_PROVIDER_ORDER = "gemini";

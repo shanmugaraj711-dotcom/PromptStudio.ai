@@ -1,68 +1,193 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { PRICING_PLANS } from '../../constants/pricingPlans';
+import { MarketingFooter, MarketingHeader } from '../../components/layout/MarketingShell';
+import { LIBRARY_CATEGORIES, PROMPT_LIBRARY } from '../../data/promptLibrary';
+import PromptDoctor, { DIMENSIONS } from './PromptDoctor';
 
-const MODELS = ['ChatGPT', 'Claude', 'Gemini', 'Grok'];
-const FEATURES = [
-  { n: '01', icon: '▤', title: 'Write a Prompt', text: 'Turn rough ideas into clear, structured prompts.', to: '/builder?mode=standard', action: 'Start now' },
-  { n: '02', icon: '▧', title: 'Image → Prompt', text: 'Upload a reference and extract useful visual details.', to: '/builder?mode=image', action: 'Try it now' },
-  { n: '03', icon: '</>', title: 'Reference Coding', text: 'Turn a reference into clean, ready-to-use code prompts.', to: '/reference-coding', action: 'Explore' },
+const MODELS = ['ChatGPT', 'Claude', 'Gemini', 'Grok', 'Midjourney', 'Cursor', 'Lovable', 'v0'];
+
+const PRODUCTS = [
+  { id: 'image', tag: 'Most loved', title: 'Image → Prompt', text: 'Upload any photo, poster or design. Get the exact prompt to recreate the style in Midjourney, Gemini or DALL·E.', to: '/builder?mode=image', action: 'Try with an image', accent: 'border-emerald-300/30 bg-emerald-300/[.05]', tagClass: 'bg-emerald-300 text-slate-950' },
+  { id: 'builder', tag: '3 versions', title: 'Prompt Builder', text: 'Describe a rough idea and get a main prompt plus Faithful, Professional and Creative versions, saved to your history.', to: '/builder?mode=standard', action: 'Build a prompt', accent: 'border-white/10 bg-white/[.025]', tagClass: 'bg-white/10 text-slate-200' },
+  { id: 'coding', tag: 'For builders', title: 'Reference Coding', text: 'Drop in screenshots of an app or site. Get a build-ready prompt for Cursor, Claude Code, Lovable, v0 or Bolt.', to: '/reference-coding', action: 'Turn UI into code', accent: 'border-sky-300/20 bg-sky-300/[.04]', tagClass: 'bg-sky-300/20 text-sky-100' },
+  { id: 'forge', tag: 'New', title: 'Studio & App Forge', text: 'Go from idea to a live website preview or an installable Android app without leaving PromptStudio.', to: '/studio', action: 'Open Studio', accent: 'border-violet-300/25 bg-violet-300/[.05]', tagClass: 'bg-violet-300/25 text-violet-100' },
 ];
 
-function PublicTry() {
-  const [prompt, setPrompt] = useState('');
-  const [target, setTarget] = useState('ChatGPT');
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  useEffect(() => { fetch('/api/public-visit', { cache: 'no-store', keepalive: true }).catch(() => {}); }, []);
-  const optimize = async () => {
-    const value = prompt.trim();
-    if (value.length < 3 || loading) return;
-    setLoading(true); setError(''); setResult(null);
-    try {
-      const res = await fetch('/api/v1/optimize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: value, target }) });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) { const e = new Error(data?.error?.message || 'Unable to optimize right now.'); e.code = data?.error?.code; throw e; }
-      setResult(data);
-    } catch (e) { setError(e.code === 'free_daily_limit' ? e.message : (e.message || 'Something went wrong. Please try again.')); }
-    finally { setLoading(false); }
-  };
-  return (
-    <section id="try" className="border-y border-white/10 bg-[#04090b] px-5 py-16 text-white sm:px-8 lg:px-12">
-      <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[.72fr_1.28fr] lg:items-center">
-        <div><p className="text-[11px] font-black uppercase tracking-[.22em] text-emerald-300">Try it yourself</p><h2 className="mt-3 text-4xl font-black tracking-[-.045em] sm:text-5xl">Don’t imagine the difference.<br /><span className="text-emerald-300">See it.</span></h2><p className="mt-4 max-w-lg text-sm leading-6 text-slate-400">Paste the rough version. Pick your AI. Get a sharper prompt in seconds.</p><div className="mt-5 flex flex-wrap gap-2">{MODELS.map(model => <button key={model} type="button" onClick={() => setTarget(model)} className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${target === model ? 'border-emerald-300/50 bg-emerald-300/10 text-emerald-200' : 'border-white/10 text-slate-500 hover:text-white'}`}>{model}</button>)}</div></div>
-        <div className="rounded-[1.75rem] border border-white/10 bg-white/[.035] p-3 shadow-2xl backdrop-blur-xl"><div className="rounded-[1.35rem] border border-white/10 bg-black/30 p-4 sm:p-5"><div className="mb-3 flex items-center justify-between text-[10px] font-black uppercase tracking-[.18em] text-slate-500"><span>PromptStudio</span><span>{target}</span></div><textarea value={prompt} onChange={e => setPrompt(e.target.value)} maxLength={6000} rows={4} placeholder="Try: make a marketing post for my restaurant" className="w-full resize-none bg-transparent text-sm leading-6 text-white outline-none placeholder:text-slate-600" /><div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3"><span className="text-[11px] text-slate-600">{prompt.length}/6000 · 2 free optimizations daily</span><button type="button" onClick={optimize} disabled={prompt.trim().length < 3 || loading} className="rounded-xl bg-emerald-300 px-5 py-2.5 text-xs font-black text-slate-950 hover:bg-emerald-200 disabled:opacity-40">{loading ? 'Sharpening…' : 'Make it better →'}</button></div>{error && <p className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs text-amber-100">{error}</p>}{result && <div className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/[.05] p-4"><div className="flex items-center justify-between"><span className="text-[10px] font-black uppercase tracking-[.18em] text-emerald-300">Result</span><button type="button" onClick={() => navigator.clipboard?.writeText(result.optimized_prompt || '')} className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px] font-bold">Copy</button></div><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-100">{result.optimized_prompt}</p></div>}</div></div>
-      </div>
-    </section>
-  );
-}
+const BEFORE_AFTER = {
+  before: 'make a marketing post for my restaurant',
+  after: `Write 3 Instagram captions for [restaurant name], a family restaurant in [city] known for [signature dish].
+Audience: local families and office-goers looking for weekend plans.
+Goal: drive table bookings for this Saturday's [offer].
+Each caption: a hook in the first line, under 60 words, a warm and friendly tone, one call to action ("Book on WhatsApp: [number]"), and 3-5 local hashtags.
+Avoid generic phrases like "delicious food" — describe the dish instead.`,
+};
 
-function ProductShowcase() {
+const FAQ = [
+  { q: 'Is Prompt Doctor really free?', a: 'Yes. You get 2 free prompt checks every day without an account. A free account adds 3 full generations a day, with 3 alternative versions, saved history and Image → Prompt.' },
+  { q: 'Which AI tools does it work with?', a: 'Any of them. Prompt Doctor tunes the rewrite for ChatGPT, Claude, Gemini, Grok or Midjourney, and the result works anywhere you can paste text — including Cursor, Lovable, v0 and Bolt.' },
+  { q: 'How is my prompt scored?', a: 'On five dimensions worth 20 points each: a clear goal, context, specificity, output format, and constraints & tone. The report shows where you lost points and exactly what was fixed.' },
+  { q: 'Do you store what I paste?', a: 'Free Prompt Doctor checks are not saved to any account or history. Your text is sent to our AI provider to produce the result, and we keep only anonymous daily usage counts. See the Privacy Policy for details.' },
+  { q: 'Why not just ask ChatGPT to improve my prompt?', a: 'You can — but you will not see what was weak, you will not learn the pattern, and it tends to invent details. Prompt Doctor grades against a fixed rubric, marks unknown facts as [placeholders] instead of making them up, and tunes the output for the AI you are using.' },
+  { q: 'How do payments work?', a: 'Pro is ₹79/month or ₹499/year. Creator Credits are one-time packs that never expire. All payments go through Razorpay secure checkout.' },
+];
+
+const libraryHighlights = LIBRARY_CATEGORIES.map((category) => ({ category, item: PROMPT_LIBRARY.find((entry) => entry.category === category.id) })).filter(({ item }) => item);
+
+function SectionTitle({ eyebrow, title, text, center = false }) {
   return (
-    <section className="px-5 py-14 sm:px-8 lg:px-12"><div className="mx-auto grid max-w-7xl gap-5 lg:grid-cols-2">
-      <article id="studio" className="relative overflow-hidden rounded-[1.75rem] border border-emerald-300/25 bg-[radial-gradient(circle_at_85%_20%,rgba(16,185,129,.18),transparent_35%),#06100d] p-6 sm:p-8"><span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[.2em] text-emerald-300">Prompt Studio</span><h2 className="mt-4 text-3xl font-black tracking-[-.04em]">Studio</h2><p className="mt-2 max-w-md text-sm leading-6 text-slate-400">Your all-in-one AI prompt workspace.</p><div className="mt-6 grid gap-2 text-xs text-slate-300 sm:grid-cols-2"><span>✓ Save & organize prompts</span><span>✓ Multiple AI tools</span><span>✓ Image → prompt</span><span>✓ Reference coding</span></div><Link to="/studio" className="mt-7 inline-flex rounded-xl bg-emerald-300 px-5 py-3 text-xs font-black text-slate-950 hover:bg-emerald-200">Open Studio →</Link><div className="absolute -bottom-8 right-[-20px] hidden h-40 w-56 rotate-[-5deg] rounded-2xl border border-white/10 bg-slate-950/80 p-4 shadow-2xl sm:block"><div className="text-[9px] font-black uppercase tracking-widest text-slate-500">Workspace</div><div className="mt-4 space-y-2"><div className="h-2 rounded bg-emerald-300/40" /><div className="h-2 w-4/5 rounded bg-white/10" /><div className="h-2 w-3/5 rounded bg-white/10" /><div className="mt-4 h-12 rounded-xl bg-emerald-300/10" /></div></div></article>
-      <article id="app-forge" className="relative overflow-hidden rounded-[1.75rem] border border-violet-300/25 bg-[radial-gradient(circle_at_85%_20%,rgba(139,92,246,.2),transparent_35%),#080713] p-6 sm:p-8"><div className="flex items-center gap-2"><span className="rounded-full border border-violet-300/20 bg-violet-300/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[.2em] text-violet-200">App Forge</span><span className="rounded-full bg-emerald-300 px-2 py-1 text-[9px] font-black text-slate-950">NEW</span></div><h2 className="mt-4 text-3xl font-black tracking-[-.04em]">App Forge</h2><p className="mt-2 max-w-md text-sm leading-6 text-slate-400">Turn your idea into a real app with AI.</p><div className="mt-6 grid gap-2 text-xs text-slate-300 sm:grid-cols-2"><span>✓ Describe your app</span><span>✓ Production-ready code</span><span>✓ Customize the build</span><span>✓ Build & deliver</span></div><Link to="/apk-forge" className="mt-7 inline-flex rounded-xl bg-violet-200 px-5 py-3 text-xs font-black text-slate-950 hover:bg-violet-100">Try App Forge →</Link><div className="absolute -bottom-8 right-4 hidden h-40 w-28 rotate-[7deg] rounded-[1.5rem] border border-white/15 bg-slate-950/90 p-3 shadow-2xl sm:block"><div className="h-2 w-12 rounded bg-violet-300/60" /><div className="mt-5 h-14 rounded-xl bg-violet-300/10" /><div className="mt-3 h-2 w-16 rounded bg-white/10" /><div className="mt-2 h-2 w-12 rounded bg-emerald-300/40" /></div></article>
-    </div></section>
+    <div className={center ? 'mx-auto max-w-2xl text-center' : 'max-w-2xl'}>
+      <p className="text-[11px] font-black uppercase tracking-[.22em] text-emerald-300">{eyebrow}</p>
+      <h2 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">{title}</h2>
+      {text && <p className="mt-3 text-sm leading-6 text-slate-400">{text}</p>}
+    </div>
   );
 }
 
 function Landing() {
-  const { user } = useAuth();
+  const location = useLocation();
+  const prefill = location.state?.doctorPrompt || '';
+  const prefillTarget = location.state?.doctorTarget || 'ChatGPT';
+
+  useEffect(() => { fetch('/api/public-visit', { cache: 'no-store', keepalive: true }).catch(() => {}); }, []);
+  useEffect(() => {
+    const id = prefill ? 'doctor' : location.hash.replace('#', '');
+    if (!id) return undefined;
+    const timer = window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    return () => window.clearTimeout(timer);
+  }, [location.hash, location.key, prefill]);
+
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#020608] text-white selection:bg-emerald-300 selection:text-slate-950">
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#020608]/85 backdrop-blur-2xl"><nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3.5 sm:px-8"><Link to="/" className="flex items-center gap-2.5" aria-label="PromptStudio home"><span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-300 text-lg font-black text-slate-950">✦</span><span className="text-base font-black tracking-tight sm:text-lg">PromptStudio.ai</span></Link><div className="hidden items-center gap-6 text-sm font-semibold text-slate-400 md:flex"><a href="#studio" className="hover:text-white">Studio</a><a href="#app-forge" className="hover:text-white">App Forge</a><a href="#pricing" className="hover:text-white">Pricing</a><a href="#try" className="hover:text-white">Try it</a></div><div className="flex items-center gap-2">{user ? <Link to="/dashboard" className="rounded-xl border border-white/10 px-4 py-2 text-xs font-bold">Dashboard</Link> : <><Link to="/login" className="hidden px-3 py-2 text-xs font-bold text-slate-300 sm:block">Sign in</Link><Link to="/signup" className="rounded-xl bg-emerald-300 px-4 py-2.5 text-xs font-black text-slate-950 hover:bg-emerald-200">Try free →</Link></>}</div></nav></header>
+    <div className="min-h-screen overflow-x-clip bg-[#020608] text-white selection:bg-emerald-300 selection:text-slate-950">
+      <MarketingHeader />
       <main>
-        <section className="relative overflow-hidden border-b border-white/10 px-5 py-14 sm:px-8 sm:py-20 lg:px-12 lg:py-24"><div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(16,185,129,.2),transparent_27%),radial-gradient(circle_at_55%_75%,rgba(59,130,246,.11),transparent_30%),linear-gradient(180deg,#020608,#061016)]" /><div className="pointer-events-none absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.025)_1px,transparent_1px)] [background-size:64px_64px]" /><div className="relative mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[.9fr_1.1fr]"><div className="max-w-xl"><span className="inline-flex rounded-full border border-emerald-300/20 bg-emerald-300/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.2em] text-emerald-200">AI prompt intelligence</span><h1 className="mt-5 text-5xl font-black leading-[.96] tracking-[-.06em] sm:text-6xl lg:text-[5.2rem]">Turn your ideas<br /><span className="text-emerald-300">into prompts that work.</span></h1><p className="mt-5 max-w-lg text-base leading-7 text-slate-300 sm:text-lg">Transform rough ideas and reference images into clear, structured prompts for the AI tools you already use.</p><div className="mt-7 flex flex-wrap gap-3"><button type="button" onClick={() => document.getElementById('try')?.scrollIntoView({ behavior: 'smooth' })} className="rounded-2xl bg-emerald-300 px-6 py-3.5 text-sm font-black text-slate-950 hover:bg-emerald-200">Try it free →</button><Link to="/studio" className="rounded-2xl border border-white/15 bg-white/[.04] px-6 py-3.5 text-sm font-bold hover:bg-white/[.08]">Open Studio</Link></div><div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs font-bold text-slate-500"><span>✦ Faster results</span><span>∞ Works with top AI tools</span><span>◇ No card required</span></div></div><div className="relative mx-auto w-full max-w-xl rounded-[2rem] border border-emerald-300/30 bg-slate-950/70 p-3 shadow-[0_0_90px_rgba(16,185,129,.12)] backdrop-blur-xl"><div className="rounded-[1.5rem] border border-white/10 bg-black/40 p-5 sm:p-6"><div className="flex items-center justify-between text-xs font-black"><span className="text-emerald-300">PromptStudio</span><span className="text-slate-600">Live workspace</span></div><div className="mt-5 rounded-2xl border border-white/10 bg-white/[.03] p-4"><p className="text-[10px] font-black uppercase tracking-widest text-slate-600">Your idea</p><p className="mt-3 text-lg font-bold leading-7 text-slate-200">Create a cinematic product launch video for my new brand</p></div><div className="my-4 flex items-center gap-2"><span className="h-px flex-1 bg-emerald-300/20" /><span className="text-[10px] font-black uppercase tracking-widest text-emerald-300">PromptStudio</span><span className="h-px flex-1 bg-emerald-300/20" /></div><div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/[.05] p-4"><p className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Better prompt</p><p className="mt-3 text-sm leading-6 text-slate-200">Create a cinematic product launch video with a premium visual language, clear subject focus, deliberate camera movement, controlled lighting, brand-safe composition, and a strong final product reveal.</p></div><div className="mt-4 flex flex-wrap gap-2">{MODELS.map(m => <span key={m} className="rounded-full border border-white/10 px-3 py-1.5 text-[10px] font-bold text-slate-400">{m}</span>)}</div></div></div></div></section>
-        <section id="examples" className="px-5 py-14 sm:px-8 lg:px-12"><div className="mx-auto max-w-7xl"><div className="text-center"><p className="text-[11px] font-black uppercase tracking-[.22em] text-emerald-300">Start creating in seconds</p><h2 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">Choose your starting point.</h2></div><div className="mt-8 grid gap-4 md:grid-cols-3">{FEATURES.map(f => <Link key={f.n} to={f.to} className="group rounded-3xl border border-white/10 bg-white/[.025] p-5 transition hover:-translate-y-1 hover:border-emerald-300/30 hover:bg-white/[.04]"><div className="flex items-start justify-between"><span className="text-emerald-300/80">{f.icon}</span><span className="text-[10px] font-black tracking-widest text-slate-600">{f.n}</span></div><h3 className="mt-7 text-lg font-black">{f.title}</h3><p className="mt-2 text-sm leading-6 text-slate-500">{f.text}</p><span className="mt-5 inline-block text-xs font-black text-emerald-300">{f.action} →</span></Link>)}</div></div></section>
-        <ProductShowcase />
-        <PublicTry />
-        <section id="pricing" className="border-y border-white/10 bg-[#03080a] px-5 py-14 sm:px-8 lg:px-12"><div className="mx-auto max-w-7xl"><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><p className="text-[11px] font-black uppercase tracking-[.22em] text-emerald-300">Simple & affordable</p><h2 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">Choose what works for you.</h2></div><p className="text-xs text-slate-600">No hidden recurring charges on credits.</p></div><div className="mt-7 grid gap-4 md:grid-cols-3">{PRICING_PLANS.map(plan => <article key={plan.id} className={`relative flex min-h-0 flex-col rounded-3xl border p-5 ${plan.highlighted ? 'border-emerald-300/40 bg-emerald-300/[.055]' : 'border-white/10 bg-white/[.025]'}`}>{plan.highlighted && <span className="absolute -top-2.5 right-5 rounded-full bg-emerald-300 px-2.5 py-1 text-[9px] font-black text-slate-950">MOST POPULAR</span>}<h3 className="text-base font-black">{plan.name}</h3><div className="mt-2 text-3xl font-black">{plan.price}<span className="ml-1.5 text-xs font-semibold text-slate-600">/ {plan.period}</span></div><p className="mt-2 min-h-10 text-xs leading-5 text-slate-500">{plan.description}</p><ul className="mt-4 flex-1 space-y-2">{plan.features.slice(0, 5).map(feature => <li key={feature} className="flex gap-2 text-xs leading-5 text-slate-300"><span className="text-emerald-300">✓</span>{feature}</li>)}</ul><Link to="/signup" className={`mt-5 rounded-xl px-4 py-2.5 text-center text-xs font-black ${plan.highlighted ? 'bg-emerald-300 text-slate-950 hover:bg-emerald-200' : 'border border-white/10 bg-white/[.04] text-white hover:bg-white/[.08]'}`}>{plan.id === 'pro' ? 'Start Pro' : plan.id === 'credits' ? 'Get Credits' : 'Get Started'} →</Link></article>)}</div></div></section>
-        <section className="px-5 py-12 sm:px-8 lg:px-12"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 rounded-3xl border border-white/10 bg-white/[.02] px-5 py-4"><div><p className="text-sm font-black">Works with the AI tools you love</p><p className="mt-1 text-xs text-slate-600">Use your prompts anywhere.</p></div><div className="flex flex-wrap gap-2">{[...MODELS, 'Midjourney', 'More'].map(m => <span key={m} className="rounded-full border border-white/10 px-3 py-2 text-[10px] font-bold text-slate-400">{m}</span>)}</div></div></section>
-        <section className="relative overflow-hidden border-t border-white/10 bg-[radial-gradient(circle_at_50%_0%,rgba(16,185,129,.12),transparent_45%),#020608] px-5 py-16 text-center sm:px-8"><p className="text-[11px] font-black uppercase tracking-[.22em] text-emerald-300">Ready?</p><h2 className="mt-3 text-4xl font-black tracking-[-.05em]">Think it. <span className="text-emerald-300">Supercharge it.</span></h2><p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-slate-500">Bring the messy thought. Leave with a prompt, a workflow, or an app idea ready to move.</p><button type="button" onClick={() => document.getElementById('try')?.scrollIntoView({ behavior: 'smooth' })} className="mt-6 rounded-2xl bg-emerald-300 px-6 py-3.5 text-sm font-black text-slate-950 hover:bg-emerald-200">Optimize a prompt free →</button></section>
+        <section className="relative overflow-hidden border-b border-white/10 px-4 py-10 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_75%_30%,rgba(16,185,129,.18),transparent_30%),radial-gradient(circle_at_20%_80%,rgba(59,130,246,.10),transparent_30%),linear-gradient(180deg,#020608,#061016)]" />
+          <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.025)_1px,transparent_1px)] [background-size:64px_64px]" />
+          <div className="relative mx-auto grid max-w-7xl items-start gap-10 lg:grid-cols-[.85fr_1.15fr]">
+            <div className="max-w-xl lg:pt-8">
+              <span className="inline-flex rounded-full border border-emerald-300/20 bg-emerald-300/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.2em] text-emerald-200">Free Prompt Doctor</span>
+              <h1 className="mt-5 text-[2.6rem] font-black leading-[.98] tracking-[-.05em] sm:text-6xl lg:text-[4rem] xl:text-[4.6rem]">Bad prompt in.<br /><span className="text-emerald-300">Great answer out.</span></h1>
+              <p className="mt-5 max-w-lg text-base leading-7 text-slate-300 sm:text-lg">AI is only as good as what you ask it. Paste any prompt — PromptStudio <strong className="text-white">scores it out of 100</strong>, shows exactly what’s missing, and rewrites it for ChatGPT, Claude, Gemini or Midjourney.</p>
+              <ul className="mt-6 grid gap-2.5 text-sm text-slate-300">
+                <li className="flex gap-2.5"><span className="text-emerald-300">✓</span>See your score across 5 dimensions in seconds</li>
+                <li className="flex gap-2.5"><span className="text-emerald-300">✓</span>Learn why it was weak — not just a rewrite</li>
+                <li className="flex gap-2.5"><span className="text-emerald-300">✓</span>No invented facts: unknowns become [placeholders]</li>
+              </ul>
+              <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-xs font-bold text-slate-500"><span>◇ No sign-up</span><span>◇ No card</span><span>◇ Works with every AI</span></div>
+            </div>
+            <PromptDoctor key={prefill ? location.key : "doctor"} initialPrompt={prefill} initialTarget={prefillTarget} />
+          </div>
+        </section>
+
+        <section className="border-b border-white/10 px-4 py-4 sm:px-8"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] font-black uppercase tracking-[.18em] text-slate-600"><span className="text-slate-500">Works with</span>{MODELS.map((model) => <span key={model}>{model}</span>)}</div></section>
+
+        <section className="px-4 py-14 sm:px-8 lg:px-12 lg:py-20">
+          <div className="mx-auto max-w-7xl">
+            <SectionTitle eyebrow="The rubric" title="Why most prompts get average answers." text="Every prompt is graded on the same five things. Miss one and the AI starts guessing — fix all five and it stops." />
+            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {DIMENSIONS.map((dimension, index) => (
+                <article key={dimension.id} className="rounded-2xl border border-white/10 bg-white/[.025] p-5">
+                  <div className="flex items-center justify-between text-[10px] font-black tracking-widest text-slate-600"><span>0{index + 1}</span><span>20 pts</span></div>
+                  <h3 className="mt-5 text-base font-black">{dimension.label}</h3>
+                  <p className="mt-2 text-xs leading-5 text-slate-400">{dimension.tip}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="border-y border-white/10 bg-[#03080a] px-4 py-14 sm:px-8 lg:px-12 lg:py-20">
+          <div className="mx-auto max-w-7xl">
+            <SectionTitle eyebrow="Example" title="Same idea. Very different answer." />
+            <div className="mt-8 grid gap-4 lg:grid-cols-[.8fr_1.2fr]">
+              <article className="rounded-3xl border border-rose-300/20 bg-rose-300/[.04] p-5 sm:p-6">
+                <div className="flex items-center justify-between"><span className="text-[10px] font-black uppercase tracking-[.18em] text-rose-300">Before</span><span className="rounded-full bg-rose-400/15 px-2.5 py-1 text-xs font-black text-rose-300">18 / 100</span></div>
+                <p className="mt-4 text-lg font-bold text-slate-200">“{BEFORE_AFTER.before}”</p>
+                <ul className="mt-5 space-y-1.5 text-xs text-slate-400"><li>✗ No audience</li><li>✗ No platform or format</li><li>✗ No goal or call to action</li><li>✗ No tone</li></ul>
+              </article>
+              <article className="rounded-3xl border border-emerald-300/25 bg-emerald-300/[.05] p-5 sm:p-6">
+                <div className="flex items-center justify-between"><span className="text-[10px] font-black uppercase tracking-[.18em] text-emerald-300">After Prompt Doctor</span><span className="rounded-full bg-emerald-300/15 px-2.5 py-1 text-xs font-black text-emerald-300">89 / 100</span></div>
+                <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-200">{BEFORE_AFTER.after}</p>
+                <button type="button" onClick={() => document.getElementById('doctor')?.scrollIntoView({ behavior: 'smooth' })} className="mt-5 text-xs font-black text-emerald-300 hover:text-emerald-200">Try it on your own prompt →</button>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section id="products" className="scroll-mt-20 px-4 py-14 sm:px-8 lg:px-12 lg:py-20">
+          <div className="mx-auto max-w-7xl">
+            <SectionTitle eyebrow="Go further with a free account" title="One workspace from idea to output." text="Prompt Doctor is the free front door. Inside, PromptStudio turns images, screenshots and rough ideas into prompts, websites and apps." />
+            <div className="mt-8 grid gap-4 md:grid-cols-2">
+              {PRODUCTS.map((product) => (
+                <Link key={product.id} to={product.to} className={`group flex flex-col rounded-3xl border p-6 transition hover:-translate-y-1 hover:border-white/25 ${product.accent}`}>
+                  <span className={`self-start rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${product.tagClass}`}>{product.tag}</span>
+                  <h3 className="mt-5 text-2xl font-black tracking-[-.03em]">{product.title}</h3>
+                  <p className="mt-2 flex-1 text-sm leading-6 text-slate-400">{product.text}</p>
+                  <span className="mt-5 text-xs font-black text-emerald-300 group-hover:text-emerald-200">{product.action} →</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="border-y border-white/10 bg-[#03080a] px-4 py-14 sm:px-8 lg:px-12 lg:py-20">
+          <div className="mx-auto max-w-7xl">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+              <SectionTitle eyebrow="Free prompt library" title="Steal these prompts." text="Ready-made, fill-in-the-blank prompts for students, job seekers, shop owners, creators and developers." />
+              <Link to="/prompts" className="shrink-0 rounded-xl border border-white/15 px-4 py-2.5 text-xs font-black hover:bg-white/[.06]">Browse all {PROMPT_LIBRARY.length} prompts →</Link>
+            </div>
+            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {libraryHighlights.map(({ category, item }) => (
+                <Link key={item.id} to={`/prompts#${item.id}`} className="group rounded-2xl border border-white/10 bg-white/[.025] p-5 transition hover:border-emerald-300/30">
+                  <p className="text-[11px] font-bold text-slate-500">{category.icon} {category.label}</p>
+                  <h3 className="mt-3 font-black">{item.title}</h3>
+                  <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-500">{item.prompt}</p>
+                  <span className="mt-4 inline-block text-xs font-black text-emerald-300">Use this prompt →</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="pricing" className="scroll-mt-20 px-4 py-14 sm:px-8 lg:px-12 lg:py-20">
+          <div className="mx-auto max-w-7xl">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><SectionTitle eyebrow="Simple pricing in ₹" title="Start free. Pay only when it's part of your day." /><p className="text-xs text-slate-500">Secure Razorpay checkout · Credits never expire</p></div>
+            <div className="mt-8 grid gap-4 md:grid-cols-3">{PRICING_PLANS.map((plan) => (
+              <article key={plan.id} className={`relative flex flex-col rounded-3xl border p-6 ${plan.highlighted ? 'border-emerald-300/40 bg-emerald-300/[.055]' : 'border-white/10 bg-white/[.025]'}`}>
+                {plan.highlighted && <span className="absolute -top-2.5 right-5 rounded-full bg-emerald-300 px-2.5 py-1 text-[9px] font-black text-slate-950">MOST POPULAR</span>}
+                <h3 className="text-base font-black">{plan.name}</h3>
+                <div className="mt-2 text-3xl font-black">{plan.price}<span className="ml-1.5 text-xs font-semibold text-slate-500">/ {plan.period}</span></div>
+                {plan.annualPrice && <p className="mt-1 text-xs font-bold text-emerald-300">or {plan.annualPrice} {plan.annualPeriod} — save 47%</p>}
+                <p className="mt-2 min-h-10 text-xs leading-5 text-slate-400">{plan.description}</p>
+                <ul className="mt-4 flex-1 space-y-2">{plan.features.slice(0, 6).map((feature) => <li key={feature} className="flex gap-2 text-xs leading-5 text-slate-300"><span className="text-emerald-300">✓</span>{feature}</li>)}</ul>
+                <Link to="/signup" className={`mt-5 rounded-xl px-4 py-2.5 text-center text-xs font-black ${plan.highlighted ? 'bg-emerald-300 text-slate-950 hover:bg-emerald-200' : 'border border-white/10 bg-white/[.04] text-white hover:bg-white/[.08]'}`}>{plan.cta} →</Link>
+              </article>
+            ))}</div>
+          </div>
+        </section>
+
+        <section id="faq" className="border-t border-white/10 bg-[#03080a] px-4 py-14 sm:px-8 lg:px-12 lg:py-20">
+          <div className="mx-auto max-w-3xl">
+            <SectionTitle eyebrow="FAQ" title="Questions, answered." center />
+            <div className="mt-8 divide-y divide-white/10 rounded-3xl border border-white/10 bg-white/[.02]">
+              {FAQ.map((item) => (
+                <details key={item.q} className="group px-5 py-4 [&_summary::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-bold text-slate-100">{item.q}<span className="text-emerald-300 transition group-open:rotate-45">+</span></summary>
+                  <p className="mt-3 text-sm leading-6 text-slate-400">{item.a}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="relative overflow-hidden border-t border-white/10 bg-[radial-gradient(circle_at_50%_0%,rgba(16,185,129,.14),transparent_45%),#020608] px-4 py-16 text-center sm:px-8">
+          <h2 className="text-4xl font-black tracking-[-.05em] sm:text-5xl">What does <span className="text-emerald-300">your</span> prompt score?</h2>
+          <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-slate-400">Find out in 10 seconds. Free, no sign-up — and you will never write a lazy prompt again.</p>
+          <button type="button" onClick={() => { document.getElementById('doctor')?.scrollIntoView({ behavior: 'smooth' }); window.setTimeout(() => document.getElementById('doctor-prompt')?.focus({ preventScroll: true }), 500); }} className="mt-7 rounded-2xl bg-emerald-300 px-6 py-3.5 text-sm font-black text-slate-950 hover:bg-emerald-200">Score my prompt free →</button>
+        </section>
       </main>
-      <footer className="border-t border-white/10 bg-[#010304] px-5 py-8 sm:px-8"><div className="mx-auto flex max-w-7xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><div><Link to="/" className="font-black">PromptStudio.ai</Link><p className="mt-1 text-xs text-slate-700">From imagination to impact.</p></div><div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-600"><Link to="/help" className="hover:text-white">Help</Link><Link to="/contact" className="hover:text-white">Contact</Link><Link to="/privacy" className="hover:text-white">Privacy</Link><Link to="/terms" className="hover:text-white">Terms</Link><Link to="/refund" className="hover:text-white">Refunds</Link></div></div></footer>
+      <MarketingFooter />
     </div>
   );
 }
