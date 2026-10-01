@@ -22,8 +22,8 @@ Most people get mediocre answers from AI for one reason: the prompt is missing c
 
 | | Feature | What it does | Account |
 |---|---|---|---|
-| 🩺 | **Prompt Doctor** | Scores a prompt 0–100 on 5 dimensions, lists the fixes, rewrites it for the chosen AI, and makes the before → after score shareable on WhatsApp, X and LinkedIn. | Free, no sign-up |
-| 📚 | **Prompt Library** | 24 fill-in-the-blank prompts for students, job seekers, small businesses, creators, developers and AI images. Each one can be sent to Prompt Doctor and tailored. | Free, no sign-up |
+| 🩺 | **Prompt Doctor** | Scores a prompt 0–100 on 5 dimensions, lists the fixes, rewrites it for the chosen AI, lets you fill in the blanks before copying, remembers your recent checks and personal best, and makes the before → after score shareable on WhatsApp, X and LinkedIn. | Free, no sign-up |
+| 📚 | **Prompt Library** | 24 fill-in-the-blank prompts for students, job seekers, small businesses, creators, developers and AI images. Fill in the blanks in place, copy your version, or send it to Prompt Doctor. | Free, no sign-up |
 | 🖼️ | **Image → Prompt** | Upload a photo, poster or design and get a prompt that recreates its style, with Faithful, Professional and Creative versions. | Free account |
 | ✍️ | **Prompt Builder** | Turns a rough idea into a main prompt plus 3 perspectives, with intent, assumptions and missing-info analysis. | Free account |
 | 💻 | **Reference Coding** | Screenshots and reference files become build-ready prompts for Cursor, Claude Code, Lovable, v0, Bolt and more. | Free account |
@@ -59,7 +59,7 @@ Pricing is server-authoritative (`src/config/product.config.js` + the runtime co
 - **Auth & data:** Firebase Authentication and Firestore, with transactional quota/credit reservation and rollback on failure.
 - **Payments:** Razorpay orders, subscriptions, signature verification and webhooks; idempotent fulfilment.
 - **Integrations:** WhatsApp Business webhook, public v1 API (GPT Action ready), browser-plugin endpoint.
-- **Tests:** Vitest + Testing Library.
+- **Tests:** Vitest + Testing Library, including a smoke test that renders every page for a signed-in user.
 
 ```
 src/

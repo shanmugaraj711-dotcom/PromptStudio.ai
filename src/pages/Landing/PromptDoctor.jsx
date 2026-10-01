@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { copyToClipboard } from '../../utils/copyToClipboard';
 import { launchPromptInAI } from '../../services/aiLaunchService';
+import { PlaceholderFields, PromptPreview, usePlaceholderFill } from '../../components/prompt/PlaceholderFiller';
 
 export const DOCTOR_TARGETS = ['ChatGPT', 'Claude', 'Gemini', 'Grok', 'Midjourney'];
 const LAUNCH_IDS = { ChatGPT: 'chatgpt', Claude: 'claude-code', Gemini: 'gemini', Grok: 'grok' };
@@ -69,11 +70,6 @@ function ScoreRing({ score, caption }) {
   );
 }
 
-function HighlightedPrompt({ text }) {
-  const parts = text.split(/(\[[^\]\n]{1,80}\])/g);
-  return <>{parts.map((part, index) => /^\[[^\]\n]{1,80}\]$/.test(part) ? <mark key={index} className="rounded bg-amber-300/15 px-1 text-amber-200">{part}</mark> : <span key={index}>{part}</span>)}</>;
-}
-
 export const buildShareText = ({ score, optimizedScore }) => typeof optimizedScore === 'number'
   ? `My AI prompt scored ${score}/100 😬 PromptStudio's Prompt Doctor fixed it to ${optimizedScore}/100 in seconds. Check yours free:`
   : `My AI prompt scored ${score}/100 on PromptStudio's Prompt Doctor. Check yours free:`;
@@ -106,15 +102,18 @@ function DoctorReport({ result, target, onReset }) {
   const breakdown = result.breakdown;
   const weakest = breakdown ? [...DIMENSIONS].sort((a, b) => breakdown[a.id] - breakdown[b.id])[0] : null;
   const launchId = LAUNCH_IDS[target];
+  const fill = usePlaceholderFill(result.optimized_prompt);
+  const builderLink = `/builder?mode=standard&idea=${encodeURIComponent(fill.filledText.slice(0, 6000))}`;
 
-  const copy = async () => { if (await copyToClipboard(result.optimized_prompt)) { setCopied(true); window.setTimeout(() => setCopied(false), 1800); } };
+  const copy = async () => { if (await copyToClipboard(fill.filledText)) { setCopied(true); window.setTimeout(() => setCopied(false), 1800); } };
   const launch = async () => {
-    const outcome = await launchPromptInAI(result.optimized_prompt, launchId);
+    const outcome = await launchPromptInAI(fill.filledText, launchId);
     setLaunchNote(outcome.success ? `Copied — paste it into ${target} (Ctrl/⌘ + V).` : outcome.reason === 'popup_blocked' ? `Copied. Your browser blocked the new tab — open ${target} and paste.` : 'Could not copy automatically — use the Copy button.');
   };
 
   return (
     <div className="workspace-panel-enter mt-5 space-y-4" aria-live="polite">
+      {result.personalBest && <p className="rounded-xl border border-emerald-300/30 bg-emerald-300/10 px-4 py-2.5 text-center text-sm font-bold text-emerald-100">🎉 New personal best — your prompts are getting better.</p>}
       <div className="rounded-2xl border border-white/10 bg-white/[.03] p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-between">
           <div className="flex items-center gap-3 sm:gap-5">
@@ -152,8 +151,8 @@ function DoctorReport({ result, target, onReset }) {
             {launchId && <button type="button" onClick={launch} className="rounded-lg border border-emerald-300/30 px-3 py-2 text-[11px] font-black text-emerald-200 hover:bg-emerald-300/10">Open in {target} ↗</button>}
           </div>
         </div>
-        <div className="mt-3 max-h-80 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-black/30 p-4 text-sm leading-6 text-slate-100"><HighlightedPrompt text={result.optimized_prompt} /></div>
-        {/\[[^\]\n]{1,80}\]/.test(result.optimized_prompt) && <p className="mt-2 text-[11px] text-amber-200/80">Fill in the <mark className="rounded bg-amber-300/15 px-1 text-amber-200">[highlighted]</mark> parts before you paste — we never invent facts about you.</p>}
+        <div className="mt-3 max-h-80 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-black/30 p-4 text-sm leading-6 text-slate-100"><PromptPreview text={result.optimized_prompt} values={fill.values} /></div>
+        {fill.placeholders.length > 0 && <div className="mt-3"><PlaceholderFields idPrefix="doctor-blank" placeholders={fill.placeholders} values={fill.values} onChange={fill.setValue} onClear={fill.clear} filledCount={fill.filledCount} /><p className="mt-2 text-[11px] text-slate-500">We never invent facts about you — add your details here and Copy gives you the finished prompt.</p></div>}
         {launchNote && <p className="mt-2 text-[11px] font-bold text-emerald-200">{launchNote}</p>}
       </div>
 
@@ -163,8 +162,37 @@ function DoctorReport({ result, target, onReset }) {
       </div>
 
       <div className="rounded-2xl border border-violet-300/20 bg-violet-300/[.05] p-4 text-sm text-slate-300">
-        <span className="font-bold text-white">Want 3 alternative versions, saved history and Image → Prompt?</span> Create a free account — 3 full generations every day.{' '}
-        <Link to="/signup" className="font-black text-violet-200 hover:text-white">Start free →</Link>
+        <span className="font-bold text-white">Want 3 different versions of this prompt?</span> Faithful, Professional and Creative — saved to your history. Free account, 3 generations a day.{' '}
+        <Link to={builderLink} className="font-black text-violet-200 hover:text-white">Open in Prompt Builder →</Link>
+      </div>
+    </div>
+  );
+}
+
+// Recent checks live only in this visitor's browser — a convenience, never the source of truth.
+const HISTORY_KEY = 'ps-doctor-recent';
+const HISTORY_LIMIT = 5;
+const readHistory = () => {
+  try {
+    const items = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    return Array.isArray(items) ? items.filter((item) => typeof item?.prompt === 'string' && item.result?.optimized_prompt).slice(0, HISTORY_LIMIT) : [];
+  } catch { return []; }
+};
+const writeHistory = (items) => { try { localStorage.setItem(HISTORY_KEY, JSON.stringify(items)); } catch { /* storage blocked or full */ } };
+
+function RecentChecks({ history, onOpen, onClear }) {
+  const best = Math.max(...history.map((item) => item.result.score));
+  return (
+    <div className="mt-3 rounded-xl border border-white/[.07] bg-white/[.02] p-3">
+      <div className="flex items-center justify-between gap-2 text-[11px]"><span className="font-bold text-slate-400">Your recent checks <span className="font-normal text-slate-600">· best {best}/100</span></span><button type="button" onClick={onClear} className="text-slate-600 hover:text-white">Clear</button></div>
+      <div className="mt-2 flex flex-col gap-1.5">
+        {history.map((item) => (
+          <button key={item.id} type="button" onClick={() => onOpen(item)} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-xs text-slate-300 hover:bg-white/[.04]">
+            <span className={`w-9 shrink-0 text-right font-black ${scoreTone(item.result.score).text}`}>{item.result.score}</span>
+            <span className="truncate">{item.prompt}</span>
+            <span className="ml-auto shrink-0 text-[10px] text-slate-600">{item.target}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -178,6 +206,7 @@ export default function PromptDoctor({ initialPrompt = '', initialTarget = 'Chat
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [remaining, setRemaining] = useState(null);
+  const [history, setHistory] = useState(readHistory);
   const textareaRef = useRef(null);
 
   useEffect(() => {
@@ -201,7 +230,11 @@ export default function PromptDoctor({ initialPrompt = '', initialTarget = 'Chat
         throw requestError;
       }
       if (!data?.optimized_prompt) throw new Error('The doctor returned an incomplete report. Please try again.');
-      setResult(data);
+      const previousBest = history.length ? Math.max(...history.map((item) => item.result.score)) : null;
+      const report = { ...data, target, personalBest: previousBest !== null && data.score > previousBest };
+      setResult(report);
+      const next = [{ id: Date.now(), prompt: value, target, result: report }, ...history.filter((item) => item.prompt !== value)].slice(0, HISTORY_LIMIT);
+      setHistory(next); writeHistory(next);
     } catch (requestError) {
       const limited = requestError.code === 'free_daily_limit' || requestError.status === 429;
       setError({ type: limited ? 'limit' : 'error', message: limited ? requestError.message || 'You’ve used today’s free checks.' : requestError.message || 'Something went wrong. Please try again.' });
@@ -212,6 +245,9 @@ export default function PromptDoctor({ initialPrompt = '', initialTarget = 'Chat
 
   const reset = () => { setResult(null); setError(null); setPrompt(''); textareaRef.current?.focus(); };
   const pickExample = (example) => { setPrompt(example.prompt); setTarget(example.target); setResult(null); setError(null); };
+  const openRecent = (item) => { setPrompt(item.prompt); setTarget(item.target); setError(null); setResult({ ...item.result, personalBest: false }); };
+  const clearHistory = () => { setHistory([]); writeHistory([]); };
+  const continueLink = `/builder?mode=standard&idea=${encodeURIComponent(prompt.trim().slice(0, 6000))}`;
 
   return (
     <div id="doctor" className="scroll-mt-24 rounded-[1.75rem] border border-emerald-300/25 bg-slate-950/80 p-2.5 shadow-[0_0_90px_rgba(16,185,129,.12)] backdrop-blur-xl sm:p-3">
@@ -239,6 +275,7 @@ export default function PromptDoctor({ initialPrompt = '', initialTarget = 'Chat
         />
 
         {!result && !loading && <div className="mt-2 flex flex-wrap items-center gap-1.5"><span className="text-[11px] text-slate-600">Try a weak one:</span>{EXAMPLES.map((example) => <button key={example.label} type="button" onClick={() => pickExample(example)} className="rounded-md border border-white/[.07] px-2 py-1 text-[11px] text-slate-400 hover:border-white/20 hover:text-white">{example.label}</button>)}</div>}
+        {!result && !loading && history.length > 0 && <RecentChecks history={history} onOpen={openRecent} onClear={clearHistory} />}
 
         <div className="mt-3 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-[11px] text-slate-600">{prompt.length}/6000 · {remaining === null ? '2 free checks daily' : `${remaining} free check${remaining === 1 ? '' : 's'} left today`} · Ctrl+Enter</span>
@@ -247,10 +284,10 @@ export default function PromptDoctor({ initialPrompt = '', initialTarget = 'Chat
 
         {loading && <div className="mt-4 grid gap-2" aria-hidden="true">{DIMENSIONS.map((dimension, index) => <div key={dimension.id} className="grid grid-cols-[7.5rem_1fr] items-center gap-3 text-xs text-slate-600 sm:grid-cols-[9rem_1fr]"><span>{dimension.label}</span><span className="h-2 overflow-hidden rounded-full bg-white/[.05]"><span className="block h-full w-1/3 animate-pulse rounded-full bg-emerald-300/30" style={{ animationDelay: `${index * 120}ms` }} /></span></div>)}</div>}
 
-        {error?.type === 'limit' && <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4"><p className="text-sm font-bold text-amber-100">{error.message}</p><p className="mt-1 text-xs leading-5 text-amber-100/70">A free account gives you 3 full generations every day, with 3 alternative versions, history and Image → Prompt.</p><div className="mt-3 flex flex-wrap gap-2"><Link to="/signup" className="rounded-lg bg-white px-3.5 py-2 text-xs font-black text-slate-950">Create free account</Link><Link to="/login" className="rounded-lg border border-white/15 px-3.5 py-2 text-xs font-bold text-white">Log in</Link></div></div>}
+        {error?.type === 'limit' && <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4"><p className="text-sm font-bold text-amber-100">{error.message}</p><p className="mt-1 text-xs leading-5 text-amber-100/70">Keep going with a free account: 3 full generations every day, with 3 versions of each prompt, history and Image → Prompt. Your text comes with you.</p><div className="mt-3 flex flex-wrap gap-2"><Link to={continueLink} className="rounded-lg bg-white px-3.5 py-2 text-xs font-black text-slate-950">Continue free in Prompt Builder →</Link><Link to="/login" state={{ from: { pathname: '/builder', search: `?mode=standard&idea=${encodeURIComponent(prompt.trim().slice(0, 6000))}` } }} className="rounded-lg border border-white/15 px-3.5 py-2 text-xs font-bold text-white">Log in</Link></div></div>}
         {error?.type === 'error' && <p className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-300/10 p-3 text-sm text-rose-100">{error.message}</p>}
 
-        {result && <DoctorReport result={result} target={target} onReset={reset} />}
+        {result && <DoctorReport result={result} target={result.target || target} onReset={reset} />}
       </div>
     </div>
   );

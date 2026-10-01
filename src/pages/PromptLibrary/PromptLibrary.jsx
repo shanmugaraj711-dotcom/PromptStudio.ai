@@ -4,23 +4,28 @@ import { MarketingFooter, MarketingHeader } from '../../components/layout/Market
 import { LIBRARY_CATEGORIES, PROMPT_LIBRARY, getLibraryCategory } from '../../data/promptLibrary';
 import { DOCTOR_TARGETS } from '../Landing/PromptDoctor';
 import { copyToClipboard } from '../../utils/copyToClipboard';
+import { PlaceholderFields, PromptPreview, usePlaceholderFill } from '../../components/prompt/PlaceholderFiller';
 
 const firstSupportedTarget = (bestFor) => bestFor.split('·').map((name) => name.trim()).find((name) => DOCTOR_TARGETS.includes(name)) || 'ChatGPT';
 
 function PromptCard({ item, highlighted }) {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const [filling, setFilling] = useState(false);
+  const fill = usePlaceholderFill(item.prompt);
   const category = getLibraryCategory(item.category);
-  const copy = async () => { if (await copyToClipboard(item.prompt)) { setCopied(true); window.setTimeout(() => setCopied(false), 1600); } };
-  const improve = () => navigate('/', { state: { doctorPrompt: item.prompt, doctorTarget: firstSupportedTarget(item.bestFor) } });
+  const copy = async () => { if (await copyToClipboard(fill.filledText)) { setCopied(true); window.setTimeout(() => setCopied(false), 1600); } };
+  const improve = () => navigate('/', { state: { doctorPrompt: fill.filledText, doctorTarget: firstSupportedTarget(item.bestFor) } });
   return (
-    <article id={item.id} className={`flex scroll-mt-24 flex-col rounded-3xl border p-5 transition ${highlighted ? 'border-emerald-300/50 bg-emerald-300/[.06] shadow-[0_0_40px_rgba(16,185,129,.15)]' : 'border-white/10 bg-white/[.025]'}`}>
+    <article id={item.id} className={`flex scroll-mt-24 flex-col rounded-3xl border p-5 transition ${highlighted || filling ? 'border-emerald-300/50 bg-emerald-300/[.06] shadow-[0_0_40px_rgba(16,185,129,.15)]' : 'border-white/10 bg-white/[.025]'}`}>
       <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-slate-500"><span>{category?.icon} {category?.label}</span><span className="truncate">{item.bestFor}</span></div>
       <h2 className="mt-3 text-lg font-black tracking-[-.02em]">{item.title}</h2>
-      <pre className="mt-3 max-h-56 flex-1 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-black/30 p-3.5 font-sans text-xs leading-5 text-slate-300">{item.prompt}</pre>
+      <pre className="mt-3 max-h-56 flex-1 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-black/30 p-3.5 font-sans text-xs leading-5 text-slate-300"><PromptPreview text={item.prompt} values={fill.values} /></pre>
+      {filling && <div className="mt-3"><PlaceholderFields idPrefix={item.id} placeholders={fill.placeholders} values={fill.values} onChange={fill.setValue} onClear={fill.clear} filledCount={fill.filledCount} /></div>}
       <div className="mt-4 flex flex-wrap gap-2">
-        <button type="button" onClick={copy} className="rounded-lg bg-emerald-300 px-3 py-2 text-[11px] font-black text-slate-950 hover:bg-emerald-200">{copied ? 'Copied ✓' : 'Copy'}</button>
-        <button type="button" onClick={improve} className="rounded-lg border border-white/10 px-3 py-2 text-[11px] font-black text-slate-200 hover:border-emerald-300/40 hover:text-white">Score &amp; customise in Prompt Doctor →</button>
+        <button type="button" onClick={copy} className="rounded-lg bg-emerald-300 px-3 py-2 text-[11px] font-black text-slate-950 hover:bg-emerald-200">{copied ? 'Copied ✓' : fill.filledCount ? 'Copy my version' : 'Copy'}</button>
+        {fill.placeholders.length > 0 && <button type="button" onClick={() => setFilling((value) => !value)} aria-expanded={filling} className="rounded-lg border border-amber-300/30 px-3 py-2 text-[11px] font-black text-amber-100 hover:bg-amber-300/10">{filling ? 'Hide blanks' : `✏️ Fill ${fill.placeholders.length} blank${fill.placeholders.length === 1 ? '' : 's'}`}</button>}
+        <button type="button" onClick={improve} className="rounded-lg border border-white/10 px-3 py-2 text-[11px] font-black text-slate-200 hover:border-emerald-300/40 hover:text-white">Score it in Prompt Doctor →</button>
       </div>
     </article>
   );

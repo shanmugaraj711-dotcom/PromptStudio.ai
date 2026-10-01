@@ -67,7 +67,7 @@ function Landing() {
           <div className="relative mx-auto grid max-w-7xl items-start gap-10 lg:grid-cols-[.85fr_1.15fr]">
             <div className="max-w-xl lg:pt-8">
               <span className="inline-flex rounded-full border border-emerald-300/20 bg-emerald-300/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.2em] text-emerald-200">Free Prompt Doctor</span>
-              <h1 className="mt-5 text-[2.6rem] font-black leading-[.98] tracking-[-.05em] sm:text-6xl lg:text-[4rem] xl:text-[4.6rem]">Bad prompt in.<br /><span className="text-emerald-300">Great answer out.</span></h1>
+              <h1 className="mt-5 text-[2.6rem] font-black leading-[.98] tracking-[-.05em] sm:text-6xl lg:text-[2.9rem] xl:text-[3.7rem] 2xl:text-[4.1rem]">Bad prompt in.<br /><span className="text-emerald-300">Great answer out.</span></h1>
               <p className="mt-5 max-w-lg text-base leading-7 text-slate-300 sm:text-lg">AI is only as good as what you ask it. Paste any prompt — PromptStudio <strong className="text-white">scores it out of 100</strong>, shows exactly what’s missing, and rewrites it for ChatGPT, Claude, Gemini or Midjourney.</p>
               <ul className="mt-6 grid gap-2.5 text-sm text-slate-300">
                 <li className="flex gap-2.5"><span className="text-emerald-300">✓</span>See your score across 5 dimensions in seconds</li>

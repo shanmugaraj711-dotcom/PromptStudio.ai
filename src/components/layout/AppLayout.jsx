@@ -6,6 +6,7 @@ import { fetchRuntimeProductConfig } from "../../services/runtimeProductConfig";
 
 const CORE_NAV = [
   { to: "/dashboard", label: "Dashboard" },
+  { to: "/prompts", label: "Prompt Library" },
   { to: "/account#plans", label: "Manage Plan" },
   { to: "/help", label: "Help" },
   { to: "/history", label: "History", feature: "promptHistory" },
