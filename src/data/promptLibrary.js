@@ -10,6 +10,7 @@ export const LIBRARY_CATEGORIES = Object.freeze([
   { id: 'creators', label: 'Creators', icon: '🎬', blurb: 'YouTube, Reels, threads and newsletters.' },
   { id: 'coding', label: 'Coding', icon: '💻', blurb: 'Build, debug and review with AI pair-programmers.' },
   { id: 'images', label: 'AI Images', icon: '🖼️', blurb: 'Midjourney, DALL·E, Gemini and Flux prompts.' },
+  { id: 'video', label: 'AI Video', icon: '🎥', blurb: 'Shot-by-shot prompts for Veo, Sora, Runway and Kling.' },
 ]);
 
 export const PROMPT_LIBRARY = Object.freeze([
@@ -285,6 +286,38 @@ Use clearly marked placeholder copy where I have not given you the facts.`,
     title: 'Cinematic portrait',
     bestFor: 'Midjourney · Flux',
     prompt: `Cinematic portrait of [subject description], [setting], golden-hour side lighting with soft shadows, natural skin texture, shallow depth of field, 50mm lens, subtle film grain, muted teal-and-amber colour grade, candid expression, editorial magazine style --ar 3:4`,
+  },
+  {
+    id: 'video-product-shot',
+    category: 'video',
+    title: 'Product hero shot in 6 seconds',
+    bestFor: 'Veo · Sora · Runway · Kling',
+    prompt: `A [product name] on [surface, e.g. a marble counter]. The camera slowly pushes in from a low angle over 6 seconds. Soft window light from the left, shallow depth of field, a few drifting dust motes. The product stays sharp and centred. Colour palette: [two or three colours]. Clean, premium look, no text or logos on screen.`,
+  },
+  {
+    id: 'video-explainer-scene',
+    category: 'video',
+    title: 'Friendly explainer scene',
+    bestFor: 'Veo · Kling',
+    prompt: `A [character description] stands in [setting] and gestures toward [visual element] while explaining [one idea] to the camera. Medium shot, static camera, warm daylight. The character says: "[one short sentence]" in a calm, friendly voice. 8 seconds, vertical 9:16.`,
+  },
+  {
+    id: 'video-three-shot-reel',
+    category: 'video',
+    title: 'Three-shot sequence for a 15-second reel',
+    bestFor: 'Sora · Veo · Kling',
+    prompt: `Create a 3-shot sequence for a 15-second vertical video about [topic].
+Shot 1 (0-5s): [opening action], handheld close-up.
+Shot 2 (5-10s): [middle action], slow tracking shot.
+Shot 3 (10-15s): [closing action] ending on a clear final frame.
+Keep the same [character or product] and colour grade across all three shots. No subtitles unless I ask for them.`,
+  },
+  {
+    id: 'video-cinematic-mood',
+    category: 'video',
+    title: 'Cinematic mood clip',
+    bestFor: 'Runway · Veo · Sora',
+    prompt: `[Subject] in [location] at [time of day]. Camera: [movement, e.g. a slow dolly-in]. Lighting: [lighting style]. Mood: [mood]. Motion: [what moves and how fast]. Style: [film look, e.g. 35mm, muted colour]. 5 seconds, 16:9.`,
   },
 ]);
 

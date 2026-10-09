@@ -28,7 +28,6 @@ Creation engines are workspace controls inside Dashboard, not global navigation 
 
 ## Live Signal
 
-`/api/live-signal` authenticates the current user and retrieves location-aware live topics. Supported Indian regions use Google Trends daily-trend data. Custom locations use live Google News RSS topic coverage rather than fabricated/curated placeholder trends. Browser location can be used with explicit permission and is reverse-geocoded server-side.
 
 The UI clearly identifies the source and timestamp and does not claim a live signal when the provider returns no data.
 

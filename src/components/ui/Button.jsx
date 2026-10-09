@@ -17,9 +17,9 @@ function Button({
     primary:
       'bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md focus:ring-blue-500',
     secondary:
-      'bg-white text-gray-900 border border-gray-200 hover:border-gray-300 hover:bg-gray-50 focus:ring-gray-300',
+      'bg-slate-900 text-white border border-white/10 hover:border-white/20 hover:bg-slate-950 focus:ring-white/20',
     ghost:
-      'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-300',
+      'bg-transparent text-slate-200 hover:bg-slate-800 focus:ring-white/20',
   };
 
   const sizes = {

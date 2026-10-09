@@ -331,7 +331,7 @@ export default function ReferenceCoding() {
                 >
                   <input ref={inputRef} type="file" multiple accept="image/*,.txt,.md,.json,.html,.css,.js,.jsx,.ts,.tsx,.pdf,.doc,.docx,.exe,.msi,.app,.bin" onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }} className="hidden" />
                   <span className="text-xs font-bold text-zinc-200">{isPreparing ? 'Inspecting…' : 'Drop screenshots or code'}</span>
-                  <span className="text-[10px] text-zinc-400 mt-0.5">Images ≤ 3MB · Files ≤ 5MB</span>
+                  <span className="text-xs text-zinc-400 mt-0.5">Images ≤ 3MB · Files ≤ 5MB</span>
                 </div>
               </div>
             </div>

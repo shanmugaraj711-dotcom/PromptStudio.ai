@@ -19,17 +19,17 @@ export function MarketingHeader() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#020608]/85 backdrop-blur-2xl">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/85 backdrop-blur-2xl">
       <nav className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-8" aria-label="Main">
         <Link to="/" className="flex items-center gap-2.5" aria-label="PromptStudio home">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-300 text-lg font-black text-slate-950">✦</span>
-          <span className="text-base font-black tracking-tight text-white sm:text-lg">PromptStudio<span className="text-emerald-300">.ai</span></span>
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-400 text-lg font-black text-slate-950">✦</span>
+          <span className="text-base font-black tracking-tight text-white sm:text-lg">PromptStudio<span className="text-brand-400">.ai</span></span>
         </Link>
         <div className="hidden items-center gap-1 md:flex">{NAV_LINKS.map((item) => <NavItem key={item.label} item={item} />)}</div>
         <div className="flex items-center gap-2">
           {user
             ? <Link to="/dashboard" className="rounded-xl border border-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/[.06]">Dashboard</Link>
-            : <><Link to="/login" className="hidden px-3 py-2 text-xs font-bold text-slate-300 hover:text-white sm:block">Sign in</Link><Link to="/signup" className="rounded-xl bg-emerald-300 px-4 py-2.5 text-xs font-black text-slate-950 hover:bg-emerald-200">Start free →</Link></>}
+            : <><Link to="/login" className="hidden px-3 py-2 text-xs font-bold text-slate-300 hover:text-white sm:block">Sign in</Link><Link to="/signup" className="rounded-xl bg-brand-400 px-4 py-2.5 text-xs font-black text-slate-950 hover:bg-brand-300">Start free</Link></>}
           <button type="button" onClick={() => setOpen((value) => !value)} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-slate-300 md:hidden" aria-expanded={open} aria-label="Toggle menu">{open ? '✕' : '☰'}</button>
         </div>
       </nav>
@@ -40,11 +40,11 @@ export function MarketingHeader() {
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-white/10 bg-[#010304] px-5 py-10 sm:px-8">
+    <footer className="border-t border-white/10 bg-slate-950 px-5 py-10 sm:px-8">
       <div className="mx-auto grid max-w-7xl gap-8 sm:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div>
-          <Link to="/" className="font-black text-white">PromptStudio<span className="text-emerald-300">.ai</span></Link>
-          <p className="mt-2 max-w-xs text-xs leading-5 text-slate-500">Score, fix and reuse prompts for ChatGPT, Claude, Gemini, Grok and Midjourney. Made in India for the world.</p>
+          <Link to="/" className="font-black text-white">PromptStudio<span className="text-brand-400">.ai</span></Link>
+          <p className="mt-2 max-w-xs text-xs leading-5 text-slate-500">Score, fix and reuse prompts for ChatGPT, Claude, Gemini, Grok, Midjourney and video models. Made in India for the world.</p>
         </div>
         <div className="flex flex-col gap-2 text-xs text-slate-500"><span className="font-black uppercase tracking-widest text-slate-400">Free tools</span><Link to="/#doctor" className="hover:text-white">Prompt Doctor</Link><Link to="/prompts" className="hover:text-white">Prompt Library</Link><Link to="/builder?mode=image" className="hover:text-white">Image → Prompt</Link></div>
         <div className="flex flex-col gap-2 text-xs text-slate-500"><span className="font-black uppercase tracking-widest text-slate-400">Product</span><Link to="/reference-coding" className="hover:text-white">Reference Coding</Link><Link to="/studio" className="hover:text-white">Studio</Link><Link to="/apk-forge" className="hover:text-white">App Forge</Link><Link to="/#pricing" className="hover:text-white">Pricing</Link></div>

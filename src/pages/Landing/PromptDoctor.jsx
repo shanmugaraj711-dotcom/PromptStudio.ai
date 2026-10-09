@@ -4,7 +4,19 @@ import { copyToClipboard } from '../../utils/copyToClipboard';
 import { launchPromptInAI } from '../../services/aiLaunchService';
 import { PlaceholderFields, PromptPreview, usePlaceholderFill } from '../../components/prompt/PlaceholderFiller';
 
-export const DOCTOR_TARGETS = ['ChatGPT', 'Claude', 'Gemini', 'Grok', 'Midjourney'];
+export const DOCTOR_TARGETS = ['ChatGPT', 'Claude', 'Gemini', 'Grok', 'Midjourney', 'Veo', 'Sora', 'Runway', 'Kling'];
+// Shown under the target picker so people know the fix is shaped for that AI, not generic.
+export const TARGET_HINTS = {
+  ChatGPT: 'markdown sections and numbered steps',
+  Claude: 'tagged sections and explicit constraints',
+  Gemini: 'task first, output format last',
+  Grok: 'short, direct instructions',
+  Midjourney: 'one image prompt, no sentences',
+  Veo: 'one continuous shot, camera and light',
+  Sora: 'timed beats for the action',
+  Runway: 'motion first, camera in one phrase',
+  Kling: 'action first, concise and motion-focused',
+};
 const LAUNCH_IDS = { ChatGPT: 'chatgpt', Claude: 'claude-code', Gemini: 'gemini', Grok: 'grok' };
 const SITE_URL = 'https://promptstudioai.in/';
 
@@ -64,7 +76,7 @@ function ScoreRing({ score, caption }) {
         </svg>
         <div className="absolute inset-0 grid place-items-center"><span className={`text-2xl font-black ${tone.text}`}>{shown}</span></div>
       </div>
-      <span className="text-[10px] font-black uppercase tracking-[.18em] text-slate-500">{caption}</span>
+      <span className="text-xs font-black uppercase tracking-[.18em] text-slate-500">{caption}</span>
       <span className={`text-[11px] font-bold ${tone.text}`}>{tone.label}</span>
     </div>
   );
@@ -139,13 +151,13 @@ function DoctorReport({ result, target, onReset }) {
       </div>
 
       {result.improvements?.length > 0 && <div className="rounded-2xl border border-white/10 bg-white/[.03] p-4 sm:p-5">
-        <p className="text-[10px] font-black uppercase tracking-[.18em] text-slate-500">What the doctor fixed</p>
+        <p className="text-xs font-black uppercase tracking-[.18em] text-slate-500">What the doctor fixed</p>
         <ul className="mt-3 space-y-2">{result.improvements.map((item) => <li key={item} className="flex gap-2 text-sm leading-6 text-slate-200"><span className="text-emerald-300">✓</span>{item}</li>)}</ul>
       </div>}
 
       <div className="rounded-2xl border border-emerald-300/25 bg-emerald-300/[.05] p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[10px] font-black uppercase tracking-[.18em] text-emerald-300">Your fixed prompt · for {target}</p>
+          <p className="text-xs font-black uppercase tracking-[.18em] text-emerald-300">Your fixed prompt · for {target}</p>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={copy} className="rounded-lg bg-emerald-300 px-3 py-2 text-[11px] font-black text-slate-950 hover:bg-emerald-200">{copied ? 'Copied ✓' : 'Copy prompt'}</button>
             {launchId && <button type="button" onClick={launch} className="rounded-lg border border-emerald-300/30 px-3 py-2 text-[11px] font-black text-emerald-200 hover:bg-emerald-300/10">Open in {target} ↗</button>}
@@ -155,6 +167,11 @@ function DoctorReport({ result, target, onReset }) {
         {fill.placeholders.length > 0 && <div className="mt-3"><PlaceholderFields idPrefix="doctor-blank" placeholders={fill.placeholders} values={fill.values} onChange={fill.setValue} onClear={fill.clear} filledCount={fill.filledCount} /><p className="mt-2 text-[11px] text-slate-500">We never invent facts about you — add your details here and Copy gives you the finished prompt.</p></div>}
         {launchNote && <p className="mt-2 text-[11px] font-bold text-emerald-200">{launchNote}</p>}
       </div>
+
+      {result.original && <details className="rounded-2xl border border-white/10 bg-white/[.02] p-4 text-sm">
+        <summary className="cursor-pointer text-[11px] font-black uppercase tracking-[.18em] text-slate-500 hover:text-white">Your original prompt</summary>
+        <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-400">{result.original}</p>
+      </details>}
 
       <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[.02] p-4 sm:flex-row sm:items-center sm:justify-between">
         <ShareBar score={result.score} optimizedScore={result.optimized_score} />
@@ -190,7 +207,7 @@ function RecentChecks({ history, onOpen, onClear }) {
           <button key={item.id} type="button" onClick={() => onOpen(item)} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-xs text-slate-300 hover:bg-white/[.04]">
             <span className={`w-9 shrink-0 text-right font-black ${scoreTone(item.result.score).text}`}>{item.result.score}</span>
             <span className="truncate">{item.prompt}</span>
-            <span className="ml-auto shrink-0 text-[10px] text-slate-600">{item.target}</span>
+            <span className="ml-auto shrink-0 text-xs text-slate-600">{item.target}</span>
           </button>
         ))}
       </div>
@@ -231,13 +248,18 @@ export default function PromptDoctor({ initialPrompt = '', initialTarget = 'Chat
       }
       if (!data?.optimized_prompt) throw new Error('The doctor returned an incomplete report. Please try again.');
       const previousBest = history.length ? Math.max(...history.map((item) => item.result.score)) : null;
-      const report = { ...data, target, personalBest: previousBest !== null && data.score > previousBest };
+      const report = { ...data, target, original: value, personalBest: previousBest !== null && data.score > previousBest };
       setResult(report);
       const next = [{ id: Date.now(), prompt: value, target, result: report }, ...history.filter((item) => item.prompt !== value)].slice(0, HISTORY_LIMIT);
       setHistory(next); writeHistory(next);
     } catch (requestError) {
       const limited = requestError.code === 'free_daily_limit' || requestError.status === 429;
-      setError({ type: limited ? 'limit' : 'error', message: limited ? requestError.message || 'You’ve used today’s free checks.' : requestError.message || 'Something went wrong. Please try again.' });
+      // fetch() rejects with a TypeError when the network is down; say so instead of showing "Failed to fetch".
+      const offline = requestError instanceof TypeError;
+      let message = requestError.message || 'Something went wrong. Please try again.';
+      if (limited) message = requestError.message || 'You’ve used today’s free checks.';
+      if (offline) message = 'We couldn’t reach PromptStudio. Check your connection and try again. Your text is still here.';
+      setError({ type: limited ? 'limit' : 'error', message });
     } finally {
       setLoading(false);
     }
@@ -245,7 +267,7 @@ export default function PromptDoctor({ initialPrompt = '', initialTarget = 'Chat
 
   const reset = () => { setResult(null); setError(null); setPrompt(''); textareaRef.current?.focus(); };
   const pickExample = (example) => { setPrompt(example.prompt); setTarget(example.target); setResult(null); setError(null); };
-  const openRecent = (item) => { setPrompt(item.prompt); setTarget(item.target); setError(null); setResult({ ...item.result, personalBest: false }); };
+  const openRecent = (item) => { setPrompt(item.prompt); setTarget(item.target); setError(null); setResult({ ...item.result, original: item.result.original ?? item.prompt, personalBest: false }); };
   const clearHistory = () => { setHistory([]); writeHistory([]); };
   const continueLink = `/builder?mode=standard&idea=${encodeURIComponent(prompt.trim().slice(0, 6000))}`;
 
@@ -254,12 +276,13 @@ export default function PromptDoctor({ initialPrompt = '', initialTarget = 'Chat
       <div className="rounded-[1.35rem] border border-white/10 bg-black/40 p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <p className="flex items-center gap-2 text-xs font-black text-emerald-300"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-300" />Prompt Doctor</p>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">Free · no sign-up</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-600">Free · no sign-up</p>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Target AI">
-          {DOCTOR_TARGETS.map((item) => <button key={item} type="button" role="radio" aria-checked={target === item} onClick={() => setTarget(item)} className={`rounded-full border px-3 py-1.5 text-[11px] font-bold transition ${target === item ? 'border-emerald-300/50 bg-emerald-300/10 text-emerald-200' : 'border-white/10 text-slate-500 hover:text-white'}`}>{item}</button>)}
+        <div className="mt-4 flex flex-wrap gap-1.5" role="group" aria-label="Target AI">
+          {DOCTOR_TARGETS.map((item) => <button key={item} type="button" aria-pressed={target === item} onClick={() => setTarget(item)} className={`rounded-full border px-3 py-1.5 text-[11px] font-bold transition ${target === item ? 'border-emerald-300/50 bg-emerald-300/10 text-emerald-200' : 'border-white/10 text-slate-500 hover:text-white'}`}>{item}</button>)}
         </div>
+        <p className="mt-2 text-[11px] text-slate-600" aria-live="polite">Fixed for {target}: {TARGET_HINTS[target]}.</p>
 
         <label htmlFor="doctor-prompt" className="sr-only">Paste your prompt</label>
         <textarea

@@ -76,4 +76,38 @@ describe("PromptDoctor", () => {
     expect(decodeURIComponent(continueLink.getAttribute("href"))).toBe("/builder?mode=standard&idea=help me plan a trip");
     await waitFor(() => expect(screen.getByText("0 free checks left today", { exact: false })).toBeInTheDocument());
   });
+
+  it("explains a network failure and keeps the visitor's text", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("Failed to fetch"); }));
+    const user = userEvent.setup();
+    renderDoctor();
+    await user.type(screen.getByLabelText(/paste your prompt/i), "write a poem");
+    await user.click(screen.getByRole("button", { name: /score & fix my prompt/i }));
+
+    expect(await screen.findByText(/couldn’t reach promptstudio/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/paste your prompt/i)).toHaveValue("write a poem");
+  });
+
+  it("shapes the fix for the chosen AI and keeps the original one click away", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => respond(report(20))));
+    const user = userEvent.setup();
+    renderDoctor();
+    await user.type(screen.getByLabelText(/paste your prompt/i), "write a launch post");
+    await user.click(screen.getByRole("button", { name: /midjourney/i }));
+
+    expect(screen.getByRole("button", { name: /midjourney/i })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText(/one image prompt, no sentences/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /score & fix my prompt/i }));
+
+    await screen.findByText("What the doctor fixed");
+    expect(screen.getByText("Your original prompt")).toBeInTheDocument();
+    expect(JSON.parse(fetch.mock.calls[0][1].body).target).toBe("Midjourney");
+  });
+  it("offers video targets with a hint about the shot format", async () => {
+    const user = userEvent.setup();
+    renderDoctor();
+    await user.click(screen.getByRole("button", { name: /veo/i }));
+    expect(screen.getByRole("button", { name: /veo/i })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText(/one continuous shot, camera and light/i)).toBeInTheDocument();
+  });
 });
