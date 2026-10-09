@@ -25,7 +25,7 @@ export default function ForgeCapabilityGuide({ onUseExample }) {
   return (
     <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4" aria-label="What can I build">
       <div className="flex flex-col gap-1">
-        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">What can I build?</p>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">What can I build?</p>
         <h2 className="text-base font-black text-white">Try something we know Forge is good at.</h2>
         <p className="text-[11px] leading-5 text-slate-500">These are starting points, not hard templates. Your request is analyzed before payment. If an idea is outside the current build capability, we will tell you before you pay.</p>
       </div>
@@ -33,16 +33,16 @@ export default function ForgeCapabilityGuide({ onUseExample }) {
       <div className="mt-3 grid gap-2">
         {CAPABILITIES.map((item) => (
           <div key={item.label} className={`rounded-xl border p-3 ${toneClasses[item.tone]}`}>
-            <p className="text-[10px] font-black uppercase tracking-wider">{item.label}</p>
-            <p className="mt-1 text-[10px] leading-4 text-slate-400">{item.text}</p>
+            <p className="text-xs font-black uppercase tracking-wider">{item.label}</p>
+            <p className="mt-1 text-xs leading-4 text-slate-400">{item.text}</p>
           </div>
         ))}
       </div>
 
       <div className="mt-4">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Try an example</p>
-          <p className="text-[9px] text-slate-600">Tap one to use it as your brief</p>
+          <p className="text-xs font-black uppercase tracking-wider text-slate-400">Try an example</p>
+          <p className="text-xs text-slate-600">Tap one to use it as your brief</p>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           {EXAMPLES.map((example) => (
@@ -53,9 +53,9 @@ export default function ForgeCapabilityGuide({ onUseExample }) {
               className="rounded-xl border border-white/8 bg-black/15 p-3 text-left transition hover:border-cyan-300/25 hover:bg-cyan-300/5 focus:outline-none focus:ring-2 focus:ring-cyan-300/30"
               aria-label={`Try ${example.title}`}
             >
-              <span className="text-[9px] font-black uppercase tracking-wider text-cyan-300">{example.category}</span>
+              <span className="text-xs font-black uppercase tracking-wider text-cyan-300">{example.category}</span>
               <span className="mt-1 block text-xs font-bold text-white">{example.title}</span>
-              <span className="mt-1 block text-[10px] leading-4 text-slate-500">Use this example →</span>
+              <span className="mt-1 block text-xs leading-4 text-slate-500">Use this example →</span>
             </button>
           ))}
         </div>
