@@ -29,7 +29,7 @@ export const PRICING_PLANS = [
       '20 image-to-prompt generations per month',
       'Optimized for ChatGPT, Claude and Gemini',
       'Priority improvements',
-      'Premium workflows and features',
+      'Saved history, favourites and share links',
     ],
     cta: 'Upgrade to Pro',
     highlighted: true,

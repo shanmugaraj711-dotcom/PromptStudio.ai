@@ -6,7 +6,7 @@
 
 **Bad prompt in. Great answer out.**
 
-Paste any AI prompt. PromptStudio scores it out of 100, shows exactly what's missing,<br/>and rewrites it for ChatGPT, Claude, Gemini, Grok or Midjourney. Free, no sign-up.
+Paste any AI prompt. PromptStudio scores it out of 100, shows exactly what's missing,<br/>and rewrites it for ChatGPT, Claude, Gemini, Grok, Midjourney, or video models (Veo, Sora, Runway, Kling). Free, no sign-up.
 
 [**Try Prompt Doctor →**](https://promptstudioai.in/#doctor) · [Prompt Library](https://promptstudioai.in/prompts) · [Pricing](https://promptstudioai.in/#pricing) · [API docs](docs/API-V1.md)
 
@@ -23,7 +23,7 @@ Most people get mediocre answers from AI for one reason: the prompt is missing c
 | | Feature | What it does | Account |
 |---|---|---|---|
 | 🩺 | **Prompt Doctor** | Scores a prompt 0–100 on 5 dimensions, lists the fixes, rewrites it for the chosen AI, lets you fill in the blanks before copying, remembers your recent checks and personal best, and makes the before → after score shareable on WhatsApp, X and LinkedIn. | Free, no sign-up |
-| 📚 | **Prompt Library** | 24 fill-in-the-blank prompts for students, job seekers, small businesses, creators, developers and AI images. Fill in the blanks in place, copy your version, or send it to Prompt Doctor. | Free, no sign-up |
+| 📚 | **Prompt Library** | 28 fill-in-the-blank prompts for students, job seekers, small businesses, creators, developers, AI images and AI video. Fill in the blanks in place, copy your version, or send it to Prompt Doctor. | Free, no sign-up |
 | 🖼️ | **Image → Prompt** | Upload a photo, poster or design and get a prompt that recreates its style, with Faithful, Professional and Creative versions. | Free account |
 | ✍️ | **Prompt Builder** | Turns a rough idea into a main prompt plus 3 perspectives, with intent, assumptions and missing-info analysis. | Free account |
 | 💻 | **Reference Coding** | Screenshots and reference files become build-ready prompts for Cursor, Claude Code, Lovable, v0, Bolt and more. | Free account |
