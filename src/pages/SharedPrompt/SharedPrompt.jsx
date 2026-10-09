@@ -36,36 +36,36 @@ function SharedPrompt() {
   };
 
   if (loading) {
-    return <main className="min-h-screen bg-gray-50 px-6 py-20"><div className="mx-auto max-w-3xl rounded-3xl bg-white p-10 text-center shadow-sm">Opening shared prompt…</div></main>;
+    return <main className="min-h-screen bg-slate-950 px-6 py-20"><div className="mx-auto max-w-3xl rounded-3xl bg-slate-900 p-10 text-center shadow-sm">Opening shared prompt…</div></main>;
   }
 
   if (error) {
-    return <main className="min-h-screen bg-gray-50 px-6 py-20"><div className="mx-auto max-w-3xl rounded-3xl bg-white p-10 text-center shadow-sm"><p className="text-sm font-bold uppercase tracking-wider text-blue-600">PromptStudio</p><h1 className="mt-3 text-2xl font-bold text-gray-900">Share link unavailable</h1><p className="mt-3 text-gray-600">{error}</p><a className="mt-6 inline-block" href="/"><Button variant="primary">Go to PromptStudio</Button></a></div></main>;
+    return <main className="min-h-screen bg-slate-950 px-6 py-20"><div className="mx-auto max-w-3xl rounded-3xl bg-slate-900 p-10 text-center shadow-sm"><p className="text-sm font-bold uppercase tracking-wider text-blue-600">PromptStudio</p><h1 className="mt-3 text-2xl font-bold text-white">Share link unavailable</h1><p className="mt-3 text-slate-300">{error}</p><a className="mt-6 inline-block" href="/"><Button variant="primary">Go to PromptStudio</Button></a></div></main>;
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-6 py-12 sm:py-20">
+    <main className="min-h-screen bg-slate-950 px-6 py-12 sm:py-20">
       <div className="mx-auto max-w-4xl">
-        <div className="rounded-3xl border border-gray-100 bg-white p-8 shadow-md sm:p-10">
+        <div className="rounded-3xl border border-white/10 bg-slate-900 p-8 shadow-md sm:p-10">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-blue-600">PromptStudio</p>
-              <h1 className="mt-2 text-2xl font-bold text-gray-900">Shared prompt</h1>
-              <p className="mt-1 text-sm text-gray-500">Read-only temporary share</p>
+              <h1 className="mt-2 text-2xl font-bold text-white">Shared prompt</h1>
+              <p className="mt-1 text-sm text-slate-400">Read-only temporary share</p>
             </div>
             <Button variant="secondary" size="sm" onClick={copy}>{copied ? 'Copied!' : 'Copy Prompt'}</Button>
           </div>
 
           <div className="mt-6"><TextArea id="sharedPrompt" value={prompt} readOnly rows={16} /></div>
 
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
             <span>Expires in 10 minutes from creation.</span>
             {expiresAt && <span>Expires: {new Date(expiresAt).toLocaleTimeString()}</span>}
           </div>
 
-          <div className="mt-8 rounded-2xl border border-blue-100 bg-blue-50 p-5">
-            <p className="text-sm font-semibold text-gray-900">Want to create your own?</p>
-            <p className="mt-1 text-sm text-gray-600">Use PromptStudio Intelligence to turn rough ideas and reference images into stronger prompts.</p>
+          <div className="mt-8 rounded-2xl border border-blue-400/30 bg-blue-400/10 p-5">
+            <p className="text-sm font-semibold text-white">Want to create your own?</p>
+            <p className="mt-1 text-sm text-slate-300">Use PromptStudio Intelligence to turn rough ideas and reference images into stronger prompts.</p>
             <a className="mt-4 inline-block" href="/"><Button variant="primary" size="sm">Try PromptStudio</Button></a>
           </div>
         </div>

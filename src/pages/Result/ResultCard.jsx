@@ -135,9 +135,9 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
   };
 
   return (
-    <div className={`relative overflow-hidden rounded-[1.5rem] border p-5 shadow-[0_28px_80px_-40px_rgba(37,99,235,0.4)] sm:rounded-[2rem] sm:p-8 lg:p-10 ${isImage ? 'border-violet-200 bg-gradient-to-b from-white via-violet-50/30 to-sky-50/50' : 'border-blue-100 bg-white'}`}>
+    <div className={`relative overflow-hidden rounded-[1.5rem] border p-5 shadow-[0_28px_80px_-40px_rgba(37,99,235,0.4)] sm:rounded-[2rem] sm:p-8 lg:p-10 ${isImage ? 'border-violet-400/30 bg-gradient-to-b from-slate-900 via-violet-50/30 to-sky-400/10/50' : 'border-blue-400/30 bg-slate-900'}`}>
       {(launchStatus || shareStatus || templateStatus) && (launchAccess.allowed || codingLaunchAllowed || shareAccess.allowed || templateAccess.allowed) && (
-        <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-gray-800 shadow-lg" role="status" aria-live="polite">
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-xl border border-blue-400/30 bg-slate-900 px-4 py-3 text-sm font-semibold text-slate-100 shadow-lg" role="status" aria-live="polite">
           {launchStatus || shareStatus || templateStatus}
         </div>
       )}
@@ -145,8 +145,8 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className={`text-xs font-bold uppercase tracking-wider ${isImage ? 'text-violet-600' : 'text-blue-600'}`}>{isImage ? 'PromptStudio Visual Intelligence' : 'PromptStudio Intelligence'}</p>
-          <h3 className="mt-1 text-lg font-bold text-gray-900">{isImage ? 'Your image prompt is ready' : 'Your optimized prompt'}</h3>
-          {isImage && <p className="mt-1 text-sm text-gray-500">A polished visual recipe for composition, lighting, detail and finish.</p>}
+          <h3 className="mt-1 text-lg font-bold text-white">{isImage ? 'Your image prompt is ready' : 'Your optimized prompt'}</h3>
+          {isImage && <p className="mt-1 text-sm text-slate-400">A polished visual recipe for composition, lighting, detail and finish.</p>}
         </div>
         <div className="flex flex-wrap gap-2">
           {templateAccess.active && <Button variant="secondary" size="sm" disabled={!templateAccess.allowed} onClick={openTemplateForm}>{templateAccess.allowed ? 'Save as Template' : 'Save Template · PRO'}</Button>}
@@ -167,10 +167,10 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
             ['◇', 'Detail', 'Texture & realism'],
             ['✧', 'Finish', 'Color & camera feel'],
           ].map(([icon, title, detail]) => (
-            <div key={title} className="min-w-[170px] snap-start rounded-2xl border border-white bg-white/80 p-4 shadow-sm ring-1 ring-violet-100/70 sm:min-w-0">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-50 text-violet-600">{icon}</div>
-              <p className="mt-3 text-sm font-bold text-gray-900">{title}</p>
-              <p className="mt-1 text-xs text-gray-500">{detail}</p>
+            <div key={title} className="min-w-[170px] snap-start rounded-2xl border border-white bg-slate-900/80 p-4 shadow-sm ring-1 ring-violet-100/70 sm:min-w-0">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-400/10 text-violet-600">{icon}</div>
+              <p className="mt-3 text-sm font-bold text-white">{title}</p>
+              <p className="mt-1 text-xs text-slate-400">{detail}</p>
             </div>
           ))}
         </div>
@@ -179,47 +179,47 @@ function ResultCard({ prompt, perspectives = [], intelligence = null, userPlan =
       {workflow && workflowAccess.allowed && <WorkflowProgress workflow={workflow} perspectives={perspectives} selectedId={selectedId} />}
 
       {templateAccess.allowed && showTemplateForm && (
-        <div className="mt-5 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
+        <div className="mt-5 rounded-2xl border border-indigo-400/30 bg-indigo-400/10/50 p-4">
           <div className="flex flex-col gap-3 sm:flex-row">
-            <input value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="Template name" className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-indigo-400 sm:w-64" />
-            <p className="self-center text-xs text-gray-600">Use <code className="rounded bg-white px-1.5 py-0.5 font-semibold">{'{{variable}}'}</code> anywhere you want a reusable field.</p>
+            <input value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="Template name" className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm outline-none focus:border-indigo-400 sm:w-64" />
+            <p className="self-center text-xs text-slate-300">Use <code className="rounded bg-slate-900 px-1.5 py-0.5 font-semibold">{'{{variable}}'}</code> anywhere you want a reusable field.</p>
           </div>
-          <textarea value={templateDraft} onChange={(e) => setTemplateDraft(e.target.value)} rows={7} className="mt-3 w-full rounded-xl border border-gray-200 bg-white p-4 text-sm leading-6 outline-none focus:border-indigo-400" />
+          <textarea value={templateDraft} onChange={(e) => setTemplateDraft(e.target.value)} rows={7} className="mt-3 w-full rounded-xl border border-white/10 bg-slate-900 p-4 text-sm leading-6 outline-none focus:border-indigo-400" />
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <div className="text-xs text-gray-600">{detectedVariables.length ? `Detected variables: ${detectedVariables.map((item) => `{{${item}}}`).join(' · ')}` : 'No variables detected yet — you can still save this as a reusable prompt.'}</div>
+            <div className="text-xs text-slate-300">{detectedVariables.length ? `Detected variables: ${detectedVariables.map((item) => `{{${item}}}`).join(' · ')}` : 'No variables detected yet — you can still save this as a reusable prompt.'}</div>
             <div className="flex gap-2"><Button variant="secondary" size="sm" onClick={() => setShowTemplateForm(false)}>Cancel</Button><Button variant="primary" size="sm" onClick={handleSaveTemplate}>Save Template</Button></div>
           </div>
         </div>
       )}
 
       {intentAccess.allowed && intelligence?.intent && (
-        <div className="mt-5 rounded-2xl border border-gray-100 bg-gray-50 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Understood goal</p><p className="mt-1 text-sm font-medium text-gray-800">{intelligence.intent}</p>{intelligence.missing?.length > 0 && <p className="mt-2 text-xs text-gray-500">Optional details that could improve it: {intelligence.missing.join(' · ')}</p>}</div>
+        <div className="mt-5 rounded-2xl border border-white/10 bg-slate-950 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Understood goal</p><p className="mt-1 text-sm font-medium text-slate-100">{intelligence.intent}</p>{intelligence.missing?.length > 0 && <p className="mt-2 text-xs text-slate-400">Optional details that could improve it: {intelligence.missing.join(' · ')}</p>}</div>
       )}
 
       {perspectiveAccess.allowed && perspectives.length > 0 && (
-        <div className="mt-6 rounded-2xl border border-indigo-100 bg-white/80 p-4 shadow-sm">
+        <div className="mt-6 rounded-2xl border border-indigo-400/30 bg-slate-900/80 p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
-            <div><p className="text-sm font-bold text-gray-900">4. Choose an approach</p><p className="mt-1 text-xs text-gray-500">Switch the recipe — the generated prompt below updates instantly.</p></div>
-            <span className="hidden rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-bold text-indigo-700 sm:inline">{selectedId === 'main' ? 'BEST FIT' : 'ALTERNATIVE'}</span>
+            <div><p className="text-sm font-bold text-white">4. Choose an approach</p><p className="mt-1 text-xs text-slate-400">Switch the recipe — the generated prompt below updates instantly.</p></div>
+            <span className="hidden rounded-full bg-indigo-400/10 px-3 py-1 text-[11px] font-bold text-indigo-200 sm:inline">{selectedId === 'main' ? 'BEST FIT' : 'ALTERNATIVE'}</span>
           </div>
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory" role="tablist" aria-label="Prompt perspectives">
-            <button type="button" role="tab" aria-selected={selectedId === 'main'} onClick={() => setSelectedId('main')} className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${selectedId === 'main' ? 'border-blue-400 bg-blue-50 text-blue-800 ring-1 ring-blue-200' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-400'}`}>Best fit</button>
-            {perspectives.map((item) => <button key={item.id} type="button" role="tab" aria-selected={selectedId === item.id} onClick={() => setSelectedId(item.id)} className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${selectedId === item.id ? 'border-blue-400 bg-blue-50 text-blue-800 ring-1 ring-blue-200' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-400'}`}>{item.label}</button>)}
+            <button type="button" role="tab" aria-selected={selectedId === 'main'} onClick={() => setSelectedId('main')} className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${selectedId === 'main' ? 'border-blue-400 bg-blue-400/10 text-blue-200 ring-1 ring-blue-200' : 'border-white/10 bg-slate-900 text-slate-200 hover:border-blue-400'}`}>Best fit</button>
+            {perspectives.map((item) => <button key={item.id} type="button" role="tab" aria-selected={selectedId === item.id} onClick={() => setSelectedId(item.id)} className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${selectedId === item.id ? 'border-blue-400 bg-blue-400/10 text-blue-200 ring-1 ring-blue-200' : 'border-white/10 bg-slate-900 text-slate-200 hover:border-blue-400'}`}>{item.label}</button>)}
           </div>
         </div>
       )}
 
-      {copyStatus && <p className="mt-3 text-sm text-gray-600" role="status">{copyStatus}</p>}
-      <div ref={generatedPromptRef} className="builder-result-anchor mt-5 rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3"><p className="text-sm font-bold text-gray-900">Generated prompt</p><span className="text-xs font-medium text-gray-400">{selectedId === 'main' ? 'Best fit' : 'Selected approach'}</span></div>
+      {copyStatus && <p className="mt-3 text-sm text-slate-300" role="status">{copyStatus}</p>}
+      <div ref={generatedPromptRef} className="builder-result-anchor mt-5 rounded-2xl border border-white/10 bg-slate-900 shadow-sm">
+        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3"><p className="text-sm font-bold text-white">Generated prompt</p><span className="text-xs font-medium text-gray-400">{selectedId === 'main' ? 'Best fit' : 'Selected approach'}</span></div>
         <div className="p-3 sm:p-4"><TextArea id="generatedPrompt" value={selectedPrompt} readOnly rows={12} /></div>
       </div>
 
       {launchAccess.active && (
-        <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50/60 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-semibold text-gray-900">One-click AI launch</p><p className="mt-1 text-xs text-gray-600">{launchAccess.allowed ? 'Your selected prompt is copied automatically, then your AI opens in a new tab.' : 'Pro unlocks direct launch to your favorite AI — no copy-paste setup.'}</p></div>{!launchAccess.allowed && <span className="rounded-full border border-blue-200 bg-white px-3 py-1 text-xs font-bold text-blue-700">PRO</span>}</div><div className="mt-3 flex gap-2 overflow-x-auto pb-1">{AI_LAUNCH_TARGETS.map((target) => <Button key={target.id} variant={launchAccess.allowed ? 'primary' : 'secondary'} size="sm" disabled={!launchAccess.allowed} onClick={() => handleLaunch(target.id)}>{launchAccess.allowed ? `Open in ${target.label}` : target.label}</Button>)}</div>{launchStatus && <p className="mt-3 text-xs font-medium text-gray-700" role="status">{launchStatus}</p>}</div>
+        <div className="mt-5 rounded-2xl border border-blue-400/30 bg-blue-400/10/60 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-semibold text-white">One-click AI launch</p><p className="mt-1 text-xs text-slate-300">{launchAccess.allowed ? 'Your selected prompt is copied automatically, then your AI opens in a new tab.' : 'Pro unlocks direct launch to your favorite AI — no copy-paste setup.'}</p></div>{!launchAccess.allowed && <span className="rounded-full border border-blue-400/30 bg-slate-900 px-3 py-1 text-xs font-bold text-blue-200">PRO</span>}</div><div className="mt-3 flex gap-2 overflow-x-auto pb-1">{AI_LAUNCH_TARGETS.map((target) => <Button key={target.id} variant={launchAccess.allowed ? 'primary' : 'secondary'} size="sm" disabled={!launchAccess.allowed} onClick={() => handleLaunch(target.id)}>{launchAccess.allowed ? `Open in ${target.label}` : target.label}</Button>)}</div>{launchStatus && <p className="mt-3 text-xs font-medium text-slate-200" role="status">{launchStatus}</p>}</div>
       )}
 
-      {intentAccess.allowed && intelligence?.recommendations?.length > 0 && <div className="mt-5 rounded-2xl border border-gray-100 p-4"><p className="text-sm font-semibold text-gray-800">PromptStudio suggestions</p><ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-600">{intelligence.recommendations.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul></div>}
+      {intentAccess.allowed && intelligence?.recommendations?.length > 0 && <div className="mt-5 rounded-2xl border border-white/10 p-4"><p className="text-sm font-semibold text-slate-100">PromptStudio suggestions</p><ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-300">{intelligence.recommendations.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul></div>}
     </div>
   );
 }

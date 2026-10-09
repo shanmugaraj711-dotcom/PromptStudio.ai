@@ -17,17 +17,17 @@ export default function WorkflowProgress({ workflow, perspectives = [], selected
   };
 
   return (
-    <div className="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-4">
+    <div className="mt-6 rounded-2xl border border-indigo-400/30 bg-indigo-400/10/60 p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-bold text-indigo-900">⚡ {workflow.name} workflow</p>
-          <p className="mt-1 text-xs text-indigo-700">Use the existing PromptStudio features in this guided sequence.</p>
+          <p className="text-sm font-bold text-indigo-200">⚡ {workflow.name} workflow</p>
+          <p className="mt-1 text-xs text-indigo-200">Use the existing PromptStudio features in this guided sequence.</p>
         </div>
-        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-indigo-700">PRO</span>
+        <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-bold text-indigo-200">PRO</span>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         {workflow.steps.map((step, index) => (
-          <span key={step} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${complete(step) ? 'border-green-200 bg-green-50 text-green-700' : 'border-indigo-200 bg-white text-indigo-700'}`}>
+          <span key={step} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${complete(step) ? 'border-green-400/30 bg-green-400/10 text-green-200' : 'border-indigo-400/30 bg-slate-900 text-indigo-200'}`}>
             {complete(step) ? '✓' : index + 1} {STEP_LABELS[step]}
           </span>
         ))}

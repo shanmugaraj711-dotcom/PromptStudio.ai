@@ -40,7 +40,6 @@ const PAGES = [
   ["/studio", () => import("../pages/Studio/Studio")],
   ["/apk-forge", () => import("../pages/ApkForge/ApkForge")],
   ["/apk-forge/my-builds", () => import("../pages/ApkForge/ApkForgeBuilds")],
-  ["/workflows", () => import("../pages/Workflows/WorkflowLibrary")],
   ["/history", () => import("../pages/Result/PromptHistory")],
   ["/account", () => import("../pages/Account/Account")],
   ["/transactions", () => import("../pages/Transactions/Transactions")],

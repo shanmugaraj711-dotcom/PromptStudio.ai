@@ -3,7 +3,9 @@
 @tailwind utilities;
 
 html { scroll-behavior: smooth; }
-body { @apply bg-white text-gray-900 antialiased; }
+body { @apply bg-slate-950 font-sans text-slate-100 antialiased; }
+::selection { @apply bg-brand-400 text-slate-950; }
+:focus-visible { outline: 2px solid theme(colors.brand.400); outline-offset: 2px; }
 textarea:focus, select:focus, input:focus { outline: none; }
 
 @media (min-width: 1024px) {
@@ -24,23 +26,3 @@ textarea:focus, select:focus, input:focus { outline: none; }
   .workspace-panel-enter { animation: none; }
   *, *::before, *::after { scroll-behavior: auto !important; }
 }
-
-/* Reference Coding: soft-light workspace — readable without the glare of pure white. */
-div[class*="bg-[#070A11]"] { background: #eef2f6 !important; color: #1e293b !important; }
-div[class*="bg-[#070A11]"] main [class*="bg-[#0E1322]"] { background: #f7f9fc !important; border-color: #d8e0e8 !important; box-shadow: 0 18px 48px -34px rgba(15, 23, 42, 0.22) !important; }
-div[class*="bg-[#070A11]"] main [class*="bg-[#0B0F19]"] { background: #f5f7fa !important; border-color: #d8e0e8 !important; box-shadow: 0 14px 40px -34px rgba(15, 23, 42, 0.2) !important; }
-div[class*="bg-[#070A11]"] main [class*="bg-zinc-950/70"] { background: #f8fafc !important; color: #1e293b !important; border-color: #cbd5e1 !important; }
-div[class*="bg-[#070A11]"] main [class*="bg-white/5"] { background: #eef2f6 !important; border-color: #d8e0e8 !important; }
-div[class*="bg-[#070A11]"] main [class*="bg-white/[0.02]"] { background: #f7f9fc !important; border-color: #cbd5e1 !important; }
-div[class*="bg-[#070A11]"] main [class*="bg-white/[0.03]"] { background: #eef2f6 !important; border-color: #d8e0e8 !important; }
-div[class*="bg-[#070A11]"] main [class*="border-white/10"], div[class*="bg-[#070A11]"] main [class*="border-white/5"] { border-color: #d8e0e8 !important; }
-div[class*="bg-[#070A11]"] main textarea, div[class*="bg-[#070A11]"] main select { background: #f8fafc !important; color: #1e293b !important; border-color: #cbd5e1 !important; }
-div[class*="bg-[#070A11]"] main select option { background: #f8fafc; color: #1e293b; }
-div[class*="bg-[#070A11]"] main [class*="bg-red-950/30"] { background: #fff1f2 !important; border-color: #fecdd3 !important; color: #be123c !important; }
-div[class*="bg-[#070A11]"] main [class*="bg-emerald-950/30"] { background: #ecfdf5 !important; border-color: #a7f3d0 !important; color: #047857 !important; }
-div[class*="bg-[#070A11]"] main .builder-result-anchor, div[class*="bg-[#070A11]"] main .builder-result-anchor > div, div[class*="bg-[#070A11]"] main .builder-result-anchor textarea { background: #f7f9fc !important; }
-div[class*="bg-[#070A11]"] main .builder-result-anchor { border-color: #d8e0e8 !important; }
-div[class*="bg-[#070A11]"] main .builder-result-anchor textarea { border-color: #cbd5e1 !important; }
-div[class*="bg-[#070A11]"] main [class*="bg-teal-950/30"] { background: #e6f2f1 !important; border-color: #b8d8d5 !important; }
-div[class*="bg-[#070A11]"] main button[class~="bg-zinc-700"], div[class*="bg-[#070A11]"] main button[class~="bg-indigo-600"], div[class*="bg-[#070A11]"] main button[class~="bg-orange-600"], div[class*="bg-[#070A11]"] main button[class~="bg-emerald-600"], div[class*="bg-[#070A11]"] main button[class~="bg-blue-600"], div[class*="bg-[#070A11]"] main button[class~="bg-slate-700"], div[class*="bg-[#070A11]"] main button[class~="bg-pink-600"], div[class*="bg-[#070A11]"] main button[class~="bg-orange-700"], div[class*="bg-[#070A11]"] main button[class~="bg-zinc-800"], div[class*="bg-[#070A11]"] main button[class~="bg-cyan-600"], div[class*="bg-[#070A11]"] main button[class~="bg-amber-600"], div[class*="bg-[#070A11]"] main button[class~="bg-teal-700"] { background: #e9eef3 !important; color: #334155 !important; border: 1px solid #d1d9e2 !important; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important; }
-div[class*="bg-[#070A11]"] main button[class~="bg-zinc-700"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-indigo-600"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-orange-600"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-emerald-600"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-blue-600"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-slate-700"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-pink-600"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-orange-700"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-zinc-800"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-cyan-600"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-amber-600"]:hover, div[class*="bg-[#070A11]"] main button[class~="bg-teal-700"]:hover { background: #dfe7ee !important; color: #1e293b !important; }
