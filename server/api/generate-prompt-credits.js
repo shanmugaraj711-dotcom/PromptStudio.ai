@@ -89,6 +89,19 @@ OUTPUT: Return exactly three perspectives: Precision Build, Expert Strategy, and
 const CODING_INSTRUCTION = `You are PromptStudio's Reference Coding intelligence engine. Convert the user's intent and supplied visual/file evidence into a production-ready coding prompt. Preserve exact requirements, existing behavior, named entities and constraints. Analyze product purpose, information architecture, visible UI, interaction states, responsive behavior, accessibility, implementation constraints and acceptance criteria. Infer only what evidence supports; clearly separate assumptions. Never claim to have executed or behaviorally inspected supplied source files. Avoid unnecessary rewrites. Return valid JSON with exactly three perspectives: Faithful Recreation, UX Improvement, Production Implementation, plus intent, outputType, assumptions, missing and recommendations.`;
 const IMAGE_INSTRUCTION = `You are PromptStudio's reference-aware visual prompt architect. Convert visible evidence and the user's intent into a high-quality prompt for the selected AI. Analyze subject, composition, geometry, camera/view, lighting, materials, color, typography and distinctive details. Never invent hidden facts. If text is uncertain, describe placement/style rather than fabricate wording. Return valid JSON with exactly three perspectives: Faithful Recreation, Professional Production, Creative Variation, plus intent, outputType, assumptions, missing and recommendations.`;
 
+const describeProviderError = (error) => {
+  const status = Number(error?.status || error?.statusCode || 0);
+  if (status === 400) return "invalid API key";
+  if (status === 401 || status === 403) return "API key rejected";
+  if (status === 404) return "model not available";
+  if (status === 429) return "quota exceeded";
+  if (status) return `provider error ${status}`;
+  const message = String(error?.message || "").toLowerCase();
+  if (message.includes("abort") || message.includes("timeout") || message.includes("deadline")) return "request timed out";
+  if (message.includes("fetch") || message.includes("network") || message.includes("econn")) return "provider unreachable";
+  return "provider call failed";
+};
+
 const generate = async ({ client, idea, aiModel, category, images, referenceFiles, referenceCoding = false }) => {
   const fileContext = referenceFiles.length ? `\n\nREFERENCE FILES (static context; never execute):\n${referenceFiles.map((file) => `- ${file.name} | ${file.detectedType || "unknown"} | ${file.kind}${file.note ? ` | ${file.note}` : ""}${file.content ? `\n${file.content}` : ""}`).join("\n")}` : "";
   const text = `TARGET AI: ${aiModel}\nCATEGORY: ${category}\nUSER REQUEST:\n${idea || "Use the supplied references as the primary source of truth."}${fileContext}`;
@@ -102,19 +115,25 @@ const generate = async ({ client, idea, aiModel, category, images, referenceFile
   const call = async (model, timeoutMs) => { const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), timeoutMs); try { return await client.models.generateContent({ model, contents, config: { ...config, abortSignal: controller.signal } }); } finally { clearTimeout(timeout); } };
   const retryable = (error) => { const status = Number(error?.status || error?.statusCode || 0); const message = String(error?.message || "").toLowerCase(); const code = String(error?.code || "").toLowerCase(); const modelNotFound = status === 404 && (message.includes("model") || message.includes("models/")); return [408,429,500,502,503,504].includes(status) || modelNotFound || code.includes("resource_exhausted") || code.includes("unavailable") || code.includes("internal") || message.includes("temporar") || message.includes("overload") || message.includes("timeout") || message.includes("aborted") || message.includes("deadline") || message.includes("incomplete_response") || message.includes("invalid json"); };
   let lastError;
+  let failureSummary = "";
   const attempts = [[primaryModel, isCoding ? 14000 : 16000], [fallbackModel, isCoding ? 10000 : 11000], [secondaryModel, isCoding ? 9000 : 10000]];
   const seen = new Set();
-  for (const [model, timeoutMs] of attempts) {
-    if (!model || seen.has(model)) continue;
-    seen.add(model);
-    try {
-      const response = await call(model, timeoutMs);
-      const raw = String(response.text || "").trim();
-      const parsed = JSON.parse(raw || "{}");
-      const perspectives = Array.isArray(parsed.perspectives) ? parsed.perspectives.filter((item) => item?.label && item?.prompt).slice(0,3) : [];
-      if (!parsed.prompt || perspectives.length < 3) { const error = new Error("incomplete_response"); error.code = "incomplete_response"; throw error; }
-      return { prompt: String(parsed.prompt).trim(), perspectives, intelligence: { intent: parsed.intent || "", outputType: parsed.outputType || category, assumptions: Array.isArray(parsed.assumptions) ? parsed.assumptions.slice(0,5) : [], missing: Array.isArray(parsed.missing) ? parsed.missing.slice(0,5) : [], recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations.slice(0,5) : [] } };
-    } catch (error) { lastError = error; console.warn("Prompt generation model attempt failed", { model, reason: error?.name || error?.code || "unknown", status: error?.status || error?.statusCode || null }); if (!retryable(error)) throw error; }
+  if (client) {
+    for (const [model, timeoutMs] of attempts) {
+      if (!model || seen.has(model)) continue;
+      seen.add(model);
+      try {
+        const response = await call(model, timeoutMs);
+        const raw = String(response.text || "").trim();
+        let parsed;
+        try { parsed = JSON.parse(raw || "{}"); } catch { const parseError = new Error("invalid json response"); parseError.code = "invalid_json"; throw parseError; }
+        const perspectives = Array.isArray(parsed.perspectives) ? parsed.perspectives.filter((item) => item?.label && item?.prompt).slice(0,3) : [];
+        if (!parsed.prompt || perspectives.length < 3) { const error = new Error("incomplete_response"); error.code = "incomplete_response"; throw error; }
+        return { prompt: String(parsed.prompt).trim(), perspectives, intelligence: { intent: parsed.intent || "", outputType: parsed.outputType || category, assumptions: Array.isArray(parsed.assumptions) ? parsed.assumptions.slice(0,5) : [], missing: Array.isArray(parsed.missing) ? parsed.missing.slice(0,5) : [], recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations.slice(0,5) : [] } };
+      } catch (error) { lastError = error; failureSummary = `Gemini ${model}: ${describeProviderError(error)}`; console.warn("Prompt generation model attempt failed", { model, reason: error?.name || error?.code || "unknown", status: error?.status || error?.statusCode || null }); if (!retryable(error)) break; }
+    }
+  } else {
+    failureSummary = "Gemini: no API key configured";
   }
   if (process.env.GROQ_API_KEY && images.length === 0) {
     try {
@@ -127,9 +146,11 @@ const generate = async ({ client, idea, aiModel, category, images, referenceFile
         console.info("Prompt Lab used Groq tertiary fallback", { model: GROQ_FALLBACK_MODEL });
         return { prompt: String(parsed.prompt).trim(), perspectives, intelligence: { intent: parsed.intent || "", outputType: parsed.outputType || category, assumptions: Array.isArray(parsed.assumptions) ? parsed.assumptions.slice(0,5) : [], missing: Array.isArray(parsed.missing) ? parsed.missing.slice(0,5) : [], recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations.slice(0,5) : [] } };
       } finally { clearTimeout(timeout); }
-    } catch (error) { lastError = error; console.warn("Prompt generation Groq fallback failed", { status: error?.status || null, reason: error?.message || "unknown" }); }
+    } catch (error) { lastError = error; const groqSummary = `Groq: ${describeProviderError(error)}`; failureSummary = failureSummary ? `${failureSummary}; ${groqSummary}` : groqSummary; console.warn("Prompt generation Groq fallback failed", { status: error?.status || null, reason: error?.message || "unknown" }); }
   }
-  throw lastError || new Error("generation_failed");
+  const finalError = lastError || new Error("generation_failed");
+  finalError.failureSummary = failureSummary;
+  throw finalError;
 };
 
 export default async function handler(req, res) {
@@ -140,7 +161,7 @@ export default async function handler(req, res) {
     if (reservation.status === "succeeded") return json(res, 200, reservation);
     let result;
     try { result = await generate({ client: process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null, idea: input.idea, aiModel: body.aiModel, category: body.category, images: input.images, referenceFiles: input.referenceFiles, referenceCoding: body.referenceCoding === true }); }
-    catch (error) { console.error("Prompt generation providers failed", { code: error?.code || "unknown", status: error?.status || error?.statusCode || null, name: error?.name || "unknown", message: String(error?.message || "").slice(0,300) }); const quota = await rollback({ db, uid: decoded.uid, requestId: body.requestId, failureCode: "generation_failed", productConfig }); return json(res, 502, { code: "generation_failed", message: "The AI service could not generate a prompt. Your quota and credits were restored.", quota }); }
+    catch (error) { console.error("Prompt generation providers failed", { code: error?.code || "unknown", status: error?.status || error?.statusCode || null, name: error?.name || "unknown", message: String(error?.message || "").slice(0,300) }); const quota = await rollback({ db, uid: decoded.uid, requestId: body.requestId, failureCode: "generation_failed", productConfig }); const summary = error.failureSummary ? ` (${error.failureSummary})` : ""; return json(res, 502, { code: "generation_failed", message: `The AI service could not generate a prompt${summary}. Your quota and credits were restored.`, quota }); }
     const userRef = db.collection("users").doc(decoded.uid); const requestRef = userRef.collection("generationRequests").doc(body.requestId); const historyRef = userRef.collection("prompts").doc(body.requestId);
     try {
       const saved = await db.runTransaction(async (tx) => { const requestSnap = await tx.get(requestRef); if (!requestSnap.exists || requestSnap.data().status !== "reserved") throw new ApiError(409, "request_not_active", "The generation request is no longer active."); const request = requestSnap.data(); tx.set(historyRef, { prompt: result.prompt, perspectives: result.perspectives, intelligence: result.intelligence, aiModel: body.aiModel, category: body.category, hasReferenceImage: input.images.length > 0, referenceImageCount: input.images.length, referenceFileCount: input.referenceFiles.length, referenceFileNames: input.referenceFiles.map((file) => file.name).slice(0,8), createdAt: FieldValue.serverTimestamp() }); tx.update(requestRef, { status: "succeeded", prompt: result.prompt, perspectives: result.perspectives, intelligence: result.intelligence, historyId: historyRef.id, refundStatus: "not_required", completedAt: FieldValue.serverTimestamp() }); return { prompt: result.prompt, perspectives: result.perspectives, intelligence: result.intelligence, historyId: historyRef.id, quota: request.quota, creditsRemaining: Math.max(Number(request.creditsRemaining ?? reservation.creditsRemaining ?? 0),0), creditCost: request.creditCost || 0 }; });
