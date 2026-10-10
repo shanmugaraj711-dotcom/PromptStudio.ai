@@ -100,7 +100,8 @@ const describeProviderError = (error) => {
     } catch { /* fall through to status mapping */ }
   }
   const status = Number(error?.status || error?.statusCode || 0);
-  if (status === 400) return "invalid API key";
+  const isGroq = rawMessage.startsWith("Groq ");
+  if (status === 400) return isGroq ? "request rejected by Groq" : "invalid API key";
   if (status === 401 || status === 403) return "API key rejected";
   if (status === 404) return "model not available";
   if (status === 429) return "quota exceeded";
@@ -149,7 +150,7 @@ const generate = async ({ client, idea, aiModel, category, images, referenceFile
     try {
       const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 12000);
       try {
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqKey}` }, body: JSON.stringify({ model: GROQ_FALLBACK_MODEL, messages: [{ role: "system", content: `${systemInstruction}\nReturn JSON only.` }, { role: "user", content: text }], response_format: { type: "json_object" }, reasoning_effort: "high", max_completion_tokens: 3600, temperature: 0.2 }), signal: controller.signal });
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqKey}` }, body: JSON.stringify({ model: GROQ_FALLBACK_MODEL, messages: [{ role: "system", content: `${systemInstruction}\nReturn JSON only.` }, { role: "user", content: text }], response_format: { type: "json_object" }, reasoning_effort: "low", max_completion_tokens: 8000, temperature: 0.2 }), signal: controller.signal });
         if (!response.ok) { const body = await response.text().catch(() => ""); const error = new Error(`Groq ${response.status}: ${body.slice(0,200)}`); error.status = response.status; throw error; }
         const payload = await response.json(); const raw = String(payload?.choices?.[0]?.message?.content || "").trim(); const parsed = JSON.parse(raw || "{}"); const perspectives = Array.isArray(parsed.perspectives) ? parsed.perspectives.filter((item) => item?.label && item?.prompt).slice(0,3) : [];
         if (!parsed.prompt || perspectives.length < 3) throw Object.assign(new Error("incomplete_response"), { code: "incomplete_response" });
