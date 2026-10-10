@@ -126,7 +126,7 @@ const generate = async ({ client, idea, aiModel, category, images, referenceFile
   const retryable = (error) => { const status = Number(error?.status || error?.statusCode || 0); const message = String(error?.message || "").toLowerCase(); const code = String(error?.code || "").toLowerCase(); const modelNotFound = status === 404 && (message.includes("model") || message.includes("models/")); return [408,429,500,502,503,504].includes(status) || modelNotFound || code.includes("resource_exhausted") || code.includes("unavailable") || code.includes("internal") || message.includes("temporar") || message.includes("overload") || message.includes("timeout") || message.includes("aborted") || message.includes("deadline") || message.includes("incomplete_response") || message.includes("invalid json"); };
   let lastError;
   let failureSummary = "";
-  const attempts = [[primaryModel, isCoding ? 14000 : 16000], [fallbackModel, isCoding ? 10000 : 11000], [secondaryModel, isCoding ? 9000 : 10000]];
+  const attempts = [[primaryModel, isCoding ? 12000 : 12000], [fallbackModel, isCoding ? 8000 : 9000], [secondaryModel, isCoding ? 7000 : 8000]];
   const seen = new Set();
   if (client) {
     for (const [model, timeoutMs] of attempts) {
@@ -148,7 +148,7 @@ const generate = async ({ client, idea, aiModel, category, images, referenceFile
   const groqKey = String(process.env.GROQ_API_KEY || "").trim();
   if (groqKey && images.length === 0) {
     try {
-      const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 12000);
+      const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 10000);
       try {
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqKey}` }, body: JSON.stringify({ model: GROQ_FALLBACK_MODEL, messages: [{ role: "system", content: `${systemInstruction}\nReturn JSON only.` }, { role: "user", content: text }], response_format: { type: "json_object" }, reasoning_effort: "low", max_completion_tokens: 8000, temperature: 0.2 }), signal: controller.signal });
         if (!response.ok) { const body = await response.text().catch(() => ""); const error = new Error(`Groq ${response.status}: ${body.slice(0,200)}`); error.status = response.status; throw error; }
