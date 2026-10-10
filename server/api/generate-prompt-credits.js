@@ -145,7 +145,7 @@ const generate = async ({ client, idea, aiModel, category, images, referenceFile
   } else {
     failureSummary = "Gemini: no API key configured";
   }
-  const groqKey = String(process.env.GROQ_API_KEY || "").trim();
+  const groqKey = String(process.env.GROQ_API_KEY || process.env.Groq_API_KEY || process.env.groq_api_key || "").trim();
   if (groqKey && images.length === 0) {
     try {
       const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 10000);
