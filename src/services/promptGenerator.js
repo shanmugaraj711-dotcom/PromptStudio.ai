@@ -34,17 +34,27 @@ export async function generatePrompt({
   requestId,
   image,
   fetchImpl = fetch,
+  timeoutMs = 90000,
 }) {
   if (!idToken) throw new PromptGenerationError("Your session has expired. Please sign in again.", { code: "unauthenticated" });
   let response;
+  // Generation can legitimately take ~60s (provider failover chain), but the
+  // UI must never spin forever on a stalled connection: the server saves
+  // finished prompts to History, so a timeout is recoverable (issue #76).
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
     response = await fetchImpl("/api/generate-prompt-credits", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
       body: JSON.stringify({ idea, aiModel, category, requestId, image }),
+      signal: controller.signal,
     });
-  } catch {
+  } catch (error) {
+    if (error?.name === "AbortError") throw new PromptGenerationError("This is taking longer than usual. If your prompt finished generating, you will find it in your History — please check there before trying again.", { code: "timeout" });
     throw new PromptGenerationError("We could not reach the generation service. Please check your connection and try again.", { code: "network_error" });
+  } finally {
+    clearTimeout(timeoutId);
   }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new PromptGenerationError(sanitizeServiceMessage(payload.message), { code: payload.code, quota: payload.quota, creditsRemaining: payload.creditsRemaining, creditCost: payload.creditCost });
