@@ -182,4 +182,46 @@ describe('reference-coding telemetry', () => {
     // Credits are charged inside generate-prompt-credits (mocked here); this route only delegates.
     expect(mocks.generatePromptHandler).toHaveBeenCalledTimes(1);
   });
+
+  it('forwards the original request so prototype-getter headers survive (issue #74)', async () => {
+    let seenReq;
+    mocks.generatePromptHandler.mockImplementation(async (req, res) => {
+      seenReq = req;
+      res.statusCode = 200;
+      return res;
+    });
+
+    // Node's IncomingMessage exposes headers through a lazy prototype getter;
+    // spreading req ({ ...req }) drops it. Model that exact shape here.
+    class FakeIncomingMessage {
+      constructor() {
+        this.method = 'POST';
+        this.body = {
+          idea: 'recreate this screen',
+          requestId: 'headers-12345678',
+          images: [],
+          referenceFiles: [],
+        };
+      }
+      get headers() { return { authorization: 'Bearer <redacted>' }; }
+    }
+    const req = new FakeIncomingMessage();
+    const res = {
+      statusCode: 200,
+      status: vi.fn(function (code) {
+        this.statusCode = code;
+        return this;
+      }),
+      json: vi.fn(function (payload) {
+        this.payload = payload;
+        return this;
+      }),
+    };
+
+    await handler(req, res);
+
+    expect(seenReq).toBe(req);
+    expect(seenReq.headers.authorization).toBe('Bearer <redacted>');
+    expect(seenReq.body.referenceCoding).toBe(true);
+  });
 });

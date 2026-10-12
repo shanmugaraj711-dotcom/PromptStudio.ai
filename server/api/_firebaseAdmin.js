@@ -16,7 +16,7 @@ export const adminAuth = () => getAuth(getAdminApp());
 export const adminDb = () => getFirestore(getAdminApp());
 
 export const requireUser = async (req) => {
-  const header = req.headers.authorization || "";
+  const header = req.headers?.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
   if (!token) { const error = new Error("Authentication required."); error.status = 401; throw error; }
   const decoded = await adminAuth().verifyIdToken(token);

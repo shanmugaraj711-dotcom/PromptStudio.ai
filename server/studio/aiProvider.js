@@ -17,10 +17,15 @@ const getGeminiClient = () => {
 
 const normalizeGeminiModelName = (name) => String(name || "").replace(/^models\//, "");
 
-const listGeminiModels = async () => {
-  const client = getGeminiClient();
+// Exported for regression checks. The client is injectable so tests can
+// substitute a fake; production callers use the default Gemini client.
+export const listGeminiModels = async (client = getGeminiClient()) => {
   const models = [];
-  for await (const model of client.models.list()) {
+  // @google/genai v2: models.list() returns Promise<Pager>. The resolved
+  // pager is the async iterable — iterating the promise itself throws
+  // "… is not a function or its return value is not async iterable" (#75).
+  const pager = await client.models.list();
+  for await (const model of pager) {
     const id = normalizeGeminiModelName(model?.name || model?.id);
     if (!id) continue;
     const supportedActions = Array.isArray(model?.supportedActions) ? model.supportedActions : Array.isArray(model?.supported_actions) ? model.supported_actions : [];

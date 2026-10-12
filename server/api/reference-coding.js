@@ -61,7 +61,11 @@ export default async function handler(req, res) {
   const body = normalizeBody(req.body);
   const requestId = body.requestId;
 
-  await generatePromptCreditsHandler({ ...req, body }, res);
+  // Forward the ORIGINAL req, not a spread copy: in Node, req.headers is a
+  // lazy prototype getter, so { ...req } silently drops headers and the shared
+  // pipeline's requireUser() crashes reading .authorization (issue #74).
+  req.body = body;
+  await generatePromptCreditsHandler(req, res);
 
   if (res.statusCode !== 200 || !requestId) return;
 
