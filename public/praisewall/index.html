@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PraiseWall — Collect praise. Show it with pride.</title>
+<meta name="description" content="PraiseWall helps any business collect kind words from happy customers and turn them into a beautiful public wall of praise. Free to start.">
+<style>
+  :root{
+    --teal:#0e7c86; --teal-dark:#0a5a61; --ink:#14202b; --soft:#5b6b78;
+    --bg:#f6f9fa; --card:#ffffff; --line:#dde7ea; --gold:#e8a33d;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+  a{color:var(--teal)}
+  .wrap{max-width:760px;margin:0 auto;padding:20px 16px 64px}
+  header.top{display:flex;align-items:center;justify-content:space-between;padding:8px 0 20px}
+  .logo{font-size:22px;font-weight:800;letter-spacing:-.02em}
+  .logo span{color:var(--teal)}
+  .pill{font-size:12px;font-weight:700;background:#e3f2f3;color:var(--teal-dark);border-radius:999px;padding:4px 10px}
+  h1{font-size:34px;line-height:1.15;letter-spacing:-.02em;margin:10px 0 12px}
+  h2{font-size:22px;letter-spacing:-.01em;margin:26px 0 10px}
+  h3{font-size:16px;margin:0 0 6px}
+  p{margin:0 0 12px}
+  .soft{color:var(--soft)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin:14px 0;box-shadow:0 1px 3px rgba(20,32,43,.05)}
+  label{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
+  label:first-child{margin-top:0}
+  input,textarea,select{width:100%;font:inherit;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  textarea{min-height:110px;resize:vertical}
+  .btn{display:inline-block;background:var(--teal);color:#fff;font-weight:700;border:none;border-radius:10px;padding:13px 20px;font-size:16px;cursor:pointer;text-decoration:none;text-align:center}
+  .btn:hover{background:var(--teal-dark)}
+  .btn.ghost{background:#fff;color:var(--teal);border:1.5px solid var(--teal)}
+  .btn.small{padding:8px 14px;font-size:14px}
+  .btn.block{display:block;width:100%;margin-top:14px}
+  .steps{display:grid;gap:12px}
+  @media(min-width:640px){.steps{grid-template-columns:1fr 1fr 1fr}}
+  .step{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px}
+  .step .n{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+  .linkbox{display:flex;gap:8px;margin:8px 0}
+  .linkbox input{flex:1;font-size:13px;color:var(--soft)}
+  .praise{border:1px solid var(--line);border-radius:14px;background:#fff;padding:18px;margin:12px 0}
+  .praise .stars{color:var(--gold);font-size:17px;letter-spacing:2px}
+  .praise .text{font-size:17px;margin:6px 0 10px}
+  .praise .who{font-weight:700}
+  .praise .detail{color:var(--soft);font-size:14px}
+  .badge{display:inline-block;margin-top:18px;font-size:13px;color:var(--soft);background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 14px;text-decoration:none}
+  .badge b{color:var(--teal)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .note{background:#eef7f7;border:1px solid #cfe8ea;border-radius:12px;padding:14px 16px;font-size:14px;margin:14px 0}
+  .warn{background:#fdf6ec;border:1px solid #f0dcba;border-radius:12px;padding:14px 16px;font-size:14px;margin:14px 0}
+  .price{display:grid;gap:12px}
+  @media(min-width:640px){.price{grid-template-columns:1fr 1fr}}
+  .plan{border:1.5px solid var(--line);border-radius:14px;padding:18px;background:#fff}
+  .plan.pro{border-color:var(--teal)}
+  .plan .amt{font-size:28px;font-weight:800}
+  ul{margin:6px 0 6px 18px}
+  li{margin:4px 0}
+  .empty{color:var(--soft);text-align:center;padding:22px 0}
+  footer{margin-top:44px;color:var(--soft);font-size:13px;text-align:center}
+  .hidden{display:none}
+  .ok{color:var(--teal-dark);font-weight:700}
+  .center{text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo">Praise<span>Wall</span></div>
+    <div class="pill">by PromptStudio</div>
+  </header>
+  <main id="app"></main>
+  <footer>PraiseWall by PromptStudio · Questions? <a href="mailto:support@promptstudioai.in">support@promptstudioai.in</a></footer>
+</div>
+
+<script>
+"use strict";
+/* ---------- tiny helpers ---------- */
+function enc(obj){
+  var s = JSON.stringify(obj);
+  var bytes = new TextEncoder().encode(s);
+  var bin = ""; bytes.forEach(function(b){ bin += String.fromCharCode(b); });
+  return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function dec(tok){
+  try{
+    var b64 = tok.replace(/-/g,"+").replace(/_/g,"/");
+    while(b64.length % 4) b64 += "=";
+    var bin = atob(b64);
+    var bytes = Uint8Array.from(bin, function(c){ return c.charCodeAt(0); });
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }catch(e){ return null; }
+}
+function esc(s){
+  return String(s==null?"":s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+function cyrb53(str, seed){
+  var h1 = 0xdeadbeef ^ (seed||0), h2 = 0x41c6ce57 ^ (seed||0);
+  for(var i=0;i<str.length;i++){
+    var ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1>>>16), 2246822507) ^ Math.imul(h2 ^ (h2>>>13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2>>>16), 2246822507) ^ Math.imul(h1 ^ (h1>>>13), 3266489909);
+  return (h2>>>0).toString(16).padStart(8,"0") + (h1>>>0).toString(16).padStart(8,"0");
+}
+var PRO_SECRET = "praisewall-pro-2026";
+function proCodeFor(wallId){ return "PW-" + cyrb53(wallId + "|" + PRO_SECRET, 7).slice(0,8).toUpperCase(); }
+function stars(n){ var s=""; for(var i=0;i<5;i++) s += i<n ? "★" : "☆"; return s; }
+function $(id){ return document.getElementById(id); }
+function base(){ return location.origin + location.pathname; }
+function myWalls(){ try{ return JSON.parse(localStorage.getItem("pw_walls")||"[]"); }catch(e){ return []; } }
+function saveMyWall(tok){
+  var w = myWalls(); if(w.indexOf(tok)===-1){ w.push(tok); localStorage.setItem("pw_walls", JSON.stringify(w)); }
+}
+function inbox(wallId){ try{ return JSON.parse(localStorage.getItem("pw_inbox_"+wallId)||"[]"); }catch(e){ return []; } }
+function saveInbox(wallId, arr){ localStorage.setItem("pw_inbox_"+wallId, JSON.stringify(arr)); }
+function isPro(wallId){
+  var code = localStorage.getItem("pw_pro_"+wallId);
+  return !!code && code.trim().toUpperCase() === proCodeFor(wallId);
+}
+
+/* ---------- views ---------- */
+var app = $("app");
+
+function viewHome(){
+  var mine = myWalls();
+  var mineHtml = "";
+  if(mine.length){
+    mineHtml = '<div class="card"><h3>Your walls</h3>' + mine.map(function(t){
+      var w = dec(t); if(!w) return "";
+      return '<p style="margin:8px 0"><b>'+esc(w.biz)+'</b><br><a href="#/dash/'+t+'">Open your owner page →</a></p>';
+    }).join("") + '</div>';
+  }
+  app.innerHTML =
+  '<h1>Your happy customers already love you.<br>PraiseWall puts their words to work.</h1>' +
+  '<p class="soft">Ask customers for a few kind words, approve the ones you like, and show them on a beautiful public wall — on your website, your Google profile, anywhere. Free to start.</p>' +
+  '<div class="steps">' +
+    '<div class="step"><div class="n">1</div><h3>Create your wall</h3><p class="soft">Thirty seconds. Your business name and one question. That is all.</p></div>' +
+    '<div class="step"><div class="n">2</div><h3>Share your ask link</h3><p class="soft">Send it on WhatsApp after every happy job. Customers write their praise and send it back to you.</p></div>' +
+    '<div class="step"><div class="n">3</div><h3>Approve &amp; publish</h3><p class="soft">Nothing appears without your yes. Approved praise becomes your public wall.</p></div>' +
+  '</div>' +
+  '<div class="card"><h2 style="margin-top:0">Create your free wall</h2>' +
+    '<label>Your business name</label><input id="f-biz" placeholder="e.g. Shine Dental Care">' +
+    '<label>Your name</label><input id="f-owner" placeholder="e.g. Dr. Priya">' +
+    '<label>What do you do? (one line)</label><input id="f-what" placeholder="e.g. Dental clinic in Anna Nagar, Chennai">' +
+    '<label>The question you ask customers</label><input id="f-q" value="What did you love about your experience with us?">' +
+    '<button class="btn block" id="f-go">Create my wall — free</button>' +
+    '<p class="soft" style="font-size:13px;margin-top:10px">No password, no sign-up. Your wall lives in your links — save your owner link somewhere safe, like a note on your phone.</p>' +
+  '</div>' +
+  mineHtml +
+  '<h2>Simple pricing</h2><div class="price">' +
+    '<div class="plan"><h3>Free</h3><div class="amt">₹0</div><ul><li>1 wall</li><li>Show up to 10 praise posts</li><li>“Powered by PraiseWall” badge on your wall</li></ul></div>' +
+    '<div class="plan pro"><h3>Pro</h3><div class="amt">₹499<span style="font-size:15px;color:var(--soft)">/month</span></div><ul><li>No badge — your wall, fully yours</li><li>Unlimited praise posts</li><li>First payers are switched on by hand — write to <a href="mailto:support@promptstudioai.in">support@promptstudioai.in</a></li></ul></div>' +
+  '</div>';
+  $("f-go").onclick = function(){
+    var biz = $("f-biz").value.trim(), owner = $("f-owner").value.trim(),
+        what = $("f-what").value.trim(), q = $("f-q").value.trim();
+    if(!biz || !owner){ alert("Please add your business name and your name."); return; }
+    var wall = { v:1, id:"w"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), biz:biz, owner:owner, what:what, q:q||"What did you love about your experience with us?" };
+    var tok = enc(wall);
+    saveMyWall(tok);
+    location.hash = "#/dash/" + tok;
+  };
+}
+
+function viewAsk(tok){
+  var w = dec(tok);
+  if(!w){ app.innerHTML = '<div class="card"><h3>This link looks broken.</h3><p class="soft">Ask the business to send you a fresh PraiseWall link.</p></div>'; return; }
+  app.innerHTML =
+  '<div class="card"><h2 style="margin-top:0">'+esc(w.biz)+'</h2>' +
+  (w.what ? '<p class="soft">'+esc(w.what)+'</p>' : '') +
+  '<p><b>'+esc(w.q)+'</b></p>' +
+  '<label>Your name</label><input id="r-name" placeholder="e.g. Meena R.">' +
+  '<label>A line about you (optional)</label><input id="r-detail" placeholder="e.g. Bride, June wedding · or · Patient since 2023">' +
+  '<label>Your rating</label><select id="r-stars"><option value="5">★★★★★ — Loved it</option><option value="4">★★★★ — Great</option><option value="3">★★★ — Good</option><option value="2">★★ — Okay</option><option value="1">★ — Poor</option></select>' +
+  '<label>Your words</label><textarea id="r-text" placeholder="Write what you honestly felt…"></textarea>' +
+  '<button class="btn block" id="r-go">Make my praise ready to send</button>' +
+  '<div id="r-out"></div></div>';
+  $("r-go").onclick = function(){
+    var name = $("r-name").value.trim(), text = $("r-text").value.trim();
+    if(!name || !text){ alert("Please add your name and a few words."); return; }
+    var resp = { wall: tok, n: name, d: $("r-detail").value.trim(), s: parseInt($("r-stars").value,10), t: text, at: Date.now() };
+    var rtok = enc(resp);
+    var give = base() + "#/give/" + rtok;
+    var waText = encodeURIComponent("Hi " + w.owner + "! Here is my praise for " + w.biz + " — tap this link to add it to your wall: " + give);
+    $("r-out").innerHTML =
+      '<div class="note"><p class="ok">Your praise is ready ✔</p>' +
+      '<p>One last step: send it to '+esc(w.biz)+' so they can add it to their wall.</p>' +
+      '<div class="row"><a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text='+waText+'">Send on WhatsApp</a>' +
+      '<button class="btn ghost" id="r-copy">Copy the link</button></div>' +
+      '<div class="linkbox"><input readonly id="r-link" value="'+give+'"></div>' +
+      '<p class="soft" style="font-size:13px">No account, nothing stored on our side — your words travel inside the link itself.</p></div>';
+    $("r-copy").onclick = function(){ $("r-link").select(); document.execCommand("copy"); $("r-copy").textContent = "Copied ✔"; };
+  };
+}
+
+function viewGive(rtok){
+  var r = dec(rtok);
+  if(!r || !r.wall){ app.innerHTML = '<div class="card"><h3>This praise link looks broken.</h3></div>'; return; }
+  var w = dec(r.wall);
+  saveMyWall(r.wall);
+  var box = inbox(w.id);
+  var dupe = box.some(function(x){ return x.at === r.at && x.n === r.n; });
+  if(!dupe){ box.push({ n:r.n, d:r.d, s:r.s, t:r.t, at:r.at, status:"pending" }); saveInbox(w.id, box); }
+  app.innerHTML =
+  '<div class="card center"><h2 style="margin-top:0">Praise received ✔</h2>' +
+  '<p><b>'+esc(r.n)+'</b> wrote for <b>'+esc(w.biz)+'</b>:</p>' +
+  '<div class="praise" style="text-align:left"><div class="stars">'+stars(r.s)+'</div><div class="text">“'+esc(r.t)+'”</div></div>' +
+  '<p class="soft">It is now in your approval inbox. Nothing goes public until you say yes.</p>' +
+  '<a class="btn" href="#/dash/'+r.wall+'">Open your owner page</a></div>';
+}
+
+function publishLink(w){
+  var box = inbox(w.id);
+  var approved = box.filter(function(x){ return x.status==="approved"; });
+  var pro = isPro(w.id);
+  var shown = pro ? approved : approved.slice(0,10);
+  var pub = { v:1, biz:w.biz, what:w.what, pro:pro, items: shown.map(function(x){ return {n:x.n,d:x.d,s:x.s,t:x.t}; }) };
+  return base() + "#/wall/" + enc(pub);
+}
+
+function viewDash(tok){
+  var w = dec(tok);
+  if(!w){ app.innerHTML = '<div class="card"><h3>This owner link looks broken.</h3></div>'; return; }
+  saveMyWall(tok);
+  var ask = base() + "#/ask/" + tok;
+  var box = inbox(w.id);
+  var pend = box.filter(function(x){ return x.status==="pending"; });
+  var appr = box.filter(function(x){ return x.status==="approved"; });
+  var pro = isPro(w.id);
+
+  function praiseRow(x, idx, withBtns){
+    var btns = withBtns ? '<div class="row"><button class="btn small" data-act="approve" data-i="'+idx+'">Approve</button><button class="btn small ghost" data-act="reject" data-i="'+idx+'">Reject</button></div>' : '';
+    return '<div class="praise"><div class="stars">'+stars(x.s)+'</div><div class="text">“'+esc(x.t)+'”</div><span class="who">'+esc(x.n)+'</span>'+(x.d?' <span class="detail">· '+esc(x.d)+'</span>':'')+btns+'</div>';
+  }
+
+  app.innerHTML =
+  '<h1 style="font-size:26px">'+esc(w.biz)+'</h1><p class="soft">Owner page — keep this link private. It is your key.</p>' +
+  '<div class="card"><h3>1 · Ask your customers</h3><p class="soft">Send this link after every happy job. Best on WhatsApp.</p>' +
+    '<div class="linkbox"><input readonly id="d-ask" value="'+ask+'"><button class="btn small" id="d-copyask">Copy</button></div>' +
+    '<a class="btn ghost small" target="_blank" rel="noopener" href="https://wa.me/?text='+encodeURIComponent("Hi! If you were happy with us, would you write a few kind words? It takes one minute: " + ask)+'">Share the ask on WhatsApp</a></div>' +
+  '<div class="card"><h3>2 · Approve praise</h3>' +
+    (pend.length ? pend.map(function(x){ return praiseRow(x, box.indexOf(x), true); }).join("") : '<p class="empty">No praise waiting right now. When a customer sends praise back and you open their link, it appears here.</p>') +
+    '<label>Paste a praise link you received</label><div class="linkbox"><input id="d-paste" placeholder="Paste the full link here"><button class="btn small" id="d-add">Add</button></div></div>' +
+  '<div class="card"><h3>3 · Your public wall</h3>' +
+    (appr.length ? '<p class="soft">'+appr.length+' approved'+(pro?"":" · free walls show the first 10")+'.</p><div class="linkbox"><input readonly id="d-pub" value="'+publishLink(w)+'"><button class="btn small" id="d-copypub">Copy wall link</button></div><a href="'+publishLink(w)+'" target="_blank" rel="noopener">Open your wall →</a>'
+                 : '<p class="empty">Approve your first praise and your public wall link appears here.</p>') +
+  '</div>' +
+  '<div class="card"><h3>Plan: '+(pro?'<span class="ok">Pro ✔</span>':'Free')+'</h3>' +
+    (pro ? '<p class="soft">Pro is on for this wall — no badge, unlimited praise. Thank you!</p>'
+         : '<p class="soft">Free walls carry a small “Powered by PraiseWall” badge and show up to 10 praise posts. <b>Pro is ₹499/month</b> — no badge, unlimited praise.</p><p class="soft">To go Pro: pay by writing to <a href="mailto:support@promptstudioai.in">support@promptstudioai.in</a> and we switch you on by hand with a Pro code.</p><label>Have a Pro code?</label><div class="linkbox"><input id="d-pro" placeholder="PW-XXXXXXXX"><button class="btn small" id="d-probtn">Switch on Pro</button></div><p id="d-promsg"></p>') +
+  '</div>';
+
+  $("d-copyask").onclick = function(){ $("d-ask").select(); document.execCommand("copy"); $("d-copyask").textContent="Copied ✔"; };
+  var cp = $("d-copypub"); if(cp) cp.onclick = function(){ $("d-pub").select(); document.execCommand("copy"); cp.textContent="Copied ✔"; };
+  $("d-add").onclick = function(){
+    var v = $("d-paste").value.trim();
+    var m = v.match(/#\/give\/([A-Za-z0-9\-_]+)/);
+    if(!m){ alert("That does not look like a praise link."); return; }
+    location.hash = "#/give/" + m[1];
+  };
+  app.querySelectorAll("[data-act]").forEach(function(b){
+    b.onclick = function(){
+      var i = parseInt(b.getAttribute("data-i"),10);
+      var arr = inbox(w.id);
+      arr[i].status = b.getAttribute("data-act")==="approve" ? "approved" : "rejected";
+      saveInbox(w.id, arr);
+      viewDash(tok);
+    };
+  });
+  var pb = $("d-probtn");
+  if(pb) pb.onclick = function(){
+    var code = $("d-pro").value.trim().toUpperCase();
+    if(code === proCodeFor(w.id)){ localStorage.setItem("pw_pro_"+w.id, code); viewDash(tok); }
+    else $("d-promsg").innerHTML = '<span style="color:#b3261e">That code does not match this wall. Check it and try again.</span>';
+  };
+}
+
+function viewWall(tok){
+  var p = dec(tok);
+  if(!p){ app.innerHTML = '<div class="card"><h3>This wall link looks broken.</h3></div>'; return; }
+  app.innerHTML =
+  '<div class="center"><h1 style="font-size:30px">'+esc(p.biz)+'</h1>' +
+  (p.what ? '<p class="soft">'+esc(p.what)+'</p>' : '') +
+  '<p class="pill">Loved by customers</p></div>' +
+  (p.items && p.items.length ? p.items.map(function(x){
+      return '<div class="praise"><div class="stars">'+stars(x.s)+'</div><div class="text">“'+esc(x.t)+'”</div><span class="who">'+esc(x.n)+'</span>'+(x.d?' <span class="detail">· '+esc(x.d)+'</span>':'')+'</div>';
+    }).join("") : '<p class="empty">No praise here yet — check back soon.</p>') +
+  (p.pro ? '' : '<div class="center"><a class="badge" href="'+base()+'">Powered by <b>PraiseWall</b> — get your own wall, free</a></div>');
+}
+
+/* ---------- router ---------- */
+function route(){
+  var h = location.hash || "#/";
+  var parts = h.replace(/^#\//,"").split("/");
+  if(parts[0]==="ask" && parts[1]) viewAsk(parts[1]);
+  else if(parts[0]==="give" && parts[1]) viewGive(parts[1]);
+  else if(parts[0]==="dash" && parts[1]) viewDash(parts[1]);
+  else if(parts[0]==="wall" && parts[1]) viewWall(parts[1]);
+  else viewHome();
+  window.scrollTo(0,0);
+}
+window.addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>
