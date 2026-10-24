@@ -50,6 +50,12 @@ export function MarketingFooter() {
         <div className="flex flex-col gap-2 text-xs text-slate-500"><span className="font-black uppercase tracking-widest text-slate-400">Product</span><Link to="/reference-coding" className="hover:text-white">Reference Coding</Link><Link to="/studio" className="hover:text-white">Studio</Link><Link to="/apk-forge" className="hover:text-white">App Forge</Link><Link to="/#pricing" className="hover:text-white">Pricing</Link></div>
         <div className="flex flex-col gap-2 text-xs text-slate-500"><span className="font-black uppercase tracking-widest text-slate-400">Company</span><Link to="/about" className="hover:text-white">About</Link><Link to="/help" className="hover:text-white">Help</Link><Link to="/contact" className="hover:text-white">Contact</Link><Link to="/privacy" className="hover:text-white">Privacy</Link><Link to="/terms" className="hover:text-white">Terms</Link><Link to="/refund" className="hover:text-white">Refunds</Link></div>
       </div>
+      <div className="mx-auto mt-8 flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 border-t border-white/10 pt-6 text-xs text-slate-500">
+        <span className="font-black uppercase tracking-widest text-slate-400">Listed on</span>
+        <a href="https://www.toolpilot.ai" target="_blank" rel="noopener noreferrer" className="hover:text-white">ToolPilot</a>
+        <a href="https://showmebest.ai" target="_blank" rel="noopener noreferrer" className="hover:text-white">ShowMeBestAI</a>
+        <a href="https://twelve.tools" target="_blank" rel="noopener noreferrer" className="hover:text-white">Twelve Tools</a>
+      </div>
     </footer>
   );
 }
