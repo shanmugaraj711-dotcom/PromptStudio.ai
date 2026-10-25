@@ -55,7 +55,6 @@ export function MarketingFooter() {
         <a href="https://www.toolpilot.ai" target="_blank" rel="noopener noreferrer" className="hover:text-white">ToolPilot</a>
         <a href="https://showmebest.ai" target="_blank" rel="noopener noreferrer" className="hover:text-white">ShowMeBestAI</a>
         <a href="https://twelve.tools" target="_blank" rel="noopener noreferrer" className="hover:text-white">Twelve Tools</a>
-        <a href="https://showmebest.ai" target="_blank" rel="noopener noreferrer"><img src="https://showmebest.ai/badge/feature-badge-dark.webp" alt="Featured on ShowMeBestAI" width="220" height="60" /></a>
       </div>
     </footer>
   );
