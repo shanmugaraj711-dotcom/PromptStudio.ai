@@ -5,18 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Is this job offer real? Checked by hand, case by case. | PromptStudio</title>
 <meta name="description" content="Suspicious job offer? Get it checked by hand, case by case — company domain, official careers page, HR contact, scam patterns. ₹49, report usually within 24 hours. No guarantee.">
+<meta property="og:title" content="Is this job offer real? Checked by hand, case by case. | PromptStudio">
+<meta property="og:description" content="Suspicious job offer? Get it checked by hand, case by case — company domain, official careers page, HR contact, scam patterns. ₹49, report usually within 24 hours. No guarantee.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://promptstudioai.in/offer-check/">
+<meta property="og:site_name" content="PromptStudio">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Is this job offer real? Checked by hand, case by case. | PromptStudio">
+<meta name="twitter:description" content="Suspicious job offer? Get it checked by hand, case by case — company domain, official careers page, HR contact, scam patterns. ₹49, report usually within 24 hours. No guarantee.">
 <style>
   :root {
     --teal-dark: #0f766e;
     --teal: #0d9488;
     --teal-bright: #14b8a6;
-    --cyan: #0891b2;
-    --teal-pale: #f0fdfa;
-    --teal-soft: #ccfbf1;
     --ink: #134e4a;
+    --deep: #062f2c;
     --body-text: #1f2937;
     --muted: #5b6b6a;
     --line: #99f6e4;
+    --pale: #f0fdfa;
+    --soft: #ccfbf1;
     --white: #ffffff;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -24,88 +32,87 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     color: var(--body-text);
     background: var(--white);
-    line-height: 1.55;
+    line-height: 1.6;
     font-size: 17px;
   }
-  .wrap { max-width: 640px; margin: 0 auto; padding: 0 20px; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 20px; }
 
-  header {
-    border-bottom: 1px solid var(--teal-soft);
-    padding: 18px 0;
-  }
+  header { padding: 18px 0; }
   .brand { display: flex; align-items: center; gap: 12px; }
   .brand img { width: 44px; height: 44px; border-radius: 10px; }
   .wordmark { font-size: 22px; font-weight: 700; color: var(--teal-dark); letter-spacing: -0.5px; }
-  .wordmark span { color: var(--cyan); }
+  .wordmark span { color: #0891b2; }
   .tagline { font-size: 13px; color: var(--muted); margin-top: 2px; }
 
-  section { padding: 36px 0 8px; }
-  h1 { font-size: 30px; line-height: 1.25; color: var(--ink); font-weight: 800; letter-spacing: -0.5px; }
-  h2 { font-size: 21px; color: var(--ink); font-weight: 700; margin-bottom: 14px; }
-  .hero { padding-top: 40px; }
-  .hero p { margin-top: 14px; font-size: 18px; color: var(--body-text); }
-  .hero .free-badge {
-    display: inline-block; margin-top: 18px; background: var(--teal-pale);
-    color: var(--teal-dark); border: 1px solid var(--line);
-    padding: 6px 14px; border-radius: 999px; font-size: 14px; font-weight: 600;
+  .hero {
+    background: linear-gradient(135deg, var(--deep) 0%, var(--ink) 55%, var(--teal-dark) 100%);
+    color: var(--white);
+    padding: 48px 0 44px;
   }
-  .proof-line {
-    margin-top: 16px; background: var(--teal-pale); border-left: 4px solid var(--teal);
-    padding: 12px 16px; font-size: 16px; color: var(--ink); border-radius: 0 8px 8px 0;
-  }
-  .proof-line strong { color: var(--teal-dark); }
-
-  .steps { list-style: none; }
-  .steps li {
-    display: flex; gap: 14px; padding: 14px 0;
-    border-bottom: 1px solid var(--teal-pale);
-  }
-  .steps li:last-child { border-bottom: none; }
-  .step-num {
-    flex: 0 0 32px; width: 32px; height: 32px; border-radius: 50%;
-    background: var(--teal); color: var(--white);
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 16px; margin-top: 2px;
-  }
-  .steps p { font-size: 16px; }
-
-  .tool-panel {
-    border: 2px solid var(--teal-bright); border-radius: 12px;
-    padding: 20px; background: var(--white);
-  }
-  .tool-label {
-    display: inline-block; background: var(--teal); color: var(--white);
+  .eyebrow {
+    display: inline-block; background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(153,246,228,0.5); color: var(--soft);
     font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
-    padding: 3px 10px; border-radius: 4px; margin-bottom: 12px;
+    padding: 5px 12px; border-radius: 999px; margin-bottom: 20px;
   }
-  .tool-panel p { font-size: 16px; margin-bottom: 10px; }
-  .q-list { list-style: none; margin: 6px 0 4px; }
-  .q-list li {
-    background: var(--teal-pale); border: 1px solid var(--teal-soft);
-    border-radius: 8px; padding: 10px 14px; margin-bottom: 8px;
-    font-size: 16px; color: var(--ink); font-weight: 600;
+  .hero h1 { font-size: 34px; line-height: 1.2; font-weight: 800; letter-spacing: -0.5px; }
+  .hero .sub { margin-top: 16px; font-size: 18px; color: #e6fffa; max-width: 600px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+  .chip {
+    background: rgba(255,255,255,0.10); border: 1px solid rgba(153,246,228,0.45);
+    color: var(--white); padding: 8px 14px; border-radius: 999px;
+    font-size: 14px; font-weight: 600;
   }
-  .q-placeholder { color: var(--muted); font-weight: 400; font-style: italic; }
+  .cta {
+    display: inline-block; margin-top: 28px; background: var(--teal-bright);
+    color: var(--white); text-decoration: none; font-weight: 700; font-size: 18px;
+    padding: 14px 26px; border-radius: 10px;
+  }
+  .cta:active { background: var(--teal-dark); }
 
-  .sample-box {
-    border: 2px dashed var(--teal-bright);
-    border-radius: 12px; padding: 20px; background: var(--teal-pale);
-  }
-  .sample-label {
-    display: inline-block; background: var(--teal); color: var(--white);
-    font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
-    padding: 3px 10px; border-radius: 4px; margin-bottom: 12px;
-  }
-  .sample-box .q { font-weight: 700; color: var(--ink); }
-  .sample-box p { margin-bottom: 10px; font-size: 16px; }
-  .sample-box p:last-child { margin-bottom: 0; }
-  .sample-box .adds { color: var(--muted); font-size: 15px; }
-  .verdict-no {
-    display: inline-block; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;
-    font-weight: 700; font-size: 14px; padding: 3px 10px; border-radius: 999px; margin-bottom: 10px;
-  }
+  main { padding-bottom: 12px; }
+  section { padding: 40px 0 4px; }
+  h2 { font-size: 23px; color: var(--ink); font-weight: 800; letter-spacing: -0.3px; margin-bottom: 8px; }
+  .sec-intro { color: var(--muted); margin-bottom: 18px; }
+  section p { margin-bottom: 12px; }
+  section ul, section ol { margin: 0 0 14px 22px; }
+  section li { margin-bottom: 8px; }
 
-  form { background: var(--white); border: 1px solid var(--teal-soft); border-radius: 12px; padding: 22px; }
+  .card {
+    background: var(--white); border: 1px solid var(--soft);
+    border-radius: 16px; padding: 20px; margin-bottom: 14px;
+    box-shadow: 0 2px 10px rgba(19,78,74,0.06);
+  }
+  .card h3 { font-size: 17px; color: var(--ink); margin-bottom: 6px; }
+  .card p { margin-bottom: 0; font-size: 16px; }
+  .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--teal); color: var(--white); font-weight: 700; font-size: 15px;
+    margin-bottom: 10px;
+  }
+  .not-for {
+    background: #fff7ed; border: 1px solid #fed7aa; border-radius: 16px;
+    padding: 20px; margin-top: 16px; font-size: 16px; color: var(--body-text);
+  }
+  .not-for strong { color: #9a3412; }
+  .verdict-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .verdict { border-radius: 16px; padding: 20px; }
+  .verdict h3 { margin-bottom: 8px; }
+  .verdict p { font-size: 16px; margin-bottom: 0; }
+  .verdict-real { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .verdict-real h3 { color: #166534; }
+  .verdict-fake { background: #fef2f2; border: 1px solid #fecaca; }
+  .verdict-fake h3 { color: #b91c1c; }
+  .verdict-unclear { background: #fffbeb; border: 1px solid #fde68a; }
+  .verdict-unclear h3 { color: #92400e; }
+  .guarantee {
+    background: var(--pale); border-left: 4px solid var(--teal);
+    border-radius: 0 12px 12px 0; padding: 18px 20px; font-size: 16px; color: var(--ink);
+  }
+  .guarantee strong { color: var(--teal-dark); }
+
+  form { background: var(--white); border: 1px solid var(--soft); border-radius: 16px; padding: 24px; box-shadow: 0 2px 10px rgba(19,78,74,0.06); }
   .field { margin-bottom: 18px; }
   label { display: block; font-weight: 600; color: var(--ink); margin-bottom: 6px; font-size: 16px; }
   input, select, textarea {
@@ -118,12 +125,12 @@
   .consent { font-size: 14px; color: var(--muted); margin: 4px 0 16px; }
   button {
     width: 100%; padding: 15px; font-size: 18px; font-weight: 700;
-    background: var(--teal); color: var(--white); border: none; border-radius: 8px;
+    background: var(--teal); color: var(--white); border: none; border-radius: 10px;
     cursor: pointer; font-family: inherit;
   }
   button:active { background: var(--teal-dark); }
   #thank-you {
-    display: none; margin-top: 18px; background: var(--teal-pale);
+    display: none; margin-top: 18px; background: var(--pale);
     border: 1px solid var(--line); border-radius: 8px; padding: 16px;
     color: var(--ink); font-size: 16px;
   }
@@ -132,19 +139,18 @@
   #thank-you ul { margin: 8px 0 0 18px; font-size: 15px; }
 
   .trust-strip {
-    margin-top: 40px; background: var(--teal-pale); border-top: 1px solid var(--teal-soft);
-    border-bottom: 1px solid var(--teal-soft); padding: 18px 0;
+    margin-top: 44px; background: var(--pale); border-top: 1px solid var(--soft);
+    border-bottom: 1px solid var(--soft); padding: 18px 0;
     text-align: center; font-size: 15px; color: var(--ink); font-weight: 600;
   }
-
   footer { padding: 26px 0 40px; }
   footer p { font-size: 13px; color: var(--muted); margin-bottom: 8px; text-align: center; }
   footer .contact { color: var(--teal-dark); font-weight: 600; }
 
-  section p { margin-bottom: 12px; }
-  section ul, section ol { margin: 0 0 14px 22px; }
-  section li { margin-bottom: 6px; }
-  section .steps { margin-left: 0; }
+  @media (min-width: 720px) {
+    .hero h1 { font-size: 42px; }
+    .verdict-grid { grid-template-columns: 1fr 1fr 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -161,17 +167,26 @@
   </div>
 </header>
 
-<main class="wrap">
-
-  <section class="hero">
+<div class="hero">
+  <div class="wrap">
+    <span class="eyebrow">JOB OFFER CHECK</span>
     <h1>Is this job offer real? Checked by hand, case by case.</h1>
-    <p>You got a job offer. Something feels off. Or a free check gave you an unclear answer. Before you pay money or send documents, this exact offer is checked by hand, case by case, and you get told what was found.</p>
-    <div class="free-badge">Checked by hand · ₹49 · Report usually within 24 hours</div>
-  </section>
+    <p class="sub">You got a job offer. Something feels off. Or a free check gave you an unclear answer. Before you pay money or send documents, this exact offer is checked by hand, case by case, and you get told what was found.</p>
+    <div class="chips">
+      <span class="chip">₹49</span>
+      <span class="chip">Report usually in 24 hours</span>
+      <span class="chip">No guarantee</span>
+      <span class="chip">Checked by hand</span>
+    </div>
+    <a class="cta" href="#details">Check my offer</a>
+  </div>
+</div>
+
+<main class="wrap">
 
   <section>
     <h2>Who this is for — confused and high-stakes cases only</h2>
-    <p>This check is for you if:</p>
+    <p class="sec-intro">This check is for you if:</p>
     <ul>
       <li>A free check gave you an unclear answer.</li>
       <li>The offer asks you to pay money first (deposit, training fee, verification fee, courier charge, equipment charge).</li>
@@ -179,92 +194,86 @@
       <li>The salary looks very big for the role.</li>
       <li>You already paid something and now you are unsure.</li>
     </ul>
-    <p>This check is NOT for you if a free check already gave you a clear answer. Use the free answer. If you send us such a case, we will tell you so and we will not take your money.</p>
+    <div class="not-for"><strong>Not for you?</strong> This check is NOT for you if a free check already gave you a clear answer. Use the free answer. If you send us such a case, we will tell you so and we will not take your money.</div>
   </section>
 
   <section>
     <h2>What is checked by hand (not a machine score)</h2>
-    <p>Checked by hand, case by case — not an automatic score — one by one:</p>
-    <ol class="steps">
-      <li>
-        <div class="step-num">1</div>
-        <p><strong>Company domain</strong> — does the sender's email come from the company's real domain, or a free email / look-alike domain?</p>
-      </li>
-      <li>
-        <div class="step-num">2</div>
-        <p><strong>Official careers page</strong> — is this exact role posted on the company's real careers page? We find the page by searching ourselves. We never use links or numbers the recruiter gave you.</p>
-      </li>
-      <li>
-        <div class="step-num">3</div>
-        <p><strong>HR contact</strong> — we find the company's real HR contact from its official site only. Never from the recruiter's message.</p>
-      </li>
-      <li>
-        <div class="step-num">4</div>
-        <p><strong>Offer document details</strong> — we look at the document's details for signs of copying or fakery. This alone never decides anything.</p>
-      </li>
-      <li>
-        <div class="step-num">5</div>
-        <p><strong>Scam patterns</strong> — payment demands, rush pressure ("pay today or lose it"), salary far above normal, no verifiable office, copied wording.</p>
-      </li>
-    </ol>
+    <p class="sec-intro">Checked by hand, case by case — not an automatic score — one by one:</p>
+    <div class="card">
+      <div class="num">1</div>
+      <h3>Company domain</h3>
+      <p>Does the sender's email come from the company's real domain, or a free email / look-alike domain?</p>
+    </div>
+    <div class="card">
+      <div class="num">2</div>
+      <h3>Official careers page</h3>
+      <p>Is this exact role posted on the company's real careers page? We find the page by searching ourselves. We never use links or numbers the recruiter gave you.</p>
+    </div>
+    <div class="card">
+      <div class="num">3</div>
+      <h3>HR contact</h3>
+      <p>We find the company's real HR contact from its official site only. Never from the recruiter's message.</p>
+    </div>
+    <div class="card">
+      <div class="num">4</div>
+      <h3>Offer document details</h3>
+      <p>We look at the document's details for signs of copying or fakery. This alone never decides anything.</p>
+    </div>
+    <div class="card">
+      <div class="num">5</div>
+      <h3>Scam patterns</h3>
+      <p>Payment demands, rush pressure ("pay today or lose it"), salary far above normal, no verifiable office, copied wording.</p>
+    </div>
   </section>
 
   <section>
     <h2>What you get</h2>
-    <p>A short report in simple words:</p>
+    <p class="sec-intro">A short report in simple words:</p>
     <ul>
       <li>Verdict first: REAL, FAKE, or UNCLEAR.</li>
       <li>Then the evidence, point by point, so you can see why.</li>
       <li>Then what to do next.</li>
     </ul>
-    <p>REAL means: no red flags were found. It does not mean 100% safe.</p>
-    <p>FAKE means: red flags were found. Do not pay, do not send documents.</p>
-    <p>UNCLEAR means: the evidence is not enough to decide. We list what is missing and what to ask next. Unclear is an honest answer, not a failure.</p>
-    <p>Report usually within 24 hours.</p>
+    <div class="verdict-grid">
+      <div class="verdict verdict-real">
+        <h3>REAL</h3>
+        <p>REAL means: no red flags were found. It does not mean 100% safe.</p>
+      </div>
+      <div class="verdict verdict-fake">
+        <h3>FAKE</h3>
+        <p>FAKE means: red flags were found. Do not pay, do not send documents.</p>
+      </div>
+      <div class="verdict verdict-unclear">
+        <h3>UNCLEAR</h3>
+        <p>UNCLEAR means: the evidence is not enough to decide. We list what is missing and what to ask next. Unclear is an honest answer, not a failure.</p>
+      </div>
+    </div>
+    <p style="margin-top: 16px;">Report usually within 24 hours.</p>
   </section>
 
   <section>
     <h2>Fee: ₹49, by Razorpay link</h2>
-    <ol class="steps">
-      <li>
-        <div class="step-num">1</div>
-        <p>Send your details below.</p>
-      </li>
-      <li>
-        <div class="step-num">2</div>
-        <p>We confirm your case fits (confused or high-stakes) and send you a payment link.</p>
-      </li>
-      <li>
-        <div class="step-num">3</div>
-        <p>Pay ₹49 on the link. Payment confirms automatically.</p>
-      </li>
-      <li>
-        <div class="step-num">4</div>
-        <p>We check by hand and send your report.</p>
-      </li>
+    <ol>
+      <li>Send your details below.</li>
+      <li>We confirm your case fits (confused or high-stakes) and send you a payment link.</li>
+      <li>Pay ₹49 on the link. Payment confirms automatically.</li>
+      <li>We check by hand and send your report.</li>
     </ol>
     <p>We never ask for your password, OTP, or bank details. Never send those to anyone.</p>
   </section>
 
   <section>
     <h2>No guarantee</h2>
-    <p>No guarantee. This check improves your decision — it never promises an outcome. The final decision is yours. If you already paid a scammer, this check cannot get money back. Report that at cybercrime.gov.in or call 1930.</p>
+    <div class="guarantee"><strong>No guarantee.</strong> This check improves your decision — it never promises an outcome. The final decision is yours. If you already paid a scammer, this check cannot get money back. Report that at cybercrime.gov.in or call 1930.</div>
   </section>
 
-  <section>
+  <section id="details">
     <h2>Send your details</h2>
-
-    <!--
-      FORM ENDPOINT: This form currently sends through a mailto: link (no backend yet),
-      following the same pattern as the free check page. To switch to a real form
-      endpoint later, replace the mailto: logic in the script block at the bottom of
-      this file with a POST to that endpoint URL. No other part of the page needs
-      to change.
-    -->
-    <form id="offer-check-form" novalidate>
+    <form id="offer-check-form">
       <div class="field">
         <label for="company-name">Company name (as written in the offer)</label>
-        <input type="text" id="company-name" name="company-name" required autocomplete="organization">
+        <input type="text" id="company-name" name="company-name" required>
       </div>
 
       <div class="field">
