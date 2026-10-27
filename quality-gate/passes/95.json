@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "pr": 95,
+  "repo": "shanmugaraj711-dotcom/PromptStudio.ai",
+  "code_sha": "6dba0a84dfe37c57ca1b819b40ecf51e13c8b0ef",
+  "target_url": "promptstudioai.in/devops/",
+  "scope_paths": ["public/devops/", ".github/workflows/"],
+  "verdict": "PASS",
+  "checker": "bud",
+  "checked_at": "2026-10-27T14:35:00+05:30",
+  "checks": ["gate-negative-test-d"],
+  "owner_approval": {"given": true, "via": "TEST ONLY — no real approval; sequence test"},
+  "known_limits": ["test record"]
+}
