@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DevOps Kit — Learn DevOps by building, one step at a time | PromptStudio</title>
+<meta name="description" content="The DevOps Kit from PromptStudio: learn Linux, Git, Docker, Kubernetes, Terraform, CI/CD and monitoring in order, with zero-cost labs, break-and-fix labs, three portfolio projects, an interview pack, resume bullets and cheat sheets. ₹399.">
+<style>
+  :root { --navy: #0a2540; --navy2: #12365e; --ink: #1f2937; --muted: #5b6b7c; --line: #dbe4ec; --pale: #f2f6fa; --teal: #0e7c7b; --white: #ffffff; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); line-height: 1.6; background: var(--white); }
+  a { color: var(--teal); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+  header { background: var(--navy); color: #fff; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; }
+  .brand { font-weight: 800; font-size: 20px; letter-spacing: .2px; }
+  .brand span { color: #7fd4d2; }
+  .topbar .tag { font-size: 13px; opacity: .85; }
+  .hero { padding: 44px 0 52px; }
+  .hero h1 { font-size: 38px; line-height: 1.2; max-width: 720px; }
+  .hero .sub { margin-top: 14px; font-size: 18px; opacity: .92; max-width: 720px; }
+  .chips { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: 5px 13px; font-size: 13px; }
+  .buyrow { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .btn { display: inline-block; background: var(--teal); color: #fff !important; text-decoration: none; font-weight: 700; padding: 13px 26px; border-radius: 8px; font-size: 17px; }
+  .btn:hover { background: #0a6564; }
+  .price { font-size: 20px; font-weight: 800; }
+  .price small { font-weight: 400; font-size: 14px; color: var(--muted); }
+  main section { padding: 40px 0; border-bottom: 1px solid var(--line); }
+  h2 { font-size: 26px; color: var(--navy); margin-bottom: 8px; }
+  .sec-intro { color: var(--muted); margin-bottom: 20px; max-width: 760px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .card { border: 1px solid var(--line); border-radius: 12px; padding: 20px; background: #fff; }
+  .card h3 { color: var(--navy); font-size: 18px; margin-bottom: 6px; }
+  .card p, .card li { font-size: 15px; }
+  .card ul, .card ol { padding-left: 20px; }
+  .icon { width: 40px; height: 40px; border-radius: 10px; background: var(--pale); display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+  .steps { position: relative; margin-left: 8px; }
+  .step { display: flex; gap: 18px; padding: 0 0 26px; }
+  .step:last-child { padding-bottom: 0; }
+  .dot { flex: 0 0 44px; height: 44px; border-radius: 50%; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; position: relative; }
+  .step:not(:last-child) .dot::after { content: ""; position: absolute; left: 50%; top: 44px; width: 2px; height: 26px; background: var(--line); }
+  .stepbody h3 { color: var(--navy); font-size: 19px; }
+  .stepbody .meta { color: var(--teal); font-weight: 700; font-size: 14px; margin: 2px 0 6px; }
+  .stepbody p { font-size: 15px; }
+  .stepbody .done { font-size: 14px; color: var(--muted); margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--navy); background: var(--pale); }
+  code { background: var(--pale); padding: 1px 6px; border-radius: 5px; font-size: 14px; }
+  .honest { background: var(--pale); border: 1px solid var(--line); border-radius: 12px; padding: 22px; }
+  .honest h2 { margin-bottom: 6px; }
+  footer { padding: 26px 0 40px; color: var(--muted); font-size: 14px; }
+  @media (max-width: 640px) { .hero h1 { font-size: 29px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="topbar"><div class="brand">Prompt<span>Studio</span></div><div class="tag">DevOps Kit</div></div>
+    <div class="hero">
+      <h1>Learn DevOps by building, one step at a time.</h1>
+      <p class="sub">A beginner kit that takes you from your first terminal command to a working pipeline, a local Kubernetes cluster and a monitoring chart — on your own machine, with no cloud bill. You learn by doing: every step ends with something you built.</p>
+      <div class="chips"><span class="chip">7 topics, in order</span><span class="chip">6 break-and-fix labs</span><span class="chip">3 portfolio projects</span><span class="chip">23 interview questions</span><span class="chip">Cheat sheets included</span><span class="chip">Zero-cost labs</span></div>
+      <div class="buyrow"><a class="btn" href="https://rzp.io/rzp/liOzX3Gr">Buy the kit — ₹399</a><span class="price">₹399 <small>one-time · 9 files · download link shared after payment</small></span></div>
+    </div>
+  </div>
+</header>
+<main>
+  <div class="wrap">
+  <section>
+    <h2>Who this is for</h2>
+    <p class="sec-intro">A beginner who wants to learn DevOps but does not know where to start. You need only a computer and internet. No paid course is needed to start.</p>
+    <div class="cards">
+      <div class="card"><div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0a2540" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></div><h3>One machine is enough</h3><p>Every lab runs on your own computer. No cloud account, no card, no bill for the learning itself.</p></div>
+      <div class="card"><div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0a2540" stroke-width="2"><path d="M4 19V5l7 7 7-7v14"/><path d="M4 19h16"/></svg></div><h3>One step at a time</h3><p>Learn in order. Do not jump to Kubernetes before you can use Linux and Git. At every step, build one small thing. Reading alone is not enough.</p></div>
+      <div class="card"><div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0a2540" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></div><h3>Proof, not just notes</h3><p>Finished projects beat finished videos. You end with three working projects on GitHub that you can open, run and explain.</p></div>
+    </div>
+  </section>
+  <section>
+    <h2>The learning path — 7 steps, in order</h2>
+    <p class="sec-intro">Rough total: about 3–4 months at 1–2 hours a day. This is a rough guide, not a promise. Slow is fine.</p>
+    <div class="steps">
+      <div class="step"><div class="dot">1</div><div class="stepbody"><h3>Linux</h3><div class="meta">About 2 weeks</div><p>Moving around folders, listing and reading files, file permissions, running and stopping programs, checking what is using the machine, and writing one tiny script that runs commands for you. Plus network basics: a port (a numbered door), DNS (names to addresses) and HTTP (the browser asking a server for a page).</p><p class="done">You are done when: you can set up a folder, install a tool, and find why a program stopped, using only the terminal.</p></div></div>
+      <div class="step"><div class="dot">2</div><div class="stepbody"><h3>Git</h3><div class="meta">About 1 week</div><p>Save your work, look at past versions, make a branch (a safe copy to try changes in), merge it back, fix a merge conflict (two people changed the same lines), and push to GitHub.</p><p class="done">You are done when: your practice work lives on GitHub with a clear history of changes.</p></div></div>
+      <div class="step"><div class="dot">3</div><div class="stepbody"><h3>Docker</h3><div class="meta">About 2–3 weeks</div><p>What a container is (a small box that holds an app and everything it needs to run, so it runs the same on any machine), how to build one from a Dockerfile (a short recipe file), run it, map ports, stop it, and share a folder into a container with a volume (so files survive after the container is removed).</p><p class="done">You are done when: you can put a small website in a container and open it in your browser.</p></div></div>
+      <div class="step"><div class="dot">4</div><div class="stepbody"><h3>Kubernetes</h3><div class="meta">About 3–4 weeks</div><p>Pods (the smallest thing Kubernetes runs, usually one container), deployments (a way to say “keep 2 copies of my app running”), services (a stable address for your app), and reading logs. Hands-on lab included: run your Project 1 app on a small local cluster with kind.</p><p class="done">You are done when: you can run your container app on a small local cluster, expose it with a Service, and fix it when it crashes.</p></div></div>
+      <div class="step"><div class="dot">5</div><div class="stepbody"><h3>Terraform</h3><div class="meta">About 2 weeks</div><p>Writing down what infrastructure you want in a file, and letting Terraform create it. This is called “infrastructure as code” — infrastructure means servers, networks and settings. Terraform keeps a state file: a record of what it created, so it knows what to change next time.</p><p class="done">You are done when: one Terraform file creates your practice setup, and running it again changes nothing.</p></div></div>
+      <div class="step"><div class="dot">6</div><div class="stepbody"><h3>CI/CD</h3><div class="meta">About 2 weeks</div><p>A pipeline that runs on every code change — check the code, build it, run a simple test, then deploy it. CI means continuous integration (merging code often and testing it). CD means continuous delivery (getting it ready to go live automatically).</p><p class="done">You are done when: pushing code to GitHub starts your pipeline by itself and you can read its log when it fails.</p></div></div>
+      <div class="step"><div class="dot">7</div><div class="stepbody"><h3>Monitoring</h3><div class="meta">About 1–2 weeks</div><p>Prometheus (collects numbers about your app, like how much memory it uses) and Grafana (turns those numbers into charts). Learn what to watch: is the app up, is it slow, is it out of memory?</p><p class="done">You are done when: you have a Grafana chart showing your monitoring targets are up.</p></div></div>
+    </div>
+  </section>
+  <section>
+    <h2>Start free: the zero-cost lab</h2>
+    <p class="sec-intro">Before you spend anything, set up your machine and run your first container. No cloud account. No card. Nothing here costs money. Windows users install WSL2 with Ubuntu first; Mac users need Docker Desktop for the Docker steps.</p>
+    <ol>
+      <li><strong>Check what you already have:</strong> run <code>git --version</code> and <code>docker --version</code>. If both print a version, skip ahead.</li>
+      <li><strong>Install Git and Docker</strong> on Ubuntu/Debian, enable Docker, and add yourself to the Docker group so you can run it without sudo every time.</li>
+      <li><strong>Prove Docker works:</strong> <code>docker run hello-world</code>. If it fails, read the error — most often Docker is simply not running yet.</li>
+      <li><strong>Run your first real container:</strong> <code>docker run -d -p 8080:80 --name my-site nginx</code>, then open <code>http://localhost:8080</code> and see the welcome page.</li>
+      <li><strong>Look at it and stop it:</strong> <code>docker ps</code>, <code>docker stop my-site</code>, <code>docker start my-site</code>, <code>docker rm my-site</code>.</li>
+      <li><strong>Make a folder for your work:</strong> <code>~/devops-practice</code> — every later lab and project lives here.</li>
+      <li><strong>Push to GitHub (first time only):</strong> free account, new repository, then <code>git init</code>, <code>git add .</code>, <code>git commit</code>, <code>git push</code>. Later pushes are just add, commit, push.</li>
+      <li><strong>Write your first script:</strong> a small health-check script that lists your running containers, made runnable with <code>chmod +x</code>.</li>
+    </ol>
+    <p style="margin-top:12px;">When something goes wrong: read the error message fully first. <code>docker ps -a</code> shows stopped containers too, and <code>docker logs</code> shows what a container printed before it stopped. Logs are the first place to look, always.</p>
+  </section>
+  <section>
+    <h2>Break-and-fix labs — learn like on-call work</h2>
+    <p class="sec-intro">Each lab breaks something on purpose. Do not read the fix first. Read the symptom, try to find the cause with the commands you know, then check the fix. In real on-call work, this order — symptom, logs, cause, fix — is the whole job.</p>
+    <div class="cards">
+      <div class="card"><h3>Lab 1 — The container that will not start</h3><p><strong>Break:</strong> run an image name with a typo in it. <strong>Find:</strong> the error says the image could not be found. <strong>Fix:</strong> correct the name and run again. Lesson: check the image name first, then the logs.</p></div>
+      <div class="card"><h3>Lab 2 — The container that starts, then dies</h3><p><strong>Break:</strong> run a container with a command that does not exist. <strong>Find:</strong> <code>docker logs</code> shows the bad command. <strong>Fix:</strong> give it a program that stays alive. Lesson: a container lives only as long as its main program runs.</p></div>
+      <div class="card"><h3>Lab 3 — The pipeline that fails</h3><p><strong>Break:</strong> a pipeline step runs a test file that was never created. <strong>Find:</strong> the failed step's log says the file was not found. <strong>Fix:</strong> add a real test file or a command that exists, push again, watch it go green.</p></div>
+      <div class="card"><h3>Lab 4 — The Git merge conflict</h3><p><strong>Break:</strong> two branches change the same line, then merge. <strong>Find:</strong> Git stops with conflict markers showing both versions side by side. <strong>Fix:</strong> pick the right lines, delete the markers, commit. Never commit a file with marker lines still in it.</p></div>
+      <div class="card"><h3>Lab 5 — The app runs, but the browser shows nothing</h3><p><strong>Break:</strong> run a container with no port mapping. <strong>Find:</strong> <code>docker ps</code> shows no port under PORTS, logs show nginx started fine. <strong>Fix:</strong> re-run with <code>-p 8080:80</code>. Lesson: the first number is your machine's door, the second is the container's.</p></div>
+      <div class="card"><h3>Lab 6 — The build fails: file not found</h3><p><strong>Break:</strong> a Dockerfile copies a file that is not in the folder. <strong>Find:</strong> the failed step names the missing file; <code>ls</code> shows what is actually there. <strong>Fix:</strong> copy the file that exists. Lesson: a build can only see files inside the folder you build from.</p></div>
+    </div>
+    <p style="margin-top:16px;">After all six labs, you can say, truthfully: “I can read container logs, fix a port clash, fix a bad image name, resolve a merge conflict, find a missing port mapping, fix a failed build, and read a failed pipeline log.” That sentence is worth more than a certificate with no practice.</p>
+  </section>
+  <section>
+    <h2>Portfolio projects — proof, not just notes</h2>
+    <p class="sec-intro">Employers trust things they can open and run. Three small, finished projects beat a long list of courses. Each one ends with a GitHub README you fill in — write only true things in it. If something is not done yet, say so.</p>
+    <div class="cards">
+      <div class="card"><div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0a2540" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div><h3>Project 1 — A website in a container</h3><p>Build a small web page, write a Dockerfile recipe for it, build the image, run it, open it in your browser, and push it to GitHub.</p><p style="margin-top:8px;color:var(--muted);">Tools: Docker, nginx, HTML</p></div>
+      <div class="card"><div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0a2540" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div><h3>Project 2 — A pipeline that tests and builds</h3><p>Add a GitHub Actions workflow to Project 1's repository so every push builds the Docker image. Break it once on purpose, read the log, fix it, push again.</p><p style="margin-top:8px;color:var(--muted);">Tools: GitHub Actions, Docker</p></div>
+      <div class="card"><div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0a2540" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg></div><h3>Project 3 — Infrastructure as code + monitoring, zero-cost</h3><p>Write a Terraform file that creates a local container with the Docker provider (no cloud account, no bill), then add monitoring with Docker Compose: Prometheus collects numbers, Grafana turns them into charts, node-exporter reports on your machine. Your first chart plots the <code>up</code> query — 1 for every target that is up, 0 for one that is down.</p><p style="margin-top:8px;color:var(--muted);">Tools: Terraform, Docker, Prometheus, Grafana</p></div>
+    </div>
+    <p style="margin-top:16px;"><strong>Warning:</strong> Terraform with a cloud provider (AWS, Azure and similar) can cost real money. Do the local Docker version first. Only try a cloud version if you understand that provider's free tier and you destroy what you create afterwards.</p>
+  </section>
+  <section>
+    <h2>Kubernetes lab — your app on a small local cluster</h2>
+    <p class="sec-intro">Run your Project 1 website on a small Kubernetes cluster that lives on your own machine, using kind (Kubernetes in Docker). No cloud account, no bill. You will also break it on purpose and fix it.</p>
+    <ol>
+      <li><strong>Install kubectl and kind</strong> (the command tool for talking to a cluster, and the tool that creates the cluster), and check both print a version number.</li>
+      <li><strong>Start the cluster:</strong> <code>kind create cluster --name devops-practice</code>, then <code>kubectl get nodes</code> should show one node Ready.</li>
+      <li><strong>Load your image into the cluster:</strong> <code>kind load docker-image my-site:1.0</code> — the step most beginners forget. A kind cluster cannot see images sitting in your local Docker by itself.</li>
+      <li><strong>Run your app with a Deployment</strong> (a file that says “keep copies of my app running”), then open it with <code>kubectl port-forward</code>. Expose it with a Service — a stable address inside the cluster, even when pods come and go.</li>
+      <li><strong>Read about your pod:</strong> <code>kubectl describe pod</code> shows details and recent events; <code>kubectl logs</code> shows what your app printed. When something breaks, these two commands are where you look first.</li>
+      <li><strong>Break it, then fix it:</strong> change the image to a tag that does not exist — the pod shows ImagePullBackOff. The fix is in the Deployment file, not the pod: change the image back and apply again. Deleting the broken pod alone would not fix it — the Deployment would simply make the same broken pod again.</li>
+      <li><strong>Try self-healing once:</strong> delete a healthy pod and watch the Deployment make a healthy replacement by itself. That is why Deployments exist.</li>
+    </ol>
+    <p style="margin-top:12px;color:var(--muted);">Note: this lab was not run end-to-end while writing the kit, and kind version links change over time — if a download link fails, take the newest link from kind's install page. If a step fails, read the error message first.</p>
+  </section>
+  <section>
+    <h2>Interview pack — 23 questions, what they really test</h2>
+    <p class="sec-intro">Read the question, answer out loud in your own words, then read the “really testing” line. Interviewers care less about perfect wording and more about whether you understand the idea and have done it. If you have not done it, say what you did instead — do not pretend.</p>
+    <table>
+      <tr><th>Question</th><th>What it really tests</th></tr>
+      <tr><td>What does <code>chmod 755</code> do?</td><td>Do you understand file permissions — who can read, write and run a file?</td></tr>
+      <tr><td>A program is using too much CPU. How do you find which one?</td><td>Can you use basic tools (<code>top</code>, <code>ps</code>) to look at a live machine?</td></tr>
+      <tr><td>What is the difference between <code>git pull</code> and <code>git fetch</code>?</td><td>Fetch only downloads; pull downloads and merges.</td></tr>
+      <tr><td>Your branch has a conflict. What do you do?</td><td>Stay calm, read the conflict markers, pick the right lines, finish the merge.</td></tr>
+      <tr><td>What is a container, and how is it different from a virtual machine?</td><td>A container shares the host's system; a virtual machine runs a whole second system.</td></tr>
+      <tr><td>What is a Dockerfile?</td><td>Can you describe a build recipe in plain words?</td></tr>
+      <tr><td>Your container starts and stops at once. Where do you look first?</td><td>Do you check <code>docker logs</code> before guessing?</td></tr>
+      <tr><td>Why map ports with <code>-p 8080:80</code>?</td><td>The container's port and your machine's port are two different doors.</td></tr>
+      <tr><td>What is a pod?</td><td>The smallest thing Kubernetes runs, usually holding one container.</td></tr>
+      <tr><td>What does a deployment do?</td><td>It keeps a chosen number of copies of your app running and replaces failed ones.</td></tr>
+      <tr><td>Your pod keeps crashing and restarting. How do you debug it?</td><td>Read pod logs and describe the failure, instead of just restarting it again.</td></tr>
+      <tr><td>What is a service in Kubernetes?</td><td>A stable address for pods that come and go.</td></tr>
+      <tr><td>What is “infrastructure as code”?</td><td>Writing down wanted infrastructure in files instead of clicking around by hand.</td></tr>
+      <tr><td>What is Terraform state, and why does it matter?</td><td>Terraform keeps a record of what it created, so it knows what to change next time.</td></tr>
+      <tr><td>What happens in a CI/CD pipeline when you push code?</td><td>Walk through test, build and deploy, in order.</td></tr>
+      <tr><td>A pipeline fails. What is your first step?</td><td>Read the failed step's log before changing anything.</td></tr>
+      <tr><td>How do you know if an app is healthy?</td><td>More than “it opened once” — uptime, speed, errors and resource use.</td></tr>
+      <tr><td>What is the difference between a metric and a log?</td><td>A metric is a number over time (like CPU use); a log is a written record of events.</td></tr>
+      <tr><td>Describe a project you built and one problem you fixed in it.</td><td>Can you explain your own work clearly — usually the question that decides the interview.</td></tr>
+      <tr><td>You do not know the answer to a question. What do you say?</td><td>Honesty and method — “I don't know, but here is how I would find out” beats a confident guess.</td></tr>
+      <tr><td>What is the difference between an image and a container?</td><td>An image is the saved recipe; a container is the image running.</td></tr>
+      <tr><td>Your YAML file fails with a strange error. What do you check first?</td><td>The spaces — YAML breaks on tabs and wrong indentation.</td></tr>
+      <tr><td>You wrote a script but running it says “permission denied”. What do you do?</td><td>The file needs <code>chmod +x</code> before it can run.</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2>Resume bullets — from your projects, in simple words</h2>
+    <p class="sec-intro">Rules before you copy anything: write only what you actually did. Never invent numbers, company names or job titles. One bullet = one fact + one result, one line each. If a bullet is not true for you yet, leave it out until it is.</p>
+    <div class="cards">
+      <div class="card"><h3>From Project 1</h3><ul><li>Built and ran a containerised website using Docker and nginx, reachable at a mapped port on a local machine.</li><li>Wrote a Dockerfile that builds the website image from a simple web page.</li></ul></div>
+      <div class="card"><h3>From Project 2</h3><ul><li>Set up a GitHub Actions pipeline that builds a Docker image on every push to the repository.</li><li>Read a failed pipeline log, found the error, and fixed it so the pipeline passed.</li><li>Kept the project's build history visible in the repository's Actions tab.</li></ul></div>
+      <div class="card"><h3>From Project 3</h3><ul><li>Wrote Terraform files that create a local container setup, and re-ran them with no changes needed on the second run.</li><li>Added Prometheus and Grafana to watch the practice setup, with a chart showing what the chart shows.</li><li>Ran the whole practice setup locally with no cloud bill.</li></ul></div>
+      <div class="card"><h3>From the break-and-fix labs</h3><ul><li>Diagnosed a container that would not start by reading its error message and correcting the image name.</li><li>Fixed a port clash by finding the running container and changing the port mapping.</li><li>Debugged a container that exited at once by reading its logs and finding the bad command.</li><li>Resolved a Git merge conflict by reading the conflict markers and keeping the correct lines.</li><li>Wrote a small Bash health-check script and made it runnable with chmod.</li><li>Found a missing port mapping when a running container did not answer in the browser.</li></ul></div>
+    </div>
+    <p style="margin-top:16px;">A short summary you can adapt: “Beginner DevOps learner. Built a containerised website, a CI/CD pipeline, and a Terraform + monitoring demo, all on GitHub. Can read logs, fix failed builds, and explain my own projects.”</p>
+    <p style="margin-top:8px;"><strong>What NOT to write:</strong> do not write “expert” or “experienced DevOps engineer” unless a real job gave you that role. Do not list tools you only watched videos about — list tools you actually ran. Do not copy someone else's project description. Yours is smaller and true — that is better.</p>
+  </section>
+  <section>
+    <h2>Cheat sheets — commands you will actually use</h2>
+    <p class="sec-intro">Keep these open while you practise. All commands below are standard, well-known commands for their tools.</p>
+    <table>
+      <tr><th>Tool</th><th>Commands</th></tr>
+      <tr><td>Linux</td><td><code>pwd</code> <code>ls -la</code> <code>cd</code> <code>mkdir</code> <code>cat</code> <code>grep</code> <code>chmod +x</code> <code>ps aux</code> <code>top</code> <code>df -h</code> <code>free -h</code> <code>systemctl start/status</code></td></tr>
+      <tr><td>Git</td><td><code>git init</code> <code>git clone</code> <code>git status</code> <code>git add .</code> <code>git commit -m</code> <code>git log --oneline</code> <code>git branch</code> <code>git checkout -b</code> <code>git merge</code> <code>git push</code> <code>git pull</code></td></tr>
+      <tr><td>Docker</td><td><code>docker ps</code> <code>docker ps -a</code> <code>docker images</code> <code>docker run</code> <code>docker logs</code> <code>docker stop/start/rm</code> <code>docker build -t</code> <code>docker exec -it</code> <code>docker compose up/ps/down</code></td></tr>
+      <tr><td>Kubernetes</td><td><code>kubectl get pods/nodes/deployments/services</code> <code>kubectl describe pod</code> <code>kubectl logs</code> <code>kubectl apply -f</code> <code>kubectl delete -f</code> <code>kubectl port-forward</code></td></tr>
+      <tr><td>kind</td><td><code>kind create cluster --name devops-practice</code> <code>kind load docker-image</code> <code>kind delete cluster</code></td></tr>
+      <tr><td>Terraform</td><td><code>terraform init</code> <code>terraform plan</code> <code>terraform apply</code> <code>terraform destroy</code> — destroy deletes things; only run it on your own practice setup, never on anything shared or real.</td></tr>
+      <tr><td>Prometheus &amp; Grafana</td><td>Concepts, not commands: Prometheus collects numbers (metrics) from your apps. Grafana turns those numbers into charts. The two things to check first: is the app up, and is it slow? YAML warning: use spaces, never Tab, in <code>.yml</code> files.</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2>Best sites — what to pick, and why</h2>
+    <p class="sec-intro">Start free, pay only when you know what you need. Prices below come from earlier research done in October 2026 and are NOT freshly verified here — check the site itself before paying anything.</p>
+    <div class="cards">
+      <div class="card"><h3>The map — start here (free)</h3><p><strong>roadmap.sh/devops</strong> — see the whole path in one picture: Linux, Git, Docker, Kubernetes, Terraform, CI/CD, monitoring, in order. It answers “what do I learn next?” in one page. It teaches little by itself, so use it as a map, not a course.</p></div>
+      <div class="card"><h3>Free learning, topic by topic</h3><ul><li><strong>freeCodeCamp</strong> — free written guides and video series on Linux, Docker and Kubernetes basics.</li><li><strong>TechWorld with Nana (YouTube)</strong> — concepts explained slowly with diagrams.</li><li><strong>Learn Git Branching (browser game)</strong> — practise branching with no setup; mistakes cost nothing.</li><li><strong>Free GitHub DevOps roadmap</strong> (chanupen/devops-roadmap) — 34 hands-on modules on one machine, no cloud bill.</li><li><strong>Docker's official getting-started guide</strong> and <strong>Kubernetes official tutorials</strong> — the toolmakers' own first steps.</li><li><strong>Pro Git book (free online)</strong> — the standard Git book, including branching and conflicts.</li><li><strong>Killercoda browser scenarios</strong> — a free terminal in the browser when your own machine is busy.</li></ul></div>
+      <div class="card"><h3>Paid, when you are ready</h3><ul><li><strong>KodeKloud</strong> — hands-on labs inside the browser, especially Kubernetes. Earlier research priced it around ₹1,300/month — unverified, check before paying.</li><li><strong>Udemy</strong> — one cheap course on one topic during a sale. Earlier research found courses around ₹449–₹3,499 — unverified, and quality varies by instructor, so check ratings and last-updated date first.</li><li><strong>HashiCorp's own Terraform tutorials</strong> — free, from the people who make Terraform.</li></ul><p style="margin-top:8px;"><strong>What NOT to buy first:</strong> a big bootcamp (tens of thousands of rupees) before you have finished the free map, the zero-cost lab and one portfolio project. Any course that promises a job or a salary — no course can promise that, whatever its page says.</p></div>
+    </div>
+    <p style="margin-top:16px;">The simple rule: map first, free guides second, one paid course only for the topic you are stuck on, and your own projects all the way through. The projects are the part employers can actually see.</p>
+  </section>
+  <section>
+    <h2>What is inside the kit</h2>
+    <p class="sec-intro">One download with all 9 files, in plain words. Read them in this order.</p>
+    <ol>
+      <li><strong>start-here.md</strong> — who this is for, the one rule, and the 7 steps in order.</li>
+      <li><strong>zero-cost-lab.md</strong> — set up your machine and run your first container. Do this first.</li>
+      <li><strong>break-and-fix-labs.md</strong> — 6 labs that break things on purpose, so you learn to fix them.</li>
+      <li><strong>portfolio-projects.md</strong> — the 3 projects that prove your skills. Build them in order.</li>
+      <li><strong>kubernetes-lab.md</strong> — run your Project 1 app on a small local cluster. Do this in Step 4.</li>
+      <li><strong>cheat-sheets.md</strong> — keep open while you practise.</li>
+      <li><strong>interview-pack.md</strong> — 23 questions with what each one really tests. Practise answering out loud, after the projects.</li>
+      <li><strong>resume-bullets.md</strong> — turn finished projects into honest resume lines.</li>
+      <li><strong>best-sites.md</strong> — only when you are stuck on a topic and want another explanation.</li>
+    </ol>
+  </section>
+  <section>
+    <div class="honest">
+      <h2>Honest note</h2>
+      <p>This kit teaches skills and helps you build proof. It does not promise a job, and it gives no salary number. Hiring depends on the employer, the market, and your interview — things no kit can promise. The learning times are rough guides, not promises. Some lab steps were not run end-to-end while writing the kit; where a step is unverified, the file says so, and the real skill is reading the error message first. Cloud versions of the Terraform steps can cost real money — do the local version first.</p>
+    </div>
+  </section>
+  <section>
+    <h2>Get the DevOps Kit — ₹399</h2>
+    <p class="sec-intro">One-time payment. After payment, the download link for all 9 kit files is shared with you. Learn on your own machine, at your own pace, in the order above.</p>
+    <div class="buyrow"><a class="btn" href="https://rzp.io/rzp/liOzX3Gr">Buy now — ₹399</a><span class="price">₹399 <small>one-time</small></span></div>
+    <p style="margin-top:12px;color:var(--muted);">What you get: start-here, zero-cost lab, 6 break-and-fix labs, 3 portfolio projects, Kubernetes lab, interview pack, resume bullets, cheat sheets, best sites.</p>
+  </section>
+  </div>
+</main>
+<footer>
+  <div class="wrap">Run by PromptStudio · DevOps Kit · ₹399 · Learn by building, one step at a time.</div>
+</footer>
+</body>
+</html>
