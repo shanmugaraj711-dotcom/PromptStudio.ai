@@ -2,13 +2,13 @@
   "version": 1,
   "pr": 93,
   "repo": "shanmugaraj711-dotcom/PromptStudio.ai",
-  "code_sha": "c73b736a58940383ce0fcb91a3a0311e8b1d7544",
+  "code_sha": "fd9527637e3e01eecbff035fae85a209ab3e0dbb",
   "target_url": "promptstudioai.in/devops/",
-  "scope_paths": ["public/devops/"],
+  "scope_paths": ["public/devops/", ".github/workflows/"],
   "verdict": "PASS",
   "checker": "bud",
-  "checked_at": "2026-10-27T13:57:00+05:30",
-  "checks": ["gate-negative-test-b"],
+  "checked_at": "2026-10-27T14:27:00+05:30",
+  "checks": ["gate-negative-test-b-redo"],
   "owner_approval": {"given": true, "via": "TEST ONLY — no real approval; scope-mismatch test"},
   "known_limits": ["test record"]
 }
