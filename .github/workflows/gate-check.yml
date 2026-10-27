@@ -20,6 +20,18 @@
 # Threat model: accidental / process ungated merges (the actual incident
 # class: PRs #79-#91), not a determined insider editing the gate.
 #
+# Target-neutrality rule (found by negative test b, 2026-10-27):
+# .github/workflows/gate-check.yml itself is target-neutral: it must still
+# be covered by a scope entry (".github/workflows/"), but it does not
+# count toward the single-target computation. Why: before this workflow
+# merges to main, EVERY test PR branched from the gate branch carries
+# this file in its diff vs main, mapping to promptstudioai.in/ — which
+# made a valid single-page PASS impossible pre-merge (test b failed on
+# the workflow file instead of on the intended offer-check mismatch).
+# Post-merge this file never appears in PR diffs from main, so the rule
+# is harmless there; and a PR that EDITS this file must still name
+# ".github/workflows/" in scope, so the edit stays explicit + visible.
+#
 # Condition 3 decision (Brain QC section 10, "real or dropped"): DROPPED.
 # No scan verifies branch-protection state, and none is claimed here.
 # The protection-off risk rests on the weekly Settings audit alone,
@@ -196,8 +208,11 @@ jobs:
               fail(f"code changed after PASS: {', '.join(fresh)} — re-issue")
 
           # 6. Scope/target: every non-gate changed path must sit inside
-          #    a scope prefix, map through the table, and all paths must
-          #    map to exactly ONE target equal to target_url.
+          #    a scope prefix and map through the table. All paths except
+          #    the gate workflow file itself must map to exactly ONE
+          #    target equal to target_url (see target-neutrality rule in
+          #    the header). A PR changing ONLY the gate workflow file
+          #    must target promptstudioai.in/.
           changed = [l for l in git("diff", f"{BASE}...{HEAD}", "--name-only")
                      .splitlines()
                      if l and not l.startswith("quality-gate/")]
@@ -207,14 +222,20 @@ jobs:
           for p in changed:
               if not any(p == s or p.startswith(s) for s in scope):
                   fail(f"changed path outside PASS scope: {p}")
+              if p == ".github/workflows/gate-check.yml":
+                  continue  # target-neutral (header rule); scope-checked
               t = map_path(p)
               if t == "UNKNOWN":
                   fail(f"changed path has no mapping-table target: {p}")
               targets.add(t)
-          if len(targets) != 1:
+          if not targets:
+              # Only the gate workflow file changed.
+              only = "promptstudioai.in/"
+          elif len(targets) != 1:
               fail(f"changed paths map to multiple targets {sorted(targets)} "
                    f"— split the PR")
-          only = next(iter(targets))
+          else:
+              only = next(iter(targets))
           if target != only:
               fail(f"target_url {target} does not match mapped target {only}")
 
