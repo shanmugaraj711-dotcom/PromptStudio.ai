@@ -7,7 +7,7 @@
   "scope_paths": [".github/workflows/"],
   "verdict": "PASS",
   "checker": "bud",
-  "checked_at": "2026-10-28T23:20:00+05:30",
+  "checked_at": "2026-10-28T23:19:00+05:30",
   "checks": ["brain-final-recheck-pass-2026-10-27", "six-negative-tests-a-to-f", "owner-word-go-ahead-2026-10-28"],
   "owner_approval": {"given": true, "via": "owner 'Go ahead' in PromptStudio side chat 2026-10-28 ~23:16 IST, after Brain final re-check PASS"},
   "known_limits": ["protection-off risk rests on weekly Settings audit alone (condition 3 dropped)", "Actions run logs rest on agent report — no workflow-runs read tool", "gate-check.yml runs its edited version on workflow-editing PRs (pull_request trigger caveat)"]
