@@ -1,0 +1,244 @@
+# Gate check — path 3 (PromptStudio site deploys).
+#
+# Design: ~/workspace/quality-gate/gate-design-path3-proposal.md + Brain QC
+# section 10 (PASS WITH CONDITIONS). This workflow is READ-ONLY: it never
+# deploys, merges, or writes anything. It only reports pass/fail, and
+# branch protection on main (switched on separately, after this workflow
+# merges) turns a fail into a blocked merge.
+#
+# Trigger note (deliberate, flagged for Brain re-check): this uses
+# `pull_request`, not `pull_request_target`, so the gate is testable
+# BEFORE merge — Brain's sequence requires the four negative tests to run
+# before the gate PR merges, which is impossible with pull_request_target
+# (that trigger runs the workflow from base, where this file does not
+# exist yet). Trade-off, stated openly: a PR that edits this workflow
+# file runs its edited version. Mitigations: (1) such a PR must name
+# .github/workflows/gate-check.yml in scope_paths with a PASS; (2) the
+# edit is visible in the PR diff; (3) this script is read-only, uses no
+# secrets, and holds no write permission, so a tampered copy can at worst
+# falsely pass its own PR — it cannot deploy or exfiltrate anything.
+# Threat model: accidental / process ungated merges (the actual incident
+# class: PRs #79-#91), not a determined insider editing the gate.
+#
+# Target-neutrality rule (found by negative test b, 2026-10-27):
+# .github/workflows/gate-check.yml itself is target-neutral: it must still
+# be covered by a scope entry (".github/workflows/"), but it does not
+# count toward the single-target computation. Why: before this workflow
+# merges to main, EVERY test PR branched from the gate branch carries
+# this file in its diff vs main, mapping to promptstudioai.in/ — which
+# made a valid single-page PASS impossible pre-merge (test b failed on
+# the workflow file instead of on the intended offer-check mismatch).
+# Post-merge this file never appears in PR diffs from main, so the rule
+# is harmless there; and a PR that EDITS this file must still name
+# ".github/workflows/" in scope, so the edit stays explicit + visible.
+#
+# Condition 3 decision (Brain QC section 10, "real or dropped"): DROPPED.
+# No scan verifies branch-protection state, and none is claimed here.
+# The protection-off risk rests on the weekly Settings audit alone,
+# unmitigated between audits. This is stated, not papered over.
+#
+# Required-check name once protection is on: "gate-check / gate".
+# (Workflow name "gate-check", job name "gate".)
+
+name: gate-check
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate PASS record for this PR
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+
+          def fail(msg):
+              print(f"GATE FAIL: {msg}")
+              sys.exit(1)
+
+          def git(*args):
+              r = subprocess.run(["git"] + list(args),
+                                 capture_output=True, text=True)
+              if r.returncode != 0:
+                  fail(f"git {' '.join(args)} failed: {r.stderr.strip()}")
+              return r.stdout
+
+          PR = int(os.environ["PR_NUMBER"])
+          HEAD = os.environ["HEAD_SHA"]
+          BASE = os.environ["BASE_SHA"]
+
+          # 1. PASS file must exist on the PR and parse as a JSON object.
+          ppath = f"quality-gate/passes/{PR}.json"
+          try:
+              with open(ppath, encoding="utf-8") as f:
+                  data = json.load(f)
+          except FileNotFoundError:
+              fail(f"PASS file missing: {ppath} — no merge without a Bud PASS")
+          except json.JSONDecodeError as e:
+              fail(f"PASS file unparseable: {ppath}: {e}")
+          if not isinstance(data, dict):
+              fail("PASS file must be a JSON object")
+
+          # 2. Field checks (fail-closed: every field must be exactly right).
+          if data.get("version") != 1:
+              fail("PASS version must be 1")
+          if data.get("verdict") != "PASS":
+              fail(f"PASS verdict is {data.get('verdict')!r}, must be 'PASS'")
+          if data.get("pr") != PR:
+              fail(f"PASS pr is {data.get('pr')!r}, must match this PR ({PR})")
+          if data.get("checker") != "bud":
+              fail("PASS checker must be 'bud'")
+          oa = data.get("owner_approval")
+          if (not isinstance(oa, dict) or oa.get("given") is not True
+                  or not isinstance(oa.get("via"), str)
+                  or not oa["via"].strip()):
+              fail("PASS owner_approval must be {given: true, via: <reference>}")
+          target = data.get("target_url")
+          if (not isinstance(target, str)
+                  or not target.startswith("promptstudioai.in/")
+                  or " " in target):
+              fail(f"PASS target_url invalid: {target!r}")
+          scope = data.get("scope_paths")
+          if (not isinstance(scope, list) or not scope
+                  or not all(isinstance(s, str) and s for s in scope)):
+              fail("PASS scope_paths must be a non-empty list of strings")
+          if not isinstance(data.get("known_limits"), list):
+              fail("PASS known_limits must be present and a list (may be empty)")
+          checks = data.get("checks")
+          if (not isinstance(checks, list) or not checks
+                  or not all(isinstance(c, str) and c for c in checks)):
+              fail("PASS checks must be a non-empty list of evidence labels")
+          if (not isinstance(data.get("checked_at"), str)
+                  or not data["checked_at"].strip()):
+              fail("PASS checked_at must be a non-empty string")
+          code_sha = data.get("code_sha")
+          if (not isinstance(code_sha, str)
+                  or not re.fullmatch(r"[0-9a-f]{40}", code_sha)):
+              fail("PASS code_sha must be a full 40-hex commit SHA")
+
+          # 3. Mapping table (condition 2: unknown routes fail closed).
+          #    Every scope entry and every changed path must map here.
+          #    public/<page>/ -> promptstudioai.in/<page>/
+          #    src/            -> promptstudioai.in/ (app shell)
+          #    api/            -> promptstudioai.in/api/
+          #    root config     -> promptstudioai.in/ (site-wide)
+          #    .github/workflows/ -> promptstudioai.in/ (gate file itself;
+          #      validated by the OLD workflow version — see header note)
+          #    quality-gate/   -> excluded from all diffs (the PASS itself)
+          #    anything else   -> UNKNOWN -> FAIL
+          ROOT_FILES = {"package.json", "package-lock.json",
+                        "vite.config.js", "vite.config.ts",
+                        "vercel.json", "index.html"}
+          PAGE_RE = re.compile(r"^[a-z0-9-]+$")
+
+          def map_path(p):
+              parts = p.split("/")
+              if parts[0] == "public" and len(parts) >= 3 \
+                      and PAGE_RE.fullmatch(parts[1]):
+                  return f"promptstudioai.in/{parts[1]}/"
+              if parts[0] == "src":
+                  return "promptstudioai.in/"
+              if parts[0] == "api":
+                  return "promptstudioai.in/api/"
+              if parts[0] == ".github" and len(parts) >= 2 \
+                      and parts[1] == "workflows":
+                  return "promptstudioai.in/"
+              if len(parts) == 1 and p in ROOT_FILES:
+                  return "promptstudioai.in/"
+              return "UNKNOWN"
+
+          def scope_target(s):
+              if s in ROOT_FILES:
+                  return "promptstudioai.in/"
+              if s in ("src/", "api/", ".github/workflows/"):
+                  return {"src/": "promptstudioai.in/",
+                          "api/": "promptstudioai.in/api/",
+                          ".github/workflows/": "promptstudioai.in/"}[s]
+              m = re.fullmatch(r"public/([a-z0-9-]+)/", s)
+              if m:
+                  return f"promptstudioai.in/{m.group(1)}/"
+              return "UNKNOWN"
+
+          for s in scope:
+              if scope_target(s) == "UNKNOWN":
+                  fail(f"unknown scope entry (not in mapping table): {s}")
+
+          # 4. Ancestor check (condition 1, Brain QC section 10):
+          #    code_sha must be an ancestor of head BEFORE the diff.
+          #    Without this, a rebase moves the three-dot merge-base and
+          #    can hide post-PASS code from the freshness diff.
+          anc = subprocess.run(
+              ["git", "merge-base", "--is-ancestor", code_sha, HEAD],
+              capture_output=True, text=True)
+          if anc.returncode != 0:
+              fail(f"code_sha {code_sha} is not an ancestor of head {HEAD} "
+                   f"— PASS does not cover this history (rebase?) — re-issue")
+
+          # 5. Freshness: no non-gate change between code_sha and head.
+          fresh = [l for l in git("diff", code_sha, HEAD, "--name-only")
+                   .splitlines()
+                   if l and not l.startswith("quality-gate/")]
+          if fresh:
+              fail(f"code changed after PASS: {', '.join(fresh)} — re-issue")
+
+          # 6. Scope/target: every non-gate changed path must sit inside
+          #    a scope prefix and map through the table. All paths except
+          #    the gate workflow file itself must map to exactly ONE
+          #    target equal to target_url (see target-neutrality rule in
+          #    the header). A PR changing ONLY the gate workflow file
+          #    must target promptstudioai.in/.
+          changed = [l for l in git("diff", f"{BASE}...{HEAD}", "--name-only")
+                     .splitlines()
+                     if l and not l.startswith("quality-gate/")]
+          if not changed:
+              fail("no non-gate changes found — nothing for the PASS to cover")
+          targets = set()
+          for p in changed:
+              if not any(p == s or p.startswith(s) for s in scope):
+                  fail(f"changed path outside PASS scope: {p}")
+              if p == ".github/workflows/gate-check.yml":
+                  continue  # target-neutral (header rule); scope-checked
+              t = map_path(p)
+              if t == "UNKNOWN":
+                  fail(f"changed path has no mapping-table target: {p}")
+              targets.add(t)
+          if not targets:
+              # Only the gate workflow file changed.
+              only = "promptstudioai.in/"
+          elif len(targets) != 1:
+              fail(f"changed paths map to multiple targets {sorted(targets)} "
+                   f"— split the PR")
+          else:
+              only = next(iter(targets))
+          if target != only:
+              fail(f"target_url {target} does not match mapped target {only}")
+
+          print(f"GATE PASS: PR #{PR} target {target} scope {scope} "
+                f"code_sha {code_sha}")
+          PY
