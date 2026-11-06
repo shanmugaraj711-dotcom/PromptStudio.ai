@@ -8,9 +8,7 @@
     "via": "owner's \"Fix simoly\" 2026-11-06 08:18 IST — same approved fix, ajax path failed so this is the standard-POST form of it"
   },
   "target_url": "promptstudioai.in/check/",
-  "scope_paths": {
-    "public/check/": "promptstudioai.in/check/"
-  },
+  "scope_paths": ["public/check/"],
   "code_sha": "89a2e4851cee6fa44d59f31e08fac6c6445ab8ad",
-  "checked_at": "2026-11-06 09:05 IST"
+  "checked_at": "2026-11-06 09:12 IST"
 }
