@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "verdict": "PASS",
+  "pr": 99,
+  "checker": "bud",
+  "owner_approval": {
+    "given": true,
+    "via": "owner message 2026-11-06 08:18 IST in analytic chat — reply to the RCA-2026-11-06 decision ask: Fix simoly"
+  },
+  "target_url": "promptstudioai.in/check/",
+  "scope_paths": ["public/check/"],
+  "known_limits": [
+    "FormSubmit needs a one-time activation click in the support@ inbox after the first submission",
+    "Visit counter is countapi.xyz free tier — if it is down, visits are not counted but the page still works",
+    "Submissions are counted from the support inbox, one email per request"
+  ],
+  "checks": [
+    "JS parses clean (node new Function check on the built file)",
+    "mailto submit removed, FormSubmit POST to support@ present",
+    "anchor deal section present (first 3 free checks get full audit free for testimonial)",
+    "countapi visit hit present, fire-and-forget",
+    "logo data URI intact in built file",
+    "remote blob SHA matched local staging before push (no divergence)",
+    "live page read before edit matched staging file"
+  ],
+  "checked_at": "2026-11-06 08:27 IST",
+  "code_sha": "c2c80ae6e6e7e5d655004dbe90581d3a2190ab13"
+}

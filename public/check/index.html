@@ -210,10 +210,13 @@
     <h2>Run your free check</h2>
 
     <!--
-      FORM ENDPOINT: This form currently sends through a mailto: link (no backend yet).
-      To switch to a real form endpoint later (e.g. Web3Forms or FormSubmit free tier),
-      replace the mailto: logic in the script block at the bottom of this file with a
-      POST to that endpoint URL. No other part of the page needs to change.
+      FORM ENDPOINT: FormSubmit free tier — posts straight to support@promptstudioai.in,
+      no signup, no backend. First ever submission triggers an activation email to
+      support@promptstudioai.in — click that link once and submissions flow after that.
+      _captcha is off so the form works in-page; _subject carries the request ID.
+      VISIT COUNTER: countapi.xyz hit on every page load (free, no key). Read the
+      count any time at https://api.countapi.xyz/get/promptstudio-check-page/visits
+      Submissions are counted from the support inbox (one email per request).
     -->
     <form id="check-form" novalidate>
       <div class="field">
@@ -253,6 +256,11 @@
 
       <div id="thank-you" role="status"></div>
     </form>
+  </section>
+
+  <section>
+    <h2>First 3 free checks get the full audit free</h2>
+    <p>The full audit normally costs ₹999. The first 3 businesses that run a free check here get it free — in exchange for a short written testimonial and permission to show your before-and-after result. No card, no sales call. When the 3 spots are gone, this line comes down.</p>
   </section>
 
   <section class="diy-kit">
@@ -342,21 +350,38 @@
     var qs = currentQuestions() || [];
 
     var subject = 'Free AI check request ' + ref + ' — ' + business;
-    var body = [
-      'Request ID: ' + ref,
-      'Business name: ' + business,
-      'Type of business: ' + type,
-      'City / area: ' + city,
-      'Send my free result to: ' + contact,
-      '',
-      'Questions to check:',
-      qs.map(function (q) { return '- ' + q; }).join('\n')
-    ].join('\n');
 
-    window.location.href = 'mailto:support@promptstudioai.in'
-      + '?subject=' + encodeURIComponent(subject)
-      + '&body=' + encodeURIComponent(body);
+    var payload = new URLSearchParams();
+    payload.append('Request ID', ref);
+    payload.append('Business name', business);
+    payload.append('Type of business', type);
+    payload.append('City / area', city);
+    payload.append('Send my free result to', contact);
+    payload.append('Questions to check', qs.join('\n'));
+    payload.append('_subject', subject);
+    payload.append('_template', 'table');
+    payload.append('_captcha', 'false');
 
+    thanks.innerHTML = '';
+    var sending = document.createElement('p');
+    sending.textContent = 'Sending your request…';
+    thanks.appendChild(sending);
+    thanks.style.display = 'block';
+
+    fetch('https://formsubmit.co/ajax/support@promptstudioai.in', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+      body: payload.toString()
+    }).then(function (res) {
+      if (!res.ok) throw new Error('submit failed');
+      showQueued(ref, qs, 'Sent. We run these questions and reply with your result and screenshots within 24 hours:');
+    }).catch(function () {
+      showQueued(ref, qs, 'Sending failed on our side — please email support@promptstudioai.in with your business name, type and area, and quote this ID:');
+    });
+  });
+
+  function showQueued(ref, qs, line) {
+    var thanks = document.getElementById('thank-you');
     thanks.innerHTML = '';
     var head = document.createElement('div');
     head.appendChild(document.createTextNode('Your check is queued. Request ID: '));
@@ -371,7 +396,7 @@
     thanks.appendChild(note);
     var sub = document.createElement('p');
     sub.style.marginTop = '8px';
-    sub.textContent = 'Your request is ready in your email app — just press send there. We run these questions and reply with your result and screenshots within 24 hours:';
+    sub.textContent = line;
     thanks.appendChild(sub);
     var ul = document.createElement('ul');
     qs.forEach(function (q) {
@@ -381,7 +406,12 @@
     });
     thanks.appendChild(ul);
     thanks.style.display = 'block';
-  });
+  }
+
+  // Visit counter (free, no key). Fire-and-forget: if the counter is down, the page still works.
+  try {
+    fetch('https://api.countapi.xyz/hit/promptstudio-check-page/visits', { mode: 'cors' }).catch(function () {});
+  } catch (e) {}
 })();
 </script>
 
