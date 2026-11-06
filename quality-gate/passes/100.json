@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "pr": 100,
+  "verdict": "PASS",
+  "checker": "bud",
+  "owner_approval": {
+    "given": true,
+    "via": "owner's \"Fix simoly\" 2026-11-06 08:18 IST — same approved fix, ajax path failed so this is the standard-POST form of it"
+  },
+  "target_url": "promptstudioai.in/check/",
+  "scope_paths": ["public/check/"],
+  "code_sha": "89a2e4851cee6fa44d59f31e08fac6c6445ab8ad",
+  "checked_at": "2026-11-06 09:20 IST",
+  "checks": [
+    "JS parses (node check)",
+    "form action is FormSubmit standard POST, method POST",
+    "no ajax fetch to FormSubmit, no countapi call, no mailto",
+    "redirect-back handler shows thank-you with request ID from ?sent=1&ref=",
+    "remote base SHA matched local staging before branching"
+  ],
+  "known_limits": [
+    "FormSubmit activation email not yet received — owner taps the link in the support inbox after merge, then Bud re-tests the form",
+    "visit counter removed — submissions counted from the support inbox only"
+  ]
+}

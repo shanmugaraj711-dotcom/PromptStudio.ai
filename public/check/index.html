@@ -210,23 +210,30 @@
     <h2>Run your free check</h2>
 
     <!--
-      FORM ENDPOINT: FormSubmit free tier — posts straight to support@promptstudioai.in,
-      no signup, no backend. First ever submission triggers an activation email to
-      support@promptstudioai.in — click that link once and submissions flow after that.
-      _captcha is off so the form works in-page; _subject carries the request ID.
-      VISIT COUNTER: countapi.xyz hit on every page load (free, no key). Read the
-      count any time at https://api.countapi.xyz/get/promptstudio-check-page/visits
+      FORM ENDPOINT: FormSubmit free tier, STANDARD post (not ajax) — posts straight
+      to support@promptstudioai.in, no signup, no backend. The ajax endpoint did NOT
+      trigger the activation email (tested 2026-11-06: submission failed, no mail in
+      Zoho inbox or spam), so this uses the documented standard flow: first submit
+      shows FormSubmit's "confirm your email" page and sends the activation mail;
+      after activation it redirects back here via _next (?sent=1&ref=...).
       Submissions are counted from the support inbox (one email per request).
+      No visit counter: countapi.xyz is dead (DNS does not resolve, checked 2026-11-06).
     -->
-    <form id="check-form" novalidate>
+    <form id="check-form" action="https://formsubmit.co/support@promptstudioai.in" method="POST" novalidate>
+      <input type="hidden" name="_subject" id="fs-subject" value="">
+      <input type="hidden" name="_template" value="table">
+      <input type="hidden" name="_captcha" value="false">
+      <input type="hidden" name="_next" id="fs-next" value="">
+      <input type="hidden" name="Request ID" id="fs-ref" value="">
+      <input type="hidden" name="Questions to check" id="fs-questions" value="">
       <div class="field">
         <label for="business-name">Business name</label>
-        <input type="text" id="business-name" name="business-name" required autocomplete="organization">
+        <input type="text" id="business-name" name="Business name" required autocomplete="organization">
       </div>
 
       <div class="field">
         <label for="business-type">What kind of business?</label>
-        <select id="business-type" name="business-type" required>
+        <select id="business-type" name="Type of business" required>
           <option value="">Choose one</option>
           <option>Dental clinic</option>
           <option>Preschool / playschool</option>
@@ -241,12 +248,12 @@
 
       <div class="field">
         <label for="city-area">City / area</label>
-        <input type="text" id="city-area" name="city-area" required autocomplete="address-level2" placeholder="e.g. Velachery, Chennai">
+        <input type="text" id="city-area" name="City / area" required autocomplete="address-level2" placeholder="e.g. Velachery, Chennai">
       </div>
 
       <div class="field">
         <label for="contact">Where do we send your free result?</label>
-        <input type="text" id="contact" name="contact" required>
+        <input type="text" id="contact" name="Send my free result to" required>
         <div class="hint">Email or WhatsApp number</div>
       </div>
 
@@ -332,8 +339,6 @@
 
   var form = document.getElementById('check-form');
   form.addEventListener('submit', function (event) {
-    event.preventDefault();
-
     var business = document.getElementById('business-name').value.trim();
     var type = typeEl.value;
     var city = cityEl.value.trim();
@@ -341,6 +346,7 @@
     var thanks = document.getElementById('thank-you');
 
     if (!business || !type || !city || !contact) {
+      event.preventDefault();
       thanks.textContent = 'Please fill all the fields, then press the button again.';
       thanks.style.display = 'block';
       return;
@@ -349,36 +355,32 @@
     var ref = 'PS-' + Date.now().toString(36).toUpperCase();
     var qs = currentQuestions() || [];
 
-    var subject = 'Free AI check request ' + ref + ' — ' + business;
+    document.getElementById('fs-subject').value = 'Free AI check request ' + ref + ' — ' + business;
+    document.getElementById('fs-next').value = 'https://promptstudioai.in/check/?sent=1&ref=' + ref;
+    document.getElementById('fs-ref').value = ref;
+    document.getElementById('fs-questions').value = qs.join('\n');
 
-    var payload = new URLSearchParams();
-    payload.append('Request ID', ref);
-    payload.append('Business name', business);
-    payload.append('Type of business', type);
-    payload.append('City / area', city);
-    payload.append('Send my free result to', contact);
-    payload.append('Questions to check', qs.join('\n'));
-    payload.append('_subject', subject);
-    payload.append('_template', 'table');
-    payload.append('_captcha', 'false');
-
-    thanks.innerHTML = '';
-    var sending = document.createElement('p');
-    sending.textContent = 'Sending your request…';
-    thanks.appendChild(sending);
-    thanks.style.display = 'block';
-
-    fetch('https://formsubmit.co/ajax/support@promptstudioai.in', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
-      body: payload.toString()
-    }).then(function (res) {
-      if (!res.ok) throw new Error('submit failed');
-      showQueued(ref, qs, 'Sent. We run these questions and reply with your result and screenshots within 24 hours:');
-    }).catch(function () {
-      showQueued(ref, qs, 'Sending failed on our side — please email support@promptstudioai.in with your business name, type and area, and quote this ID:');
-    });
+    try {
+      sessionStorage.setItem('check-ref', ref);
+      sessionStorage.setItem('check-qs', JSON.stringify(qs));
+    } catch (e) {}
+    // Native submit: FormSubmit processes, then redirects back here via _next.
   });
+
+  // After redirect back from FormSubmit (?sent=1&ref=...), show the thank-you.
+  (function showSent() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('sent') !== '1') return;
+    var ref = params.get('ref') || '';
+    try {
+      ref = ref || sessionStorage.getItem('check-ref') || '';
+      var stored = sessionStorage.getItem('check-qs');
+      var qs = stored ? JSON.parse(stored) : [];
+      showQueued(ref, qs, 'Sent. We run these questions and reply with your result and screenshots within 24 hours:');
+    } catch (e) {
+      showQueued(ref, [], 'Sent. We reply with your result and screenshots within 24 hours.');
+    }
+  })();
 
   function showQueued(ref, qs, line) {
     var thanks = document.getElementById('thank-you');
@@ -407,11 +409,6 @@
     thanks.appendChild(ul);
     thanks.style.display = 'block';
   }
-
-  // Visit counter (free, no key). Fire-and-forget: if the counter is down, the page still works.
-  try {
-    fetch('https://api.countapi.xyz/hit/promptstudio-check-page/visits', { mode: 'cors' }).catch(function () {});
-  } catch (e) {}
 })();
 </script>
 
