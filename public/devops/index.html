@@ -1,101 +1,149 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DevOps Kit — Learn by Doing, On Your Own Machine</title>
+<title>DevOps Kit — Learn by Doing, On Your Own Machine | PromptStudio</title>
 <link rel="stylesheet" href="assets/style.css">
 </head>
-<body>
+<body class="has-sticky">
+<div class="brandbar"><a href="index.html">PromptStudio<span class="dot">.</span></a><span class="tag">DevOps Kit</span></div>
 <div class="hero">
   <div class="wrap" style="padding:0">
-  <h1>DevOps Kit — Learn by Doing, On Your Own Machine</h1>
-  <p class="sub">No cloud bill. No server. Just your own laptop and free tools.</p>
+  <span class="eyebrow">PromptStudio &middot; DevOps Kit</span>
+  <h1>Learn DevOps by doing, on your own machine</h1>
+  <p class="sub">No cloud bill. No server. Just your laptop and free tools.</p>
   <p>Real DevOps is not watching videos. It is running things, watching them
-  break, and fixing them. This kit teaches you that way: read a short lesson,
-  try it in a simulation on this page, then run the real lab with Docker on
-  your own machine.</p>
-  <p>Every lab uses fake data only — fake orders, fake names, fake receipts.
-  Nothing real, nothing to leak.</p>
+  break, and fixing them. Read a short lesson, try it in a real terminal
+  simulation on this page, then run the real lab with Docker on your own
+  machine.</p>
+  <div class="chips">
+    <span class="chip">16 lessons</span>
+    <span class="chip">6 terminal simulations</span>
+    <span class="chip">No cloud bill</span>
+    <span class="chip">Fake data only</span>
+  </div>
+  <div class="btnrow">
+    <a class="btn" href="lessons/p1-start.html">Start Phase 1 &mdash; ₹399</a>
+    <a class="btn ghostlight" href="#try-sim">Try a simulation free</a>
+  </div>
   </div>
 </div>
 <div class="wrap">
-  <h2>How learning works</h2>
-  <div class="steps">
-    <div class="step"><b>1. Read a lesson.</b><br>Short, plain words. One idea per step. No jargon without a simple meaning next to it.</div>
-    <div class="step"><b>2. Run the simulation.</b><br>A real-feeling terminal right here on the page. Type any command — it runs, with real outputs. No install, works on your phone.</div>
-    <div class="step"><b>3. Run the real lab.</b><br>Same commands, on your own machine, with Docker. That is where the learning sticks — because things really break there, and you really fix them.</div>
-  </div>
-
-  <h2>Two phases</h2>
-  <div class="cards">
-    <div class="card">
-      <h3>Phase 1 — The Data Tier</h3>
-      <div class="price">₹399</div>
-      <ul>
-        <li>Kafka — messages in a line, copied to a second cluster</li>
-        <li>PostgreSQL — main database, standby copy, failover with Patroni</li>
-        <li>Redis — a fast memory store, with a read-only copy</li>
-        <li>Object store — file storage that mirrors itself</li>
-        <li>Load balancer — one guard, three backends</li>
-        <li>Replication and failover, end to end</li>
-        <li>One full end-to-end lab: one fake order, all the way through</li>
-      </ul>
-      <a class="btn" href="lessons/p1-start.html">Start Phase 1</a>
-    </div>
-    <div class="card">
-      <h3>Phase 2 — The Rest of DevOps</h3>
-      <div class="price">₹799</div>
-      <ul>
-        <li>Linux, Git, Docker — the base skills, from zero</li>
-        <li>Kubernetes — your app on a small local cluster</li>
-        <li>Terraform, CI/CD, monitoring</li>
-        <li>Break-and-fix labs — learn like on-call work</li>
-        <li>Interview pack, portfolio projects, resume bullets</li>
-        <li>Best sites — what to pick, and why</li>
-      </ul>
-      <a class="btn" href="lessons/p2-start.html">Start Phase 2</a>
+  <div class="section">
+    <h2>How learning works</h2>
+    <div class="steps">
+      <div class="step"><span class="num">1</span><b>Read a lesson.</b><p>Short, plain words. One idea per step. No jargon without a simple meaning next to it.</p></div>
+      <div class="step"><span class="num">2</span><b>Run the simulation.</b><p>A real-feeling terminal right here on the page. Type any command &mdash; it runs, with real outputs. No install, works on your phone.</p></div>
+      <div class="step"><span class="num">3</span><b>Run the real lab.</b><p>Same commands, on your own machine, with Docker. That is where the learning sticks &mdash; because things really break there, and you really fix them.</p></div>
     </div>
   </div>
-  <p><span class="btn disabled" aria-disabled="true">🔒 Opening Soon</span></p>
-  <p class="paynote">Payments open soon — the kit is being perfected.</p>
 
-  <h2>All lessons</h2>
-  <h3>Phase 1</h3>
-  <ul class="lesson-list">
-    <li><a href="lessons/p1-start.html">Start Here — Phase 1: The Data Tier</a></li>
-    <li><a href="lessons/p1-kafka.html">Kafka Lab — Messages in a Line</a><br><span class="simlink">▶ <a href="sims/kafka.html">Try the simulation</a></span></li>
-    <li><a href="lessons/p1-postgresql.html">PostgreSQL Lab — Main Database, Standby, Failover</a><br><span class="simlink">▶ <a href="sims/postgresql.html">Try the simulation</a></span></li>
-    <li><a href="lessons/p1-redis.html">Redis Lab — A Fast Memory Store</a><br><span class="simlink">▶ <a href="sims/redis.html">Try the simulation</a></span></li>
-    <li><a href="lessons/p1-object-store.html">Object Store Lab — A File Cupboard</a><br><span class="simlink">▶ <a href="sims/object-store.html">Try the simulation</a></span></li>
-    <li><a href="lessons/p1-load-balancer.html">Load Balancer Lab — One Guard, Three Backends</a><br><span class="simlink">▶ <a href="sims/load-balancer.html">Try the simulation</a></span></li>
-    <li><a href="lessons/p1-end-to-end.html">End-to-End Lab — One Fake Order, All the Way Through</a><br><span class="simlink">▶ <a href="sims/end-to-end.html">Try the simulation</a></span></li>
-  </ul>
-  <h3>Phase 2</h3>
-  <ul class="lesson-list">
-    <li><a href="lessons/p2-start.html">Start Here — Phase 2: Linux, Git, Docker and More</a></li>
-    <li><a href="lessons/p2-zero-cost.html">Zero-Cost Lab — One Machine, No Cloud Bill</a></li>
-    <li><a href="lessons/p2-kubernetes.html">Kubernetes Lab — Your App on a Small Local Cluster</a></li>
-    <li><a href="lessons/p2-break-fix.html">Break-and-Fix Labs — Learn Like On-Call Work</a></li>
-    <li><a href="lessons/p2-cheat-sheets.html">Cheat Sheets — Commands You Will Actually Use</a></li>
-    <li><a href="lessons/p2-interview.html">Interview Pack — Real Questions, What They Really Test</a></li>
-    <li><a href="lessons/p2-portfolio.html">Portfolio Projects — Proof, Not Just Notes</a></li>
-    <li><a href="lessons/p2-resume.html">Resume Bullets — From Your Projects, In Simple Words</a></li>
-    <li><a href="lessons/p2-best-sites.html">Best Sites — What To Pick, And Why</a></li>
-  </ul>
+  <div class="section">
+    <h2>What you&rsquo;ll learn</h2>
+    <p class="lead">Two phases. Seven labs in Phase 1, nine guides in Phase 2.</p>
+    <div class="skills">
+      <div class="skill">Kafka<small>messages in a line</small></div>
+      <div class="skill">PostgreSQL<small>database + standby</small></div>
+      <div class="skill">Redis<small>fast memory store</small></div>
+      <div class="skill">Object store<small>files that mirror</small></div>
+      <div class="skill">Load balancer<small>one guard, three backends</small></div>
+      <div class="skill">Replication &amp; failover<small>standby takes over</small></div>
+      <div class="skill">Linux<small>from zero</small></div>
+      <div class="skill">Git &amp; Docker<small>the base skills</small></div>
+      <div class="skill">Kubernetes<small>your app on a cluster</small></div>
+      <div class="skill">Terraform<small>infrastructure as code</small></div>
+      <div class="skill">CI/CD<small>pipelines that ship</small></div>
+      <div class="skill">Monitoring<small>Prometheus &amp; Grafana</small></div>
+    </div>
+  </div>
 
-  <h2>Try a simulation first</h2>
-  <p>Pick one — no install, works on your phone. Every simulation is a
-  practice version: it shows the lab's real outputs, but nothing here runs a
-  live service.</p>
-  <ul class="lesson-list">
-    <li><a href="sims/kafka.html">Kafka Simulation — Messages in a Line</a> — 9 steps</li>
-    <li><a href="sims/postgresql.html">PostgreSQL Simulation — Main Database, Standby, Failover</a> — 20 steps</li>
-    <li><a href="sims/redis.html">Redis Simulation — A Fast Memory Store</a> — 17 steps</li>
-    <li><a href="sims/object-store.html">Object Store Simulation — A File Cupboard</a> — 10 steps</li>
-    <li><a href="sims/load-balancer.html">Load Balancer Simulation — One Guard, Three Backends</a> — 12 steps</li>
-    <li><a href="sims/end-to-end.html">End-to-End Simulation — One Fake Order, All the Way Through</a> — 21 steps</li>
-  </ul>
+  <div class="section">
+    <h2>Two phases</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>Phase 1 &mdash; The Data Tier</h3>
+        <p class="tagline">The new tech: how data moves, copies itself, and survives a crash.</p>
+        <div class="price">₹399 <small>one-time</small></div>
+        <ul>
+          <li>Kafka &mdash; messages in a line, copied to a second cluster</li>
+          <li>PostgreSQL &mdash; main database, standby copy, failover with Patroni</li>
+          <li>Redis &mdash; a fast memory store, with a read-only copy</li>
+          <li>Object store &mdash; file storage that mirrors itself</li>
+          <li>Load balancer &mdash; one guard, three backends</li>
+          <li>Replication and failover, end to end</li>
+          <li>One full end-to-end lab: one fake order, all the way through</li>
+        </ul>
+        <a class="btn" href="lessons/p1-start.html">Start Phase 1</a>
+        <p class="paynote"><span class="btn disabled" aria-disabled="true">&#128274; Opening Soon</span><br>Payments open soon &mdash; the kit is being perfected.</p>
+      </div>
+      <div class="card">
+        <h3>Phase 2 &mdash; The Rest of DevOps</h3>
+        <p class="tagline">The base skills and the rest of the toolkit, from zero.</p>
+        <div class="price">₹799 <small>one-time</small></div>
+        <ul>
+          <li>Linux, Git, Docker &mdash; the base skills, from zero</li>
+          <li>Kubernetes &mdash; your app on a small local cluster</li>
+          <li>Terraform, CI/CD, monitoring</li>
+          <li>Break-and-fix labs &mdash; learn like on-call work</li>
+          <li>Interview pack, portfolio projects, resume bullets</li>
+          <li>Best sites &mdash; what to pick, and why</li>
+        </ul>
+        <a class="btn" href="lessons/p2-start.html">Start Phase 2</a>
+        <p class="paynote"><span class="btn disabled" aria-disabled="true">&#128274; Opening Soon</span><br>Payments open soon &mdash; the kit is being perfected.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Course curriculum</h2>
+    <p class="lead">16 lessons. Tap a phase to see its lessons. Lessons with a simulation are marked Try free.</p>
+    <details class="curriculum" open>
+      <summary>Phase 1 &mdash; The Data Tier <span class="meta">7 lessons &middot; ₹399</span></summary>
+      <div class="cbody">
+      <div class="lesson-row"><span class="n">1</span><div><a href="lessons/p1-start.html">Start Here — Phase 1: The Data Tier</a><div class="sub">Guide only</div></div></div>
+      <div class="lesson-row"><span class="n">2</span><div><a href="lessons/p1-kafka.html">Kafka Lab — Messages in a Line</a> <span class="pill sim">Try free</span><div class="sub"><a href="sims/kafka.html">&#9654; Try the simulation free</a></div></div></div>
+      <div class="lesson-row"><span class="n">3</span><div><a href="lessons/p1-postgresql.html">PostgreSQL Lab — Main Database, Standby, Failover</a> <span class="pill sim">Try free</span><div class="sub"><a href="sims/postgresql.html">&#9654; Try the simulation free</a></div></div></div>
+      <div class="lesson-row"><span class="n">4</span><div><a href="lessons/p1-redis.html">Redis Lab — A Fast Memory Store</a> <span class="pill sim">Try free</span><div class="sub"><a href="sims/redis.html">&#9654; Try the simulation free</a></div></div></div>
+      <div class="lesson-row"><span class="n">5</span><div><a href="lessons/p1-object-store.html">Object Store Lab — A File Cupboard</a> <span class="pill sim">Try free</span><div class="sub"><a href="sims/object-store.html">&#9654; Try the simulation free</a></div></div></div>
+      <div class="lesson-row"><span class="n">6</span><div><a href="lessons/p1-load-balancer.html">Load Balancer Lab — One Guard, Three Backends</a> <span class="pill sim">Try free</span><div class="sub"><a href="sims/load-balancer.html">&#9654; Try the simulation free</a></div></div></div>
+      <div class="lesson-row"><span class="n">7</span><div><a href="lessons/p1-end-to-end.html">End-to-End Lab — One Fake Order, All the Way Through</a> <span class="pill sim">Try free</span><div class="sub"><a href="sims/end-to-end.html">&#9654; Try the simulation free</a></div></div></div>
+      </div>
+    </details>
+    <details class="curriculum">
+      <summary>Phase 2 &mdash; The Rest of DevOps <span class="meta">9 lessons &middot; ₹799</span></summary>
+      <div class="cbody">
+      <div class="lesson-row"><span class="n">8</span><div><a href="lessons/p2-start.html">Start Here — Phase 2: Linux, Git, Docker and More</a><div class="sub">Guide only</div></div></div>
+      <div class="lesson-row"><span class="n">9</span><div><a href="lessons/p2-zero-cost.html">Zero-Cost Lab — One Machine, No Cloud Bill</a><div class="sub">Guide only</div></div></div>
+      <div class="lesson-row"><span class="n">10</span><div><a href="lessons/p2-kubernetes.html">Kubernetes Lab — Your App on a Small Local Cluster</a><div class="sub">Guide only</div></div></div>
+      <div class="lesson-row"><span class="n">11</span><div><a href="lessons/p2-break-fix.html">Break-and-Fix Labs — Learn Like On-Call Work</a><div class="sub">Guide only</div></div></div>
+      <div class="lesson-row"><span class="n">12</span><div><a href="lessons/p2-cheat-sheets.html">Cheat Sheets — Commands You Will Actually Use</a><div class="sub">Guide only</div></div></div>
+      <div class="lesson-row"><span class="n">13</span><div><a href="lessons/p2-interview.html">Interview Pack — Real Questions, What They Really Test</a><div class="sub">Guide only</div></div></div>
+      <div class="lesson-row"><span class="n">14</span><div><a href="lessons/p2-portfolio.html">Portfolio Projects — Proof, Not Just Notes</a><div class="sub">Guide only</div></div></div>
+      <div class="lesson-row"><span class="n">15</span><div><a href="lessons/p2-resume.html">Resume Bullets — From Your Projects, In Simple Words</a><div class="sub">Guide only</div></div></div>
+      <div class="lesson-row"><span class="n">16</span><div><a href="lessons/p2-best-sites.html">Best Sites — What To Pick, And Why</a><div class="sub">Guide only</div></div></div>
+      </div>
+    </details>
+  </div>
+
+  <div class="section" id="try-sim">
+    <h2>Try a simulation first</h2>
+    <p class="lead">Pick one &mdash; no install, works on your phone, free. Every simulation is a practice version: it shows the lab&rsquo;s real outputs, but nothing here runs a live service.</p>
+    <div class="simcards">
+      <div class="simcard"><h3><a href="sims/kafka.html">Kafka Simulation — Messages in a Line</a></h3><p>9 guided steps &middot; free, no install, works on your phone.</p><a class="btn" href="sims/kafka.html">Try free &rarr;</a></div>
+      <div class="simcard"><h3><a href="sims/postgresql.html">PostgreSQL Simulation — Main Database, Standby, Failover</a></h3><p>20 guided steps &middot; free, no install, works on your phone.</p><a class="btn" href="sims/postgresql.html">Try free &rarr;</a></div>
+      <div class="simcard"><h3><a href="sims/redis.html">Redis Simulation — A Fast Memory Store</a></h3><p>17 guided steps &middot; free, no install, works on your phone.</p><a class="btn" href="sims/redis.html">Try free &rarr;</a></div>
+      <div class="simcard"><h3><a href="sims/object-store.html">Object Store Simulation — A File Cupboard</a></h3><p>10 guided steps &middot; free, no install, works on your phone.</p><a class="btn" href="sims/object-store.html">Try free &rarr;</a></div>
+      <div class="simcard"><h3><a href="sims/load-balancer.html">Load Balancer Simulation — One Guard, Three Backends</a></h3><p>12 guided steps &middot; free, no install, works on your phone.</p><a class="btn" href="sims/load-balancer.html">Try free &rarr;</a></div>
+      <div class="simcard"><h3><a href="sims/end-to-end.html">End-to-End Simulation — One Fake Order, All the Way Through</a></h3><p>21 guided steps &middot; free, no install, works on your phone.</p><a class="btn" href="sims/end-to-end.html">Try free &rarr;</a></div>
+    </div>
+  </div>
+</div>
+<footer class="site"><b>PromptStudio</b> &middot; DevOps Kit &mdash; learn by doing, on your own machine.<br>Every lab uses fake data only &mdash; fake orders, fake names, fake receipts. Nothing real, nothing to leak.</footer>
+<div class="stickybar">
+  <div class="price">₹399<small>Phase 1 &middot; one-time</small></div>
+  <span class="btn disabled" aria-disabled="true">&#128274; Opening Soon</span>
 </div>
 </body>
 </html>
