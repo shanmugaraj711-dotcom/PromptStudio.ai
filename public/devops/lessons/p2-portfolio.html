@@ -3,31 +3,39 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Portfolio Projects — Proof, Not Just Notes</title>
+<title>Portfolio Projects — Proof, Not Just Notes — DevOps Kit</title>
 <link rel="stylesheet" href="/devops/assets/style.css">
 </head>
-<body>
-<div class="brandbar"><a href="/devops/index.html">PromptStudio<span class="dot">.</span></a><span class="tag">DevOps Kit</span></div>
-<header class="top"><h1>Portfolio Projects — Proof, Not Just Notes</h1><p>Phase 2 · The Rest of DevOps · fake data only</p></header><nav class="crumbs"><a href="../index.html">Home</a> / Phase 2</nav><div class="wrap"><div class="progress">Lesson 14 of 16</div><div class="progressbar"><span style="width:88%"></span></div><span class="phasebadge">Phase 2 · The Rest of DevOps</span><h2>Why projects</h2>
+<body data-page="lesson" data-lesson="p2-portfolio" data-phase="phase2">
+<header class="lesson-header">
+  <div class="lh-row">
+    <a class="wordmark" href="/devops/index.html">DevOps Kit</a>
+    <span class="lh-meta">Phase 2 · Lesson 14 of 16</span>
+    <span class="auth-slot" id="auth-slot"></span>
+  </div>
+  <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
+</header>
+<main class="lesson-wrap">
+<div class="lock-screen" id="lock-screen" hidden><span class="lock-icon">🔒</span><h2>This lesson is in Phase 2 — ₹799, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase2" type="button" hidden>Buy Phase 2 — ₹799</button><a class="lock-back" href="/devops/index.html">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><h1>Portfolio Projects — Proof, Not Just Notes</h1><span class="phasebadge">Phase 2 · The Rest of DevOps</span><h2>Why projects</h2>
 <p>Employers trust things they can open and run. Four small, finished projects beat a long list of courses. Each project below ends with a GitHub README (the front page of a repository) that you fill in. Write only true things in it. If something is not done yet, say so.</p>
 <hr>
 <h2>Project 1 — A website in a container</h2>
 <h3>Build it</h3>
 <ol><li>Make a folder called <code>my-site</code> inside <code>~/devops-practice</code> and put one <code>index.html</code> page in it that says what the site is. Then move into that folder before you build:</li></ol>
-<pre><code>cd ~/devops-practice/my-site</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cd ~/devops-practice/my-site</code></pre></div>
 <p>Example content for <code>index.html</code> (make it with the method in zero-cost-lab.md, &quot;How to make a file&quot;):</p>
-<pre><code class="language-html">&lt;h1&gt;My DevOps practice site&lt;/h1&gt;
-&lt;p&gt;This site runs in a Docker container I built myself.&lt;/p&gt;</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code class="language-html">&lt;h1&gt;My DevOps practice site&lt;/h1&gt;
+&lt;p&gt;This site runs in a Docker container I built myself.&lt;/p&gt;</code></pre></div>
 <ol><li>Add a <code>Dockerfile</code> — the recipe file that tells Docker how to build your container:</li></ol>
-<pre><code class="language-dockerfile">FROM nginx
-COPY index.html /usr/share/nginx/html/index.html</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code class="language-dockerfile">FROM nginx
+COPY index.html /usr/share/nginx/html/index.html</code></pre></div>
 <ol><li>From inside the <code>my-site</code> folder, build and run it:</li></ol>
-<pre><code>docker build -t my-site:1.0 .
-docker run -d -p 8080:80 --name my-site my-site:1.0</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker build -t my-site:1.0 .
+docker run -d -p 8080:80 --name my-site my-site:1.0</code></pre></div>
 <p>If port 8080 is already in use, stop the container using it or run with <code>-p 8081:80</code> instead and open <code>http://localhost:8081</code>. Clean up when done: <code>docker stop my-site</code>, then <code>docker rm my-site</code>.</p>
 <ol><li>Open <code>http://localhost:8080</code> and check it works.</li><li>Push the folder to GitHub (first time: follow zero-cost-lab.md Step 7; after that, <code>git add .</code>, <code>git commit</code>, <code>git push</code>).</li></ol>
 <h3>README template — fill in the blanks</h3>
-<pre><code># [Site name]
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code># [Site name]
 What it is: [one line]
 Tools used: Docker, nginx, HTML
 How to run it:
@@ -35,13 +43,13 @@ How to run it:
   docker run -d -p 8080:80 --name my-site my-site:1.0
   Open http://localhost:8080
 What I learned: [two lines]
-Problems I fixed: [one problem and its fix]</code></pre>
+Problems I fixed: [one problem and its fix]</code></pre></div>
 <hr>
 <h2>Project 2 — A pipeline that tests and builds</h2>
 <h3>Build it</h3>
 <ol><li>Use Project 1&#x27;s repository.</li><li>Make the folder for the workflow file, then add <code>.github/workflows/build.yml</code> (see zero-cost-lab.md, &quot;How to make a file&quot;, for how to create files):</li></ol>
-<pre><code>mkdir -p .github/workflows</code></pre>
-<pre><code class="language-yaml">name: build
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir -p .github/workflows</code></pre></div>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code class="language-yaml">name: build
 on: [push]
 jobs:
   build:
@@ -53,21 +61,21 @@ jobs:
           test -f index.html
           grep -q &quot;My DevOps practice site&quot; index.html
       - name: Build the image
-        run: docker build -t my-site:1.0 .</code></pre>
+        run: docker build -t my-site:1.0 .</code></pre></div>
 <p>The test step runs BEFORE the build: it fails if <code>index.html</code> is missing or does not hold the site&#x27;s heading, so a broken site never gets built. A pipeline that only builds is not a pipeline that tests — the test step is the point.</p>
 <ol><li>Push, open the Actions tab on GitHub, and watch the pipeline run. Break it once on purpose (for example, delete the heading from <code>index.html</code> so the test step fails, or a typo in the Dockerfile so the build fails), read the log, fix it, and push again.</li></ol>
 <h3>README template — fill in the blanks</h3>
-<pre><code># [Site name] — CI/CD pipeline
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code># [Site name] — CI/CD pipeline
 What it is: [one line]
 Pipeline does: on every push, it tests the site, then builds the Docker image.
 Tools used: GitHub Actions, Docker
 A failure I fixed: [what broke, what the log said, what I changed]
-Pipeline status: [link to the Actions tab, if public]</code></pre>
+Pipeline status: [link to the Actions tab, if public]</code></pre></div>
 <hr>
 <h2>Project 3 — Infrastructure as code + monitoring, zero-cost</h2>
 <h3>Build it</h3>
 <ol><li>Install Terraform (the tool that creates infrastructure from files). Its install steps differ by system, so follow the official Terraform install docs for your machine — this step is unverified in this kit.</li><li>Write a small Terraform file called <code>main.tf</code> (Terraform reads every <code>.tf</code> file in the folder) that creates a local container using the Docker provider (Terraform talks to Docker on your own machine — no cloud account, no bill):</li></ol>
-<pre><code class="language-hcl">terraform {
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code class="language-hcl">terraform {
   required_providers {
     docker = {
       source = &quot;kreuzwerker/docker&quot;
@@ -86,14 +94,14 @@ resource &quot;docker_container&quot; &quot;web&quot; {
     internal = 80
     external = 8080
   }
-}</code></pre>
+}</code></pre></div>
 <p>Run <code>terraform init</code>, then <code>terraform apply</code>, and check <code>http://localhost:8080</code>. <code>init</code> downloads the Docker provider the file asks for. Once you have a working run, pin the provider version: add a <code>version</code> line inside the docker provider block with the version you tested, and keep the <code>.terraform.lock.hcl</code> file <code>init</code> creates — do not delete it casually. No version is pinned here because none was tested end-to-end yet.</p>
 <p>To check nothing changed, run <code>terraform plan</code> after the first apply — it should report no changes. If the plan shows changes, read it before you apply; something drifted or changed.</p>
 <p>Clean up when you are done: first check you are in the right folder and read the plan with <code>terraform plan -destroy</code>. Then <code>terraform destroy</code> removes what Terraform created. Run it only on your own practice setup, never on anything shared or real.</p>
 <ol><li>Add monitoring with Docker Compose (a tool that starts several containers together from one file). You will run three small programs on your own machine: Prometheus (collects numbers), Grafana (turns numbers into charts), and node-exporter (reports numbers from inside its own container). This demo shows container monitoring — it does not measure your whole host machine. On a Linux host you can add host mounts later; on Docker Desktop or WSL2, the numbers describe the Linux container environment, not your Windows or Mac host. No cloud account, no bill.</li></ol>
 <p>Make a folder called <code>monitoring</code> inside <code>~/devops-practice</code> and put two files in it.</p>
 <p>File 1 — <code>docker-compose.yml</code>:</p>
-<pre><code class="language-yaml">services:
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code class="language-yaml">services:
   prometheus:
     image: prom/prometheus
     ports:
@@ -107,10 +115,10 @@ resource &quot;docker_container&quot; &quot;web&quot; {
   grafana:
     image: grafana/grafana
     ports:
-      - &quot;127.0.0.1:3000:3000&quot;</code></pre>
+      - &quot;127.0.0.1:3000:3000&quot;</code></pre></div>
 <p>Ports are bound to 127.0.0.1 (this machine only) on purpose — this is a local learning stack, not a shared service. Images here have no version tags, so a later pull may change them. Once you have a working run, pin the versions you used and record them in the README.</p>
 <p>File 2 — <code>prometheus.yml</code> (the file that tells Prometheus what to watch — a &quot;scrape&quot; is Prometheus visiting an address every 15 seconds and writing down numbers):</p>
-<pre><code class="language-yaml">global:
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code class="language-yaml">global:
   scrape_interval: 15s
 scrape_configs:
   - job_name: &quot;prometheus&quot;
@@ -118,12 +126,12 @@ scrape_configs:
       - targets: [&quot;localhost:9090&quot;]
   - job_name: &quot;practice-machine&quot;
     static_configs:
-      - targets: [&quot;node-exporter:9100&quot;]</code></pre>
+      - targets: [&quot;node-exporter:9100&quot;]</code></pre></div>
 <p>A &quot;job&quot; is just a named thing to watch. <code>node-exporter:9100</code> works because Docker Compose lets containers reach each other by service name. <code>localhost:9090</code> works for Prometheus itself because it is watching its own container.</p>
 <p>Start it all:</p>
-<pre><code>cd ~/devops-practice/monitoring
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cd ~/devops-practice/monitoring
 docker compose up -d
-docker compose ps</code></pre>
+docker compose ps</code></pre></div>
 <p>All three should show as running. If <code>docker compose</code> fails, older Docker uses <code>docker-compose</code> (with a hyphen) — try that instead.</p>
 <p>Check Prometheus first: open <code>http://localhost:9090</code>, click Status, then Targets. Both jobs should show UP, with the target address and last-scrape time beside them. If a target shows DOWN, work in this order: <code>docker compose ps</code> (is the container running?), <code>docker compose logs &lt;service&gt;</code> (what did it print?), then the error line under the target in Prometheus.</p>
 <p>Now open Grafana: <code>http://localhost:3000</code>. Log in with username <code>admin</code> and password <code>admin</code>, and change that default password at first login — this stack is local learning only, not secured for sharing. If it asks you to set a new password, set one you will remember.</p>
@@ -132,28 +140,28 @@ docker compose ps</code></pre>
 <p>Stop everything when you are done: <code>docker compose down</code>. Your files stay, so <code>docker compose up -d</code> starts it again later.</p>
 <p>Note: Grafana&#x27;s menu words can differ slightly by version — if a button name differs, look for the closest match. This exact stack was not run end-to-end while writing this kit, so if a step fails, read the error message first.</p>
 <ol><li>Push to GitHub — but not everything. First make a <code>.gitignore</code> file in the project folder with at least these lines, then run <code>git status</code> and check nothing private is staged:</li></ol>
-<pre><code>.terraform/
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>.terraform/
 *.tfstate
 *.tfstate.*
-crash.log</code></pre>
+crash.log</code></pre></div>
 <p>Commit: the <code>.tf</code> files, <code>.terraform.lock.hcl</code>, the Compose file, <code>prometheus.yml</code>, and the README. Never commit state files, the provider cache, or secrets — state can hold private values.</p>
 <h3>A clear warning</h3>
 <p>Terraform with a cloud provider (AWS, Azure, and similar) can cost real money. Do the local Docker version first. Only try a cloud version if you understand that provider&#x27;s free tier and you destroy what you create afterwards. This kit does not promise any setup is free on the cloud.</p>
 <h3>README template — fill in the blanks</h3>
-<pre><code># Terraform + monitoring demo
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code># Terraform + monitoring demo
 What it is: [one line]
 Tools used: Terraform, Docker, Prometheus, Grafana
 How to run it: [the commands you used]
 What the chart shows: [one line — for example, &quot;both monitoring targets are up: Prometheus and the practice machine&quot;]
 What I learned: [two lines]
-Cost: local only, no cloud bill.</code></pre>
+Cost: local only, no cloud bill.</code></pre></div>
 <hr>
 <h2>Project 4 — A data-tier pipeline, end to end (Phase 1)</h2>
 <h3>Build it</h3>
 <p>This project is the Phase 1 end-to-end lab, done as a portfolio piece. Do the Phase 1 single-topic labs first (Kafka, PostgreSQL, Redis, object store, load balancer), then run the end-to-end lab in the Phase 1 folder:</p>
 <ol><li>Start it with one command: <code>docker compose up -d --build</code>.</li><li>Watch three fake orders flow from files to Kafka to PostgreSQL, with the counter in Redis and the files in Moto.</li><li>Add a fourth order yourself and watch it flow through.</li><li>Kill the main database, promote the standby, point a fresh worker at it, and send a fifth order through the new main database.</li><li>Push the lab folder to GitHub (the compose file, the two Python programs, the sample order files, and the README below). Do not push any real data — the sample orders are fake, and that is the point.</li></ol>
 <h3>README template — fill in the blanks</h3>
-<pre><code># Order pipeline demo (Kafka + PostgreSQL + Redis + Moto + NGINX)
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code># Order pipeline demo (Kafka + PostgreSQL + Redis + Moto + NGINX)
 What it is: [one line]
 How it works: a fake order file lands in incoming/, ingest stores
   it in Moto and sends it to Kafka, worker saves it in PostgreSQL
@@ -162,7 +170,35 @@ How it works: a fake order file lands in incoming/, ingest stores
 Tools used: Docker Compose, Kafka, PostgreSQL, Redis, Moto, NGINX, Python
 Failover I proved: killed the main database, promoted the standby
   with pg_promote(), sent a new order through the new main database.
-Cost: local only, no cloud bill.</code></pre>
+Cost: local only, no cloud bill.</code></pre></div>
 <hr>
 <h2>When all four are done</h2>
-<p>You have: a running container app, a working pipeline, an infrastructure-as-code setup with a monitoring chart, and a data pipeline with a proven failover — all on GitHub, all runnable, all explained in your own words. That is the proof this kit is built to give you.</p><div class="pager"><span><a href="p2-interview.html">← Previous: Interview Pack — Real Questions, What They Really Test</a></span><span><a href="p2-resume.html">Next: Resume Bullets — From Your Projects, In Simple Words →</a></span></div></div></body></html>
+<p>You have: a running container app, a working pipeline, an infrastructure-as-code setup with a monitoring chart, and a data pipeline with a proven failover — all on GitHub, all runnable, all explained in your own words. That is the proof this kit is built to give you.</p><nav class="pager"><a class="prev" href="/devops/lessons/p2-interview.html"><span>← Previous lesson</span><span class="pname">Interview Pack</span></a><a class="next" href="/devops/lessons/p2-resume.html"><span>Next lesson →</span><span class="pname">Resume Bullets</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
+<div class="auth-modal" id="auth-modal" hidden>
+  <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
+    <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
+    <h2>Sign in to DevOps Kit</h2>
+    <p class="auth-sub">Your progress saves, so you can stop and come back.</p>
+    <button class="btn auth-google" id="auth-google" type="button">Continue with Google</button>
+    <div class="auth-or"><span>or with email</span></div>
+    <div class="auth-tabs">
+      <button type="button" id="auth-tab-signin" class="active">Sign in</button>
+      <button type="button" id="auth-tab-signup">Create account</button>
+    </div>
+    <form id="auth-form">
+      <label>Email<input id="auth-email" type="email" autocomplete="email" required></label>
+      <label>Password<input id="auth-password" type="password" autocomplete="current-password" required minlength="6"></label>
+      <p class="auth-error" id="auth-error" hidden></p>
+      <button class="btn amber auth-submit" id="auth-submit" type="submit">Sign in</button>
+    </form>
+    <p class="auth-switch"><span id="auth-switch-note">No account yet? </span><button type="button" id="auth-switch-link" class="linklike">Create one</button></p>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="/devops/assets/auth.js"></script>
+<script src="/devops/assets/devops-app.js"></script>
+<script src="/devops/assets/lesson.js"></script></body></html>

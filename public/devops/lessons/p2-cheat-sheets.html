@@ -3,19 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cheat Sheets — Commands You Will Actually Use</title>
+<title>Cheat Sheets — Commands You Will Actually Use — DevOps Kit</title>
 <link rel="stylesheet" href="/devops/assets/style.css">
 </head>
-<body>
-<div class="brandbar"><a href="/devops/index.html">PromptStudio<span class="dot">.</span></a><span class="tag">DevOps Kit</span></div>
-<header class="top"><h1>Cheat Sheets — Commands You Will Actually Use</h1><p>Phase 2 · The Rest of DevOps · fake data only</p></header><nav class="crumbs"><a href="../index.html">Home</a> / Phase 2</nav><div class="wrap"><div class="progress">Lesson 12 of 16</div><div class="progressbar"><span style="width:75%"></span></div><span class="phasebadge">Phase 2 · The Rest of DevOps</span><p>Keep this file open while you practise. All commands below are standard, well-known commands for their tools, written for a Linux terminal (Ubuntu/Debian directly, or WSL2 Ubuntu on Windows). <code>systemctl</code> commands work on systemd Linux only — on Docker Desktop, start the app instead.</p>
+<body data-page="lesson" data-lesson="p2-cheat-sheets" data-phase="phase2">
+<header class="lesson-header">
+  <div class="lh-row">
+    <a class="wordmark" href="/devops/index.html">DevOps Kit</a>
+    <span class="lh-meta">Phase 2 · Lesson 12 of 16</span>
+    <span class="auth-slot" id="auth-slot"></span>
+  </div>
+  <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
+</header>
+<main class="lesson-wrap">
+<div class="lock-screen" id="lock-screen" hidden><span class="lock-icon">🔒</span><h2>This lesson is in Phase 2 — ₹799, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase2" type="button" hidden>Buy Phase 2 — ₹799</button><a class="lock-back" href="/devops/index.html">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><h1>Cheat Sheets — Commands You Will Actually Use</h1><span class="phasebadge">Phase 2 · The Rest of DevOps</span><p>Keep this file open while you practise. All commands below are standard, well-known commands for their tools, written for a Linux terminal (Ubuntu/Debian directly, or WSL2 Ubuntu on Windows). <code>systemctl</code> commands work on systemd Linux only — on Docker Desktop, start the app instead.</p>
 <h2>Making files</h2>
-<pre><code>nano &lt;file&gt;            Open a file in a simple text editor
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>nano &lt;file&gt;            Open a file in a simple text editor
                        (Ctrl+O, Enter to save, Ctrl+X to leave)
-cat &gt; &lt;file&gt; &lt;&lt; &#x27;EOF&#x27;  Write lines into a file until the EOF line</code></pre>
+cat &gt; &lt;file&gt; &lt;&lt; &#x27;EOF&#x27;  Write lines into a file until the EOF line</code></pre></div>
 <p>YAML warning: use spaces, never Tab, in <code>.yml</code> files.</p>
 <h2>Linux</h2>
-<pre><code>pwd                    Show which folder you are in
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>pwd                    Show which folder you are in
 ls -la                 List files, including hidden ones
 cd &lt;folder&gt;            Move into a folder
 mkdir &lt;name&gt;           Make a new folder
@@ -27,9 +35,9 @@ top                    Watch live CPU and memory use
 df -h                  Show disk space
 free -h                Show memory use
 sudo systemctl start &lt;service&gt;    Start a service
-sudo systemctl status &lt;service&gt;   Check a service</code></pre>
+sudo systemctl status &lt;service&gt;   Check a service</code></pre></div>
 <h2>Git</h2>
-<pre><code>git init               Start tracking a folder
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git init               Start tracking a folder
 git clone &lt;address&gt;    Copy a repository from GitHub to your machine
 git config user.name &quot;Your Name&quot;    Tell Git who you are (once)
 git config user.email &quot;you@example.com&quot;   (once)
@@ -42,9 +50,9 @@ git checkout -b &lt;name&gt;   Make a new branch and move into it
 git merge &lt;branch&gt;     Merge a branch into the current one
 git push               Send your saves to GitHub
 git pull               Download and integrate the latest changes
-                       (usually merge, or rebase if set up that way)</code></pre>
+                       (usually merge, or rebase if set up that way)</code></pre></div>
 <h2>Docker</h2>
-<pre><code>docker ps              List running containers
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker ps              List running containers
 docker ps -a           List all containers, including stopped ones
 docker images          List downloaded images
 docker run hello-world   Prove Docker works
@@ -63,10 +71,10 @@ docker run -d -v ~/data:/data --name store ubuntu sleep 1000
                        live on your machine)
 docker compose up -d   Start the containers in docker-compose.yml
 docker compose ps      List containers started by Compose
-docker compose down    Stop and remove Compose containers</code></pre>
+docker compose down    Stop and remove Compose containers</code></pre></div>
 <h2>Kubernetes (kubectl)</h2>
 <p><code>kubectl</code> is the command tool for talking to a Kubernetes cluster.</p>
-<pre><code>kubectl get pods       List pods
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl get pods       List pods
 kubectl get nodes      List cluster machines
 kubectl get deployments   List deployments
 kubectl get services   List services
@@ -77,48 +85,48 @@ kubectl logs &lt;pod&gt;     Read a pod&#x27;s logs
 kubectl logs &lt;pod&gt; --previous   Read the crashed run&#x27;s logs after
                        a restart
 kubectl apply -f &lt;file.yaml&gt;   Create things from a file
-kubectl delete -f &lt;file.yaml&gt;  Remove things from a file</code></pre>
+kubectl delete -f &lt;file.yaml&gt;  Remove things from a file</code></pre></div>
 <h2>kind (local Kubernetes)</h2>
-<pre><code>kind create cluster --name devops-practice   Start a local cluster
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kind create cluster --name devops-practice   Start a local cluster
 kind load docker-image my-site:1.0 --name devops-practice
                        Copy a local image into the cluster
-kind delete cluster --name devops-practice   Remove the cluster</code></pre>
+kind delete cluster --name devops-practice   Remove the cluster</code></pre></div>
 <h2>Terraform</h2>
-<pre><code>terraform init         Prepare a folder for Terraform
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>terraform init         Prepare a folder for Terraform
 terraform plan         Show what Terraform would change
 terraform apply        Create or change the infrastructure
-terraform destroy      Remove everything Terraform created</code></pre>
+terraform destroy      Remove everything Terraform created</code></pre></div>
 <p>Warning: <code>terraform destroy</code> removes everything the active configuration and state manage. Before you run it: check you are in the right folder, check the workspace and state, and read the destruction plan (<code>terraform plan -destroy</code>) first. Run it only on your own disposable practice setup — never on anything shared or real, and never without that plan check.</p>
 <h2>Prometheus and Grafana (concepts, not commands)</h2>
 <ul><li>Prometheus collects numbers (metrics) from your apps.</li><li>Grafana turns those numbers into charts.</li><li>The two things to check first: is the app up, and is it slow?</li></ul>
 <h2>Kafka (Phase 1 — run inside the container with docker exec)</h2>
-<pre><code>docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
                        List topics on cluster a
 docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic orders --partitions 1 --replication-factor 1
                        Make a topic called orders
 docker exec -it kafka-a /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic orders
                        Send messages (type lines, Ctrl+C to stop)
 docker exec kafka-a /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --from-beginning
-                       Read messages from the start</code></pre>
+                       Read messages from the start</code></pre></div>
 <p>Kafka commands run inside the container because Kafka tells clients to come back to the container&#x27;s own name. Do not run them from your own terminal.</p>
 <h2>PostgreSQL (Phase 1 — run inside the container with docker exec)</h2>
-<pre><code>docker exec pg-primary psql -U learner -d practice -c &quot;SELECT * FROM orders ORDER BY id;&quot;
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec pg-primary psql -U learner -d practice -c &quot;SELECT * FROM orders ORDER BY id;&quot;
                        Read rows from the primary
 docker exec pg-replica psql -U learner -d practice -c &quot;SELECT pg_is_in_recovery();&quot;
                        t = standby, f = primary
 docker exec pg-replica psql -U learner -d practice -c &quot;SELECT pg_promote();&quot;
                        Promote the standby to primary
 docker exec pg-primary psql -U learner -d practice
-                       Open an interactive psql shell (type \q to leave)</code></pre>
+                       Open an interactive psql shell (type \q to leave)</code></pre></div>
 <p>A standby refuses writes — that is correct, not a bug.</p>
 <h2>Patroni (Phase 1)</h2>
-<pre><code>curl http://localhost:8008/cluster
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8008/cluster
                        Show the cluster: who is leader, who is replica
 curl http://localhost:8008/leader
-                       Show the leader only</code></pre>
+                       Show the leader only</code></pre></div>
 <p>Patroni&#x27;s web page answers on port 8008 (node 1) and 8009 (node 2).</p>
 <h2>Redis (Phase 1 — run inside the container with docker exec)</h2>
-<pre><code>docker exec redis-a redis-cli ping
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli ping
                        Should answer PONG
 docker exec redis-a redis-cli SET user:101 Asha
                        Save a value
@@ -131,21 +139,49 @@ docker exec redis-a redis-cli TTL login-code:101
 docker exec redis-a redis-cli INCR orders:count
                        Add 1 to a counter
 docker exec redis-b redis-cli INFO replication
-                       Check the copy is following the main store</code></pre>
+                       Check the copy is following the main store</code></pre></div>
 <h2>Moto and aws (Phase 1 — object store)</h2>
-<pre><code>docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 mb s3://incoming
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 mb s3://incoming
                        Make a bucket called incoming
 docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 cp /files/receipt-001.txt s3://incoming/
                        Upload a file
 docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 ls s3://incoming/
                        List files in the bucket
 docker compose exec awscli aws --endpoint-url http://moto-b:5000 s3 cp s3://incoming/receipt-001.txt -
-                       Print a file&#x27;s contents from the second store</code></pre>
+                       Print a file&#x27;s contents from the second store</code></pre></div>
 <h2>NGINX load balancer (Phase 1)</h2>
-<pre><code>curl http://localhost:8080/
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8080/
                        Ask the load balancer for the page
                        (repeat it — a different backend answers each time)
 docker compose logs lb
-                       Read what the load balancer saw</code></pre>
+                       Read what the load balancer saw</code></pre></div>
 <h2>Troubleshooting index — error, then where to look</h2>
-<ul><li>&quot;image not found&quot; / container never starts → break-and-fix-labs.md Lab 1: read Docker&#x27;s error, check the image name and tag.</li><li>Container starts, then dies at once → break-and-fix-labs.md Lab 2: the main program exited; run the real foreground app.</li><li>Pipeline fails on a missing test file → break-and-fix-labs.md Lab 3: write the real test, do not bypass it.</li><li>Git merge conflict → break-and-fix-labs.md Lab 4: read the markers, pick the right lines, finish the merge.</li><li>Browser shows nothing but the container runs → break-and-fix-labs.md Lab 5: check the PORTS column in <code>docker ps</code> — the <code>-p</code> mapping is the door, logs alone do not prove it.</li><li>Docker build &quot;file not found&quot; → break-and-fix-labs.md Lab 6: check the build context and <code>.dockerignore</code>.</li><li>Pod crashes, bad image → kubernetes-lab.md Step 5: describe the pod, fix the Deployment, check rollout status.</li><li>Monitoring target DOWN → portfolio-projects.md Project 3: check <code>docker compose ps</code>, the service logs, then the Prometheus Targets error line, in that order.</li><li>Kafka topic missing or consumer shows nothing → Phase 1 kafka-lab.md: check the topic list on the right cluster, and remember Kafka commands run with <code>docker exec</code> inside the container, not from your own terminal.</li><li>PostgreSQL replica shows 0 rows → Phase 1 postgresql-lab.md: wait 10 seconds and try again, then check <code>SELECT pg_is_in_recovery();</code> shows <code>t</code> on the replica.</li><li>&quot;cannot execute INSERT in a read-only transaction&quot; on a replica → correct, not a bug: a standby takes reads only. Write on the primary, or promote the replica first.</li><li>Redis READONLY error on the copy → correct, not a bug: a one-way replica takes reads only.</li><li>Moto file missing from the second store → Phase 1 object-store-lab.md: wait a minute, then check <code>docker compose logs mirror</code> for the error line.</li><li>Load balancer answers the same backend every time → Phase 1 load-balancer-lab.md: check <code>docker compose ps</code> — a dead backend is skipped by the guard, which is correct behaviour.</li></ul><div class="pager"><span><a href="p2-break-fix.html">← Previous: Break-and-Fix Labs — Learn Like On-Call Work</a></span><span><a href="p2-interview.html">Next: Interview Pack — Real Questions, What They Really Test →</a></span></div></div></body></html>
+<ul><li>&quot;image not found&quot; / container never starts → break-and-fix-labs.md Lab 1: read Docker&#x27;s error, check the image name and tag.</li><li>Container starts, then dies at once → break-and-fix-labs.md Lab 2: the main program exited; run the real foreground app.</li><li>Pipeline fails on a missing test file → break-and-fix-labs.md Lab 3: write the real test, do not bypass it.</li><li>Git merge conflict → break-and-fix-labs.md Lab 4: read the markers, pick the right lines, finish the merge.</li><li>Browser shows nothing but the container runs → break-and-fix-labs.md Lab 5: check the PORTS column in <code>docker ps</code> — the <code>-p</code> mapping is the door, logs alone do not prove it.</li><li>Docker build &quot;file not found&quot; → break-and-fix-labs.md Lab 6: check the build context and <code>.dockerignore</code>.</li><li>Pod crashes, bad image → kubernetes-lab.md Step 5: describe the pod, fix the Deployment, check rollout status.</li><li>Monitoring target DOWN → portfolio-projects.md Project 3: check <code>docker compose ps</code>, the service logs, then the Prometheus Targets error line, in that order.</li><li>Kafka topic missing or consumer shows nothing → Phase 1 kafka-lab.md: check the topic list on the right cluster, and remember Kafka commands run with <code>docker exec</code> inside the container, not from your own terminal.</li><li>PostgreSQL replica shows 0 rows → Phase 1 postgresql-lab.md: wait 10 seconds and try again, then check <code>SELECT pg_is_in_recovery();</code> shows <code>t</code> on the replica.</li><li>&quot;cannot execute INSERT in a read-only transaction&quot; on a replica → correct, not a bug: a standby takes reads only. Write on the primary, or promote the replica first.</li><li>Redis READONLY error on the copy → correct, not a bug: a one-way replica takes reads only.</li><li>Moto file missing from the second store → Phase 1 object-store-lab.md: wait a minute, then check <code>docker compose logs mirror</code> for the error line.</li><li>Load balancer answers the same backend every time → Phase 1 load-balancer-lab.md: check <code>docker compose ps</code> — a dead backend is skipped by the guard, which is correct behaviour.</li></ul><nav class="pager"><a class="prev" href="/devops/lessons/p2-break-fix.html"><span>← Previous lesson</span><span class="pname">Break-and-Fix</span></a><a class="next" href="/devops/lessons/p2-interview.html"><span>Next lesson →</span><span class="pname">Interview Pack</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
+<div class="auth-modal" id="auth-modal" hidden>
+  <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
+    <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
+    <h2>Sign in to DevOps Kit</h2>
+    <p class="auth-sub">Your progress saves, so you can stop and come back.</p>
+    <button class="btn auth-google" id="auth-google" type="button">Continue with Google</button>
+    <div class="auth-or"><span>or with email</span></div>
+    <div class="auth-tabs">
+      <button type="button" id="auth-tab-signin" class="active">Sign in</button>
+      <button type="button" id="auth-tab-signup">Create account</button>
+    </div>
+    <form id="auth-form">
+      <label>Email<input id="auth-email" type="email" autocomplete="email" required></label>
+      <label>Password<input id="auth-password" type="password" autocomplete="current-password" required minlength="6"></label>
+      <p class="auth-error" id="auth-error" hidden></p>
+      <button class="btn amber auth-submit" id="auth-submit" type="submit">Sign in</button>
+    </form>
+    <p class="auth-switch"><span id="auth-switch-note">No account yet? </span><button type="button" id="auth-switch-link" class="linklike">Create one</button></p>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="/devops/assets/auth.js"></script>
+<script src="/devops/assets/devops-app.js"></script>
+<script src="/devops/assets/lesson.js"></script></body></html>

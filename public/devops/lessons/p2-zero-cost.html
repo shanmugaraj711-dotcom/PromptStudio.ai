@@ -3,12 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Zero-Cost Lab — One Machine, No Cloud Bill</title>
+<title>Zero-Cost Lab — One Machine, No Cloud Bill — DevOps Kit</title>
 <link rel="stylesheet" href="/devops/assets/style.css">
 </head>
-<body>
-<div class="brandbar"><a href="/devops/index.html">PromptStudio<span class="dot">.</span></a><span class="tag">DevOps Kit</span></div>
-<header class="top"><h1>Zero-Cost Lab — One Machine, No Cloud Bill</h1><p>Phase 2 · The Rest of DevOps · fake data only</p></header><nav class="crumbs"><a href="../index.html">Home</a> / Phase 2</nav><div class="wrap"><div class="progress">Lesson 9 of 16</div><div class="progressbar"><span style="width:56%"></span></div><span class="phasebadge">Phase 2 · The Rest of DevOps</span><h2>What you need</h2>
+<body data-page="lesson" data-lesson="p2-zero-cost" data-phase="phase2">
+<header class="lesson-header">
+  <div class="lh-row">
+    <a class="wordmark" href="/devops/index.html">DevOps Kit</a>
+    <span class="lh-meta">Phase 2 · Lesson 9 of 16</span>
+    <span class="auth-slot" id="auth-slot"></span>
+  </div>
+  <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
+</header>
+<main class="lesson-wrap">
+<div class="lock-screen" id="lock-screen" hidden><span class="lock-icon">🔒</span><h2>This lesson is in Phase 2 — ₹799, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase2" type="button" hidden>Buy Phase 2 — ₹799</button><a class="lock-back" href="/devops/index.html">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><h1>Zero-Cost Lab — One Machine, No Cloud Bill</h1><span class="phasebadge">Phase 2 · The Rest of DevOps</span><h2>What you need</h2>
 <ul><li>A computer with internet.</li><li>Linux. If you use Windows, install WSL2 with Ubuntu first (Windows Subsystem for Linux — a way to run Linux inside Windows). If you use a Mac, the Docker steps below need Docker Desktop instead.</li><li>No cloud account. No card. Nothing here costs money.</li></ul>
 <h2>Open a terminal first</h2>
 <ul><li>Linux: press Ctrl+Alt+T, or find Terminal in your apps.</li><li>Mac: open the Terminal app.</li><li>Windows: after WSL2 and Ubuntu are installed, open Ubuntu from the Start menu — that window is your Linux terminal.</li></ul>
@@ -17,66 +25,94 @@
 <h2>How to make a file (you will need this)</h2>
 <p>Projects and labs ask you to make files like <code>index.html</code>, <code>Dockerfile</code>, and <code>.yml</code> files. Two easy ways:</p>
 <ol><li>With a text editor: type <code>nano index.html</code>, write your text, press Ctrl+O then Enter to save, Ctrl+X to leave.</li><li>Straight from the terminal (good for short files):</li></ol>
-<pre><code>cat &gt; index.html &lt;&lt; &#x27;EOF&#x27;
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cat &gt; index.html &lt;&lt; &#x27;EOF&#x27;
 &lt;h1&gt;My site&lt;/h1&gt;
 &lt;p&gt;Learning DevOps, one project at a time.&lt;/p&gt;
-EOF</code></pre>
+EOF</code></pre></div>
 <p><code>cat &gt;</code> writes what follows into the file until the <code>EOF</code> line. One YAML warning: YAML files use spaces for structure — never use the Tab key in a <code>.yml</code> or <code>.yaml</code> file. If a YAML file fails with a strange error, check the spaces first.</p>
 <h2>Step 1 — Check what you already have</h2>
 <p>Open a terminal and run:</p>
-<pre><code>git --version
-docker --version</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git --version
+docker --version</code></pre></div>
 <p>If both print a version number, skip to Step 3. If either says &quot;command not found&quot;, go to Step 2 (Step 2 is Linux-terminal only — see its note).</p>
 <h2>Step 2 — Install Git and Docker (Ubuntu/Debian)</h2>
 <p>This step is for a Linux terminal only (Ubuntu/Debian directly, or WSL2 Ubuntu on Windows). On a Mac, do NOT run these commands — install Git and Docker Desktop, then go to Step 3.</p>
-<pre><code>sudo apt update
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>sudo apt update
 sudo apt install -y git docker.io
 sudo systemctl enable --now docker
-sudo usermod -aG docker $USER</code></pre>
+sudo usermod -aG docker $USER</code></pre></div>
 <p>Then close the terminal, open it again, and run:</p>
-<pre><code>docker --version</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker --version</code></pre></div>
 <p>The <code>usermod</code> step lets you run Docker without typing <code>sudo</code> each time. It only takes effect after you open a fresh terminal (or log out and back in).</p>
 <p>Warning: being in the Docker group effectively gives control of this Linux machine at the administrator level. Use it only on a machine you control. On a shared or work machine, follow the administrator&#x27;s rules instead — Docker&#x27;s rootless mode is the safer option there.</p>
 <h2>Step 3 — Prove Docker works</h2>
-<pre><code>docker run hello-world</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker run hello-world</code></pre></div>
 <p>You should see a message saying Docker is working. This downloads a tiny test image and runs it once. If it fails, read the error: the most common cause is that Docker is not running — on a Linux terminal, run <code>sudo systemctl start docker</code> and try again. On Docker Desktop (Mac, or Windows outside WSL2), open Docker Desktop instead — systemctl does not apply there. If the error says &quot;permission denied&quot;, your terminal session has not picked up the Docker group yet — run <code>newgrp docker</code>, or close the terminal and open it again, then retry.</p>
 <h2>Step 4 — Run your first real container</h2>
-<pre><code>docker run -d -p 8080:80 --name my-site nginx</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker run -d -p 8080:80 --name my-site nginx</code></pre></div>
 <p>What this means:</p>
 <ul><li><code>-d</code> — run in the background.</li><li><code>-p 8080:80</code> — connect port 8080 on your machine to port 80 inside the container. A port is just a numbered door for network traffic.</li><li><code>--name my-site</code> — give the container a name you can use later.</li><li><code>nginx</code> — a small, well-known web server program.</li></ul>
 <p>Now open your browser and go to <code>http://localhost:8080</code>. You should see the nginx welcome page. <code>localhost</code> means &quot;this machine&quot;.</p>
 <h2>Step 5 — Look at it and stop it</h2>
-<pre><code>docker ps
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker ps
 docker stop my-site
-docker ps</code></pre>
+docker ps</code></pre></div>
 <p><code>docker ps</code> lists running containers. After <code>docker stop</code>, the second <code>docker ps</code> should no longer list my-site — your container is stopped. Other running containers may still appear. To start it again later: <code>docker start my-site</code>. To remove it fully: <code>docker rm my-site</code>.</p>
 <h2>Step 6 — Make a folder for your work</h2>
-<pre><code>mkdir -p ~/devops-practice
-cd ~/devops-practice</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir -p ~/devops-practice
+cd ~/devops-practice</code></pre></div>
 <p>All later labs and projects in this kit live in this folder.</p>
 <h2>Step 7 — Put your work on GitHub (first time only)</h2>
 <p>The projects ask you to &quot;push to GitHub&quot;. The first time, do this once:</p>
 <ol><li>Make a free account on github.com, then make a new repository (a folder on GitHub that holds your project). GitHub will show you the repository&#x27;s address — copy it.</li><li>In your terminal, from inside your project folder, first check Git knows who you are: <code>git config user.name</code> and <code>git config user.email</code>. If either prints nothing, set them (see cheat-sheets.md — use an email you are comfortable attaching to your commits). Then run <code>git status</code> to see what would be staged, and make a <code>.gitignore</code> file first if the folder holds anything private (passwords, keys, Terraform state files) — never stage those. Then run:</li></ol>
-<pre><code>git init
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git init
 git add .
 git commit -m &quot;first commit&quot;
 git branch -M main
 git remote add origin &lt;your repository address&gt;
-git push -u origin main</code></pre>
+git push -u origin main</code></pre></div>
 <p>What this means: <code>git init</code> starts tracking the folder, <code>git add .</code> stages everything, <code>commit</code> saves it, <code>branch -M main</code> names your main line of work &quot;main&quot;, <code>remote add origin</code> connects your folder to GitHub, and <code>push</code> sends it there. After this first push, later pushes are just <code>git add .</code>, <code>git commit -m &quot;message&quot;</code>, <code>git push</code>. Replace <code>&lt;your repository address&gt;</code> with the address GitHub showed you — do not type the brackets.</p>
 <h2>Step 8 — Your first script</h2>
 <p>A script is a text file full of commands. Make one that checks your Docker containers:</p>
-<pre><code>cat &gt; health-check.sh &lt;&lt; &#x27;EOF&#x27;
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cat &gt; health-check.sh &lt;&lt; &#x27;EOF&#x27;
 #!/bin/bash
 echo &quot;Running containers:&quot;
 docker ps --format &quot;{{.Names}} is {{.Status}}&quot;
 EOF
 chmod +x health-check.sh
-./health-check.sh</code></pre>
+./health-check.sh</code></pre></div>
 <p>What this means: the first line says &quot;run this with Bash&quot;; <code>chmod +x</code> makes the file runnable; <code>./</code> means &quot;run the file in this folder&quot;. If you forget <code>chmod +x</code>, you get &quot;permission denied&quot; — that usually means &quot;this file is not marked runnable yet&quot;. But the same error can also come from the wrong owner, a folder you cannot enter, or a disk that forbids running files. If the error names a missing interpreter instead, check the first line of the script and whether that program is installed.</p>
 <h2>If something goes wrong</h2>
 <ol><li>Read the error message fully before searching for help.</li><li><code>docker ps -a</code> shows stopped containers too — useful when a container died.</li><li><code>docker logs my-site</code> shows what a container printed before it stopped. Start with the error message and the container&#x27;s status. For a container that stopped, <code>docker logs</code> is usually the next look. For a container that never started, the error Docker printed is the evidence — there may be no logs at all.</li><li>Docker itself confused? Three different problems, three checks: <code>docker --version</code> prints nothing → the Docker program is missing, install it. <code>docker ps</code> says it cannot connect → Docker is installed but not running, start it (Linux terminal: systemctl; Docker Desktop: open the app). <code>docker ps</code> works but a command says permission denied → your terminal has not picked up the Docker group, run <code>newgrp docker</code> or open a fresh terminal.</li></ol>
 <h2>What costs money (so you can avoid it)</h2>
 <p>Cloud servers, hosted Kubernetes, and paid course platforms cost money. Nothing in this lab needs them. If a later step in this kit mentions a cloud service, it will say so clearly and give a local alternative first.</p>
 <h2>What comes next</h2>
-<p>You can now run Docker. Do the break-and-fix labs as you learn each tool, then build the portfolio projects. When you can run Docker and read logs, Phase 1 is next: Kafka, PostgreSQL, Redis, Moto and a load balancer, ending with an end-to-end lab where a fake order flows through all of them at once.</p><div class="pager"><span><a href="p2-start.html">← Previous: Start Here — Phase 2: Linux, Git, Docker and More</a></span><span><a href="p2-kubernetes.html">Next: Kubernetes Lab — Your App on a Small Local Cluster →</a></span></div></div></body></html>
+<p>You can now run Docker. Do the break-and-fix labs as you learn each tool, then build the portfolio projects. When you can run Docker and read logs, Phase 1 is next: Kafka, PostgreSQL, Redis, Moto and a load balancer, ending with an end-to-end lab where a fake order flows through all of them at once.</p><nav class="pager"><a class="prev" href="/devops/lessons/p2-start.html"><span>← Previous lesson</span><span class="pname">Start Here</span></a><a class="next" href="/devops/lessons/p2-kubernetes.html"><span>Next lesson →</span><span class="pname">Kubernetes</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
+<div class="auth-modal" id="auth-modal" hidden>
+  <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
+    <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
+    <h2>Sign in to DevOps Kit</h2>
+    <p class="auth-sub">Your progress saves, so you can stop and come back.</p>
+    <button class="btn auth-google" id="auth-google" type="button">Continue with Google</button>
+    <div class="auth-or"><span>or with email</span></div>
+    <div class="auth-tabs">
+      <button type="button" id="auth-tab-signin" class="active">Sign in</button>
+      <button type="button" id="auth-tab-signup">Create account</button>
+    </div>
+    <form id="auth-form">
+      <label>Email<input id="auth-email" type="email" autocomplete="email" required></label>
+      <label>Password<input id="auth-password" type="password" autocomplete="current-password" required minlength="6"></label>
+      <p class="auth-error" id="auth-error" hidden></p>
+      <button class="btn amber auth-submit" id="auth-submit" type="submit">Sign in</button>
+    </form>
+    <p class="auth-switch"><span id="auth-switch-note">No account yet? </span><button type="button" id="auth-switch-link" class="linklike">Create one</button></p>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="/devops/assets/auth.js"></script>
+<script src="/devops/assets/devops-app.js"></script>
+<script src="/devops/assets/lesson.js"></script></body></html>
