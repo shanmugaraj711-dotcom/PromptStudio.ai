@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Redis Lab — A Fast Memory Store</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="top"><h1>Redis Lab — A Fast Memory Store</h1><p>Phase 1 · DevOps Kit · fake data only</p></header><nav class="crumbs"><a href="../index.html">Home</a> / Phase 1</nav><div class="wrap"><div class="simbox">▶ Try it first: <a href="../sims/redis.html">Redis Simulation — A Fast Memory Store</a><br>Simulation — practice version. Run the real lab with Docker to do it for real.</div><h2>Test status</h2>
+<p>Syntax-checked only (20 November 2026). The compose file was checked for correct syntax. This lab was not run end-to-end on this machine, because this machine has no Docker. Follow it on your own machine with Docker, and if a step fails, read the error first — that is the real skill.</p>
+<h2>What this lab is</h2>
+<p>You will run two Redis stores on your own machine: a main one and a copy that follows it. You will save fake values, set expiry times, use a counter, and see what happens when you try to write to the copy. All data is fake.</p>
+<h2>What you need first</h2>
+<ul><li>Docker running (Phase 2, zero-cost-lab.md).</li><li>The file in this folder: <code>docker-compose.yml</code>.</li></ul>
+<h2>Words you need here</h2>
+<ul><li><strong>Redis</strong> — a store that keeps data in memory, so reads are very fast. It is used for caches, counters and short-term data.</li><li><strong>Key and value</strong> — Redis stores things by name. The name is the key, the thing stored is the value. Example: key <code>user:101</code>, value <code>Asha</code>.</li><li><strong>Cache</strong> — a fast copy of an answer, kept so you do not have to ask the slow database again.</li><li><strong>Expiry (TTL)</strong> — a time limit on a key. When the time runs out, Redis deletes the key by itself.</li><li><strong>Replica</strong> — a copy that follows the main store. It takes reads only.</li><li><strong>CRDT</strong> — a way for two stores to accept writes at the same time and merge them. It is a paid feature. This lab shows the idea in plain words and shows the free one-way copy instead.</li></ul>
+<h2>Step 1 — Start both stores</h2>
+<p>From inside this folder:</p>
+<pre><code>docker compose up -d</code></pre>
+<p>Check:</p>
+<pre><code>docker compose ps</code></pre>
+<p>You should see <code>redis-a</code> and <code>redis-b</code> with STATUS &quot;Up&quot;. Check they answer:</p>
+<pre><code>docker exec redis-a redis-cli ping</code></pre>
+<p>You should see:</p>
+<pre><code>PONG</code></pre>
+<p>If it breaks: if <code>ping</code> shows nothing, wait 10 seconds and try again. Redis starts fast, but the first start downloads the image.</p>
+<h2>Step 2 — Save and read a value</h2>
+<p>Save a fake user:</p>
+<pre><code>docker exec redis-a redis-cli SET user:101 Asha</code></pre>
+<p>You should see:</p>
+<pre><code>OK</code></pre>
+<p>Read it back:</p>
+<pre><code>docker exec redis-a redis-cli GET user:101</code></pre>
+<p>You should see:</p>
+<pre><code>&quot;Asha&quot;</code></pre>
+<p>The quotes are part of how redis-cli shows a value. The value stored is <code>Asha</code>.</p>
+<h2>Step 3 — Set a value that deletes itself</h2>
+<p>Save a login code that lasts 60 seconds:</p>
+<pre><code>docker exec redis-a redis-cli SETEX login-code:101 60 482913</code></pre>
+<p>You should see <code>OK</code>. Check how long is left:</p>
+<pre><code>docker exec redis-a redis-cli TTL login-code:101</code></pre>
+<p>You should see a number near 60 (it counts down — 58, 57, and so on). Wait 65 seconds and read it again:</p>
+<pre><code>docker exec redis-a redis-cli GET login-code:101</code></pre>
+<p>You should see:</p>
+<pre><code>(nil)</code></pre>
+<p><code>(nil)</code> means &quot;nothing here&quot; — the key deleted itself when its time ran out. This is how login codes and short-lived sessions work: the store cleans up by itself.</p>
+<h2>Step 4 — Use a counter</h2>
+<p>Counters are the simplest thing Redis does well. Make one:</p>
+<pre><code>docker exec redis-a redis-cli SET orders:count 0
+docker exec redis-a redis-cli INCR orders:count
+docker exec redis-a redis-cli INCR orders:count
+docker exec redis-a redis-cli INCR orders:count
+docker exec redis-a redis-cli GET orders:count</code></pre>
+<p>You should see:</p>
+<pre><code>&quot;3&quot;</code></pre>
+<p>Each INCR adds 1. In the end-to-end lab, a worker does this every time an order is saved — that is how the app shows &quot;how many orders&quot; without asking the database.</p>
+<h2>Step 5 — Read the same values from the copy</h2>
+<p>The copy follows the main store. Read from it:</p>
+<pre><code>docker exec redis-b redis-cli GET user:101
+docker exec redis-b redis-cli GET orders:count</code></pre>
+<p>You should see <code>&quot;Asha&quot;</code> and <code>&quot;3&quot;</code>. The copy has the same data. Now check what the copy thinks it is:</p>
+<pre><code>docker exec redis-b redis-cli INFO replication</code></pre>
+<p>You should see a line <code>role:slave</code> (older Redis still calls a replica &quot;slave&quot;) and a line <code>master_host:redis-a</code>. That is the proof it is following the main store.</p>
+<h2>Step 6 — Try to write on the copy (it must refuse)</h2>
+<pre><code>docker exec redis-b redis-cli SET user:102 Ravi</code></pre>
+<p>You should see an error like:</p>
+<pre><code>(error) READONLY You can&#x27;t write against a read only replica.</code></pre>
+<p>That error is the proof. A one-way copy takes reads only. This is correct and expected — do not try to fix it.</p>
+<h2>Step 7 — The two-way idea, in plain words</h2>
+<p>What if two stores both accept writes at the same time? Then they must merge the changes. That merge rule is called a CRDT. It is a paid feature in Redis products. The free Redis in this lab does not have it. The idea is the same as a shared document: if two people change the same line at the same time, the system needs a rule for which change wins. With a CRDT, the rule is built into the data itself, so both copies end up the same without arguing. For this lab, remember this: one-way copy is free and simple; two-way copy is a paid feature with rules you must understand before you use it.</p>
+<h2>Clean up</h2>
+<pre><code>docker compose down</code></pre>
+<p>The data is in named volumes, so it survives a restart. Run <code>docker compose down -v</code> to wipe it. The data was fake.</p>
+<h2>What you can now say, truthfully</h2>
+<p>&quot;I ran two Redis stores, saved and read values, set keys that expire by themselves, used a counter, and proved a replica takes reads only.&quot;</p>
+<h2>What this lab does NOT cover</h2>
+<ul><li>Redis Cluster (many nodes sharing the data) is a bigger setup. The ideas are the same; the setup is bigger.</li><li>Redis persistence (saving to disk) is on in this lab with <code>--appendonly yes</code>, so data survives a restart. In real work, check the disk settings before you trust it.</li></ul><div class="pager"><span><a href="p1-postgresql.html">← Previous: PostgreSQL Lab — Main Database, Standby, Failover</a></span><span><a href="p1-object-store.html">Next: Object Store Lab — A File Cupboard →</a></span></div></div></body></html>

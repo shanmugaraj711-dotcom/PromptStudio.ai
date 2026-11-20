@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resume Bullets — From Your Projects, In Simple Words</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="top"><h1>Resume Bullets — From Your Projects, In Simple Words</h1><p>Phase 2 · DevOps Kit · fake data only</p></header><nav class="crumbs"><a href="../index.html">Home</a> / Phase 2</nav><div class="wrap"><h2>Rules before you copy anything</h2>
+<ul><li>Write only what you actually did. Fill in the blanks with your real project details.</li><li>Never invent numbers, company names, or job titles.</li><li>One bullet = one fact + one result. Keep each bullet to one line.</li><li>If a bullet is not true for you yet, leave it out until it is.</li></ul>
+<h2>From Project 1 — Website in a container</h2>
+<ul><li>Built and ran a containerised website using Docker and nginx, reachable at a mapped port on a local machine.</li><li>Wrote a Dockerfile that builds the website image from a simple web page.</li><li>[Your detail:] Deployed the site image version [version] and verified it in a browser.</li></ul>
+<h2>From Project 2 — CI/CD pipeline</h2>
+<ul><li>Set up a GitHub Actions pipeline that tests the site, then builds a Docker image on every push to the repository.</li><li>Read a failed pipeline log, found the [error you fixed], and fixed it so the pipeline passed.</li><li>Kept the project&#x27;s build history visible in the repository&#x27;s Actions tab.</li></ul>
+<h2>From Project 3 — Terraform + monitoring</h2>
+<ul><li>Wrote Terraform files that create a local container setup, and checked with <code>terraform plan</code> that a second run needed no changes.</li><li>Added Prometheus and Grafana to watch the practice setup, with a chart showing [what your chart shows].</li><li>Ran the whole practice setup locally with no cloud bill.</li></ul>
+<h2>From the break-and-fix labs</h2>
+<ul><li>Diagnosed a container that would not start by reading its error message and correcting the image name.</li><li>Fixed a port clash by finding the running container and changing the port mapping.</li><li>Debugged a container that exited at once by reading its logs and finding the bad command.</li><li>Resolved a Git merge conflict by reading the conflict markers and keeping the correct lines.</li><li>Wrote a small Bash health-check script and made it runnable with chmod.</li><li>Found a missing port mapping when a running container did not answer in the browser.</li></ul>
+<h2>From the Phase 1 labs (data tier)</h2>
+<ul><li>Ran two Kafka clusters on one machine, made a topic, sent and read messages, and copied the topic to the second cluster with MirrorMaker 2.</li><li>Ran a PostgreSQL primary and a standby with WAL streaming, proved the standby had the same data, and promoted it by hand when the primary died.</li><li>Ran a Patroni cluster that promoted the standby to leader by itself when the leader stopped.</li><li>Used Redis as a cache and a counter, with keys that expire by themselves.</li><li>Ran two Moto object stores and set up a mirror that copies new files to the second store by itself.</li><li>Ran NGINX as a load balancer in front of three backends, killed one backend, and the site stayed up.</li><li>Built an end-to-end pipeline where a fake order flows through an object store, Kafka, PostgreSQL and Redis, behind a load balancer — then proved failover by killing the main database and sending a new order through the standby.</li></ul>
+<h2>A short summary you can adapt</h2>
+<p>&quot;Beginner DevOps learner. Built a containerised website, a CI/CD pipeline, a Terraform + monitoring demo, and a data pipeline with a proven failover, all on GitHub. Can read logs, fix failed builds, and explain my own projects.&quot;</p>
+<h2>What NOT to write</h2>
+<ul><li>Do not write &quot;expert&quot; or &quot;experienced DevOps engineer&quot; unless a real job gave you that role.</li><li>Do not list tools you only watched videos about. List tools you actually ran.</li><li>Do not copy someone else&#x27;s project description. Yours is smaller and true — that is better.</li></ul><div class="pager"><span><a href="p2-portfolio.html">← Previous: Portfolio Projects — Proof, Not Just Notes</a></span><span><a href="p2-best-sites.html">Next: Best Sites — What To Pick, And Why →</a></span></div></div></body></html>

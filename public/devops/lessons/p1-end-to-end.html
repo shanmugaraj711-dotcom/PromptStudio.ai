@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>End-to-End Lab — One Fake Order, All the Way Through</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="top"><h1>End-to-End Lab — One Fake Order, All the Way Through</h1><p>Phase 1 · DevOps Kit · fake data only</p></header><nav class="crumbs"><a href="../index.html">Home</a> / Phase 1</nav><div class="wrap"><div class="simbox">▶ Try it first: <a href="../sims/end-to-end.html">End-to-End Simulation — One Fake Order, All the Way Through</a><br>Simulation — practice version. Run the real lab with Docker to do it for real.</div><h2>Test status</h2>
+<p>Syntax-checked only (20 November 2026). The compose file, the two Python programs and the shell script were checked for correct syntax. The Python files also compile cleanly. This lab was not run end-to-end on this machine, because this machine has no Docker. Follow it on your own machine with Docker, and if a step fails, read the error first — that is the real skill.</p>
+<p>v2 (20 November 2026): fixed the four faults found in the EC2 demo — the backends now use an image that works on ARM64, the database setup file is readable, the Kafka client works on Python 3.12, and the object store is now Moto (MinIO&#x27;s free images are gone). Still syntax-checked only, not run end to end.</p>
+<h2>What this lab is</h2>
+<p>You will run a small order pipeline with one command. A fake order file lands in a folder. A program stores the file, sends the order to Kafka, and another program saves it in PostgreSQL and updates a counter in Redis. A load balancer spreads visitors across three backends. Then you kill the main database and watch the standby take over — and a new order still flows through.</p>
+<h2>What you need first</h2>
+<ul><li>Docker running (Phase 2, zero-cost-lab.md).</li><li>The single-topic labs (kafka, postgresql, redis, object store, load balancer) done first. This lab uses all of them at once.</li><li>The files in this folder: <code>docker-compose.yml</code>, <code>Dockerfile</code>, <code>requirements.txt</code>, <code>ingest.py</code>, <code>worker.py</code>, <code>nginx.conf</code>, <code>postgres/</code>, <code>incoming/</code> with three fake orders.</li></ul>
+<h2>The fake shop, in plain words</h2>
+<p>A small online shop sells stationery. A customer places an order. The order is a small file like this:</p>
+<pre><code class="language-json">{&quot;id&quot;: 101, &quot;item&quot;: &quot;notebook&quot;, &quot;amount&quot;: 250, &quot;buyer&quot;: &quot;Asha&quot;}</code></pre>
+<p>The order travels like this:</p>
+<ol><li>The file lands in <code>incoming/</code>.</li><li><code>ingest</code> sees it, stores a copy of the file in the object store (Moto, a free S3-compatible stand-in, bucket <code>incoming</code>), and sends the order to Kafka (topic <code>orders</code>).</li><li><code>worker</code> reads the order from Kafka, saves it in PostgreSQL (table <code>orders</code>), and adds 1 to the counter in Redis (<code>orders:count</code>).</li><li>The file moves to <code>processed/</code> — done.</li><li>Meanwhile, the load balancer (<code>lb</code>) spreads visitors across three backends (<code>web1</code>, <code>web2</code>, <code>web3</code>).</li><li>PostgreSQL copies every change to its standby, live.</li></ol>
+<p>All names, items and amounts are made up for this lab.</p>
+<h2>Step 1 — Start everything with one command</h2>
+<p>From inside this folder, first make the database setup file readable. The database runs as its own user, and it cannot read a file that is private to you. This one command fixes that:</p>
+<pre><code>chmod -R a+r .</code></pre>
+<p>Then start everything:</p>
+<pre><code>docker compose up -d --build</code></pre>
+<p>The first start builds the small Python image and downloads the others, so it takes a few minutes. Check all eleven services:</p>
+<pre><code>docker compose ps</code></pre>
+<p>You should see eleven containers with STATUS &quot;Up&quot;: <code>kafka</code>, <code>postgres-primary</code>, <code>postgres-replica</code>, <code>redis</code>, <code>moto</code>, <code>lb</code>, <code>web1</code>, <code>web2</code>, <code>web3</code>, <code>ingest</code>, <code>worker</code>.</p>
+<p>If it breaks: if any container shows &quot;Exited&quot;, read its log with <code>docker compose logs &lt;name&gt;</code> and look for the error line. The most common cause on the first run is a slow download — wait a minute and run <code>docker compose up -d</code> again.</p>
+<h2>Step 2 — Watch the three orders flow</h2>
+<p>The <code>incoming/</code> folder already holds three fake orders. The ingest program should pick them up within seconds. Watch it:</p>
+<pre><code>docker compose logs ingest</code></pre>
+<p>You should see lines like:</p>
+<pre><code>Connected to Kafka.
+Connected to the object store.
+Watching /incoming for new order files...
+Sent order-001.json: {&#x27;id&#x27;: 101, &#x27;item&#x27;: &#x27;notebook&#x27;, &#x27;amount&#x27;: 250, &#x27;buyer&#x27;: &#x27;Asha&#x27;}
+Sent order-002.json: {&#x27;id&#x27;: 102, &#x27;item&#x27;: &#x27;pen&#x27;, &#x27;amount&#x27;: 40, &#x27;buyer&#x27;: &#x27;Ravi&#x27;}
+Sent order-003.json: {&#x27;id&#x27;: 103, &#x27;item&#x27;: &#x27;mug&#x27;, &#x27;amount&#x27;: 350, &#x27;buyer&#x27;: &#x27;Meena&#x27;}</code></pre>
+<p>Now watch the worker:</p>
+<pre><code>docker compose logs worker</code></pre>
+<p>You should see lines like:</p>
+<pre><code>Connected to PostgreSQL.
+Connected to Redis.
+Connected to Kafka. Waiting for orders...
+Saved order 101: notebook (250)
+Saved order 102: pen (40)
+Saved order 103: mug (350)</code></pre>
+<p>If it breaks: if the worker says &quot;Waiting for PostgreSQL...&quot; for more than two minutes, the database is not up yet — check <code>docker compose ps</code>. If the ingest log shows no &quot;Sent&quot; lines, check the <code>incoming/</code> folder still holds the files. If the files are gone but nothing was saved, read the worker log from the top — the error line is usually about a connection.</p>
+<h2>Step 3 — Prove it in four places</h2>
+<p>Check the database:</p>
+<pre><code>docker compose exec postgres-primary psql -U learner -d practice -c &quot;SELECT * FROM orders ORDER BY id;&quot;</code></pre>
+<p>You should see:</p>
+<pre><code> id  |   item   | amount | buyer
+-----+----------+--------+-------
+ 101 | notebook |    250 | Asha
+ 102 | pen      |     40 | Ravi
+ 103 | mug      |    350 | Meena
+(3 rows)</code></pre>
+<p>Check the counter:</p>
+<pre><code>docker compose exec redis redis-cli GET orders:count</code></pre>
+<p>You should see:</p>
+<pre><code>&quot;3&quot;</code></pre>
+<p>Check the file store — the ingest log is the proof. Ingest only prints &quot;Sent ...&quot; after it has stored the file, so the three &quot;Sent&quot; lines in Step 2 mean all three files are in the object store (bucket <code>incoming</code>). Moto has no web page to open, so the log is the check. The object-store lab shows you how to list files with the <code>aws</code> tool.</p>
+<p>Check the load balancer:</p>
+<pre><code>for i in 1 2 3 4 5 6; do curl -s http://localhost:8080/ | grep Hostname; done</code></pre>
+<p>You should see the Hostname line change between the backends: <code>web1</code>, <code>web2</code>, <code>web3</code>, then again. That is the guard sharing the work.</p>
+<p>If it breaks: if the database shows fewer than 3 rows, wait 30 seconds and try again — the worker may still be catching up. If the counter shows less than 3, same fix. If the files are missing from the object store, check the ingest log — it prints a line for every file it sends.</p>
+<h2>Step 4 — Add a fourth order yourself</h2>
+<p>Make a new order file:</p>
+<pre><code>cat &gt; incoming/order-004.json &lt;&lt; &#x27;EOF&#x27;
+{&quot;id&quot;: 104, &quot;item&quot;: &quot;pen stand&quot;, &quot;amount&quot;: 120, &quot;buyer&quot;: &quot;Kumar&quot;}
+EOF</code></pre>
+<p>Wait 10 seconds, then check the database again:</p>
+<pre><code>docker compose exec postgres-primary psql -U learner -d practice -c &quot;SELECT * FROM orders ORDER BY id;&quot;</code></pre>
+<p>You should see 4 rows now, including order 104. And the counter:</p>
+<pre><code>docker compose exec redis redis-cli GET orders:count</code></pre>
+<p>You should see <code>&quot;4&quot;</code>. A new order flows through the whole pipeline by itself — file in, database row out.</p>
+<h2>Step 5 — Kill the main database</h2>
+<p>Stop the main database:</p>
+<pre><code>docker compose stop postgres-primary</code></pre>
+<p>The worker will crash (it cannot reach the database any more) and Docker will restart it. It will keep printing &quot;Waiting for PostgreSQL...&quot; — that is correct. It is waiting for a database that is gone.</p>
+<p>Check the standby still has the data:</p>
+<pre><code>docker compose exec postgres-replica psql -U learner -d practice -c &quot;SELECT * FROM orders ORDER BY id;&quot;</code></pre>
+<p>You should see all 4 rows. The standby has its own copy.</p>
+<h2>Step 6 — Promote the standby</h2>
+<pre><code>docker compose exec postgres-replica psql -U learner -d practice -c &quot;SELECT pg_promote();&quot;</code></pre>
+<p>You should see <code>t</code> (true). Check it is no longer a standby:</p>
+<pre><code>docker compose exec postgres-replica psql -U learner -d practice -c &quot;SELECT pg_is_in_recovery();&quot;</code></pre>
+<p>You should see <code>f</code> (false). It is now the main database.</p>
+<h2>Step 7 — Point a worker at the new main database</h2>
+<p>Stop the old worker (it is still waiting for the dead database):</p>
+<pre><code>docker compose stop worker</code></pre>
+<p>Start a fresh worker that talks to the new main database. The <code>--no-deps</code> flag matters: without it, Compose would restart the dead main database too.</p>
+<pre><code>docker compose run --no-deps --rm -e PG_HOST=postgres-replica worker</code></pre>
+<p>This runs in your terminal (not in the background), so you will see its logs live. Wait until you see:</p>
+<pre><code>Connected to PostgreSQL.
+Connected to Redis.
+Connected to Kafka. Waiting for orders...</code></pre>
+<p>Leave that terminal open. It is now the live worker.</p>
+<h2>Step 8 — Send a fifth order through the new main database</h2>
+<p>In a second terminal, from the same folder, make a new order:</p>
+<pre><code>cat &gt; incoming/order-005.json &lt;&lt; &#x27;EOF&#x27;
+{&quot;id&quot;: 105, &quot;item&quot;: &quot;ruler&quot;, &quot;amount&quot;: 60, &quot;buyer&quot;: &quot;Divya&quot;}
+EOF</code></pre>
+<p>Wait 10 seconds. In the first terminal (the worker), you should see:</p>
+<pre><code>Saved order 105: ruler (60)</code></pre>
+<p>Check the new main database:</p>
+<pre><code>docker compose exec postgres-replica psql -U learner -d practice -c &quot;SELECT * FROM orders ORDER BY id;&quot;</code></pre>
+<p>You should see 5 rows. The order flowed through the standby that is now the main database. Failover done — end to end.</p>
+<p>Stop the temporary worker with Ctrl+C in the first terminal.</p>
+<h2>Step 9 — The honest part</h2>
+<p>The old main database is still stopped, and it still has the old data (4 orders, not 5). It cannot rejoin by itself. In real work, you rebuild it from the new main database with <code>pg_basebackup</code>, the same way the standby was first built. For this lab, the simple way back is to wipe everything and start fresh:</p>
+<pre><code>docker compose down -v</code></pre>
+<p>That stops all services and deletes the data. The data was fake.</p>
+<h2>Clean up</h2>
+<pre><code>docker compose down -v</code></pre>
+<h2>What you can now say, truthfully</h2>
+<p>&quot;I built a pipeline where a fake order file flows through an object store, Kafka, PostgreSQL and Redis, behind a load balancer — then I killed the main database, promoted the standby, and a new order still flowed through.&quot;</p>
+<h2>What this lab does NOT cover</h2>
+<ul><li>Real pipelines run each part on its own machines, not all on one machine. The ideas are the same; the setup is bigger.</li><li>Moto keeps files in memory only. If you stop the lab, the files are gone. The database rows and the Redis counter live in named volumes, so they survive a restart — the files do not.</li><li>This lab has no automatic failover (no Patroni here). The promotion in Step 6 is by hand. The Patroni part of the PostgreSQL lab shows the automatic version.</li><li>The load balancer here serves three tiny backends. A real app behind it is a bigger setup — but the guard works the same way.</li></ul><div class="pager"><span><a href="p1-load-balancer.html">← Previous: Load Balancer Lab — One Guard, Three Backends</a></span><span><a href="p2-start.html">Next: Start Here — Phase 2: Linux, Git, Docker and More →</a></span></div></div></body></html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Load Balancer Lab — One Guard, Three Backends</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="top"><h1>Load Balancer Lab — One Guard, Three Backends</h1><p>Phase 1 · DevOps Kit · fake data only</p></header><nav class="crumbs"><a href="../index.html">Home</a> / Phase 1</nav><div class="wrap"><div class="simbox">▶ Try it first: <a href="../sims/load-balancer.html">Load Balancer Simulation — One Guard, Three Backends</a><br>Simulation — practice version. Run the real lab with Docker to do it for real.</div><h2>Test status</h2>
+<p>Syntax-checked only (20 November 2026). The compose file and the NGINX settings were checked for correct syntax. This lab was not run end-to-end on this machine, because this machine has no Docker. Follow it on your own machine with Docker, and if a step fails, read the error first — that is the real skill.</p>
+<p>v2 (20 November 2026): the backends now use an image that works on ARM64 as well as x86_64. Each backend answers with its own name, so you can see which one answered. Still syntax-checked only, not run end to end.</p>
+<h2>What this lab is</h2>
+<p>You will run three small backends and one NGINX load balancer in front of them. You will ask the load balancer for the page six times and see a different backend answer each time. Then you will kill one backend and watch the site stay up.</p>
+<h2>What you need first</h2>
+<ul><li>Docker running (Phase 2, zero-cost-lab.md).</li><li>The files in this folder: <code>docker-compose.yml</code>, <code>nginx.conf</code>.</li></ul>
+<h2>Words you need here</h2>
+<ul><li><strong>Load balancer</strong> — a traffic guard. It stands in front of copies of your app and sends each visitor to a different copy.</li><li><strong>Backend</strong> — one copy of your app, behind the load balancer.</li><li><strong>Upstream</strong> — NGINX&#x27;s word for the list of backends.</li><li><strong>Round robin</strong> — taking turns: backend 1, then 2, then 3, then 1 again. That is how NGINX shares the work by default.</li><li><strong>F5</strong> — a paid box that does this job in big companies. This lab uses NGINX instead. It is free, and it teaches the same idea. The lab says so honestly wherever it matters.</li></ul>
+<h2>Step 1 — Start the guard and the three backends</h2>
+<p>From inside this folder:</p>
+<pre><code>docker compose up -d</code></pre>
+<p>Check:</p>
+<pre><code>docker compose ps</code></pre>
+<p>You should see <code>lb</code>, <code>web1</code>, <code>web2</code>, <code>web3</code> with STATUS &quot;Up&quot;.</p>
+<p>If it breaks: if <code>lb</code> shows &quot;Exited&quot;, the NGINX settings file has a mistake. Read the log with <code>docker compose logs lb</code> — the error line names the line number in <code>nginx.conf</code>. Fix the line and run <code>docker compose up -d</code> again.</p>
+<h2>Step 2 — Ask for the page six times</h2>
+<p>Ask the load balancer for the page:</p>
+<pre><code>curl http://localhost:8080/</code></pre>
+<p>You should see a few lines, starting with one of these:</p>
+<pre><code>Hostname: web1</code></pre>
+<p>The Hostname line tells you which backend answered. Ask again, five more times:</p>
+<pre><code>curl http://localhost:8080/
+curl http://localhost:8080/
+curl http://localhost:8080/
+curl http://localhost:8080/
+curl http://localhost:8080/</code></pre>
+<p>You should see the Hostname line take turns: web1, web2, web3, web1, web2, web3 (the order may start on a different backend, but all three appear). That is round robin — the guard shares the work evenly.</p>
+<p>If it breaks: if <code>curl</code> says &quot;connection refused&quot;, the lb is not up yet — wait and try again. If every answer is the same backend, check <code>docker compose ps</code> — one of the backends may have failed to start, so the guard is only using the ones that are alive. That is still the guard working correctly, but fix the dead backend first (read its log) and try again.</p>
+<h2>Step 3 — Kill one backend and watch the site stay up</h2>
+<p>Stop backend 2:</p>
+<pre><code>docker compose stop web2</code></pre>
+<p>Ask for the page six more times:</p>
+<pre><code>for i in 1 2 3 4 5 6; do curl -s http://localhost:8080/ | grep Hostname; done</code></pre>
+<p>You should see only &quot;Hostname: web1&quot; and &quot;Hostname: web3&quot;. Backend 2 never answers — the guard skips it by itself. The site stays up with two backends. That is the whole point of a load balancer: one copy can die and nobody notices.</p>
+<p>Bring it back:</p>
+<pre><code>docker compose start web2</code></pre>
+<p>Ask again:</p>
+<pre><code>curl http://localhost:8080/</code></pre>
+<p>Backend 2 answers again within a few seconds.</p>
+<h2>Step 4 — See the guard&#x27;s view (optional)</h2>
+<p>Look at what NGINX thinks:</p>
+<pre><code>docker compose logs lb</code></pre>
+<p>You will see one line per visit, with the visitor&#x27;s address and the answer code <code>200</code> (which means &quot;OK&quot;). There is no line that says which backend answered — NGINX&#x27;s normal log does not record that. The <code>curl</code> answers in Step 2 are the proof, not the log.</p>
+<h2>Clean up</h2>
+<pre><code>docker compose down</code></pre>
+<h2>What you can now say, truthfully</h2>
+<p>&quot;I ran NGINX as a load balancer in front of three backends, watched it share visitors round robin, killed one backend, and the site stayed up.&quot;</p>
+<h2>What this lab does NOT cover</h2>
+<ul><li>Real load balancers also check backend health on their own (health checks) and can share work by least-busy instead of round robin. NGINX can do both — this lab keeps the default, so you learn the idea first.</li><li>HTTPS (the locked version of web traffic) is a later topic. This lab uses plain HTTP on your own machine only.</li><li>A paid F5 box has more features than NGINX. The idea — spread traffic, skip dead backends — is the same.</li></ul><div class="pager"><span><a href="p1-object-store.html">← Previous: Object Store Lab — A File Cupboard</a></span><span><a href="p1-end-to-end.html">Next: End-to-End Lab — One Fake Order, All the Way Through →</a></span></div></div></body></html>

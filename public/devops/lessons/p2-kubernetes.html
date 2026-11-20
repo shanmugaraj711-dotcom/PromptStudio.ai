@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kubernetes Lab — Your App on a Small Local Cluster</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="top"><h1>Kubernetes Lab — Your App on a Small Local Cluster</h1><p>Phase 2 · DevOps Kit · fake data only</p></header><nav class="crumbs"><a href="../index.html">Home</a> / Phase 2</nav><div class="wrap"><h2>What this lab is</h2>
+<p>You will run your Project 1 website on a small Kubernetes cluster that lives on your own machine. No cloud account, no bill. You will also break it on purpose and fix it, the same way you did in the break-and-fix labs.</p>
+<h2>What you need first</h2>
+<ul><li>Docker running (from zero-cost-lab.md).</li><li>Your Project 1 image built: <code>my-site:1.0</code> (from portfolio-projects.md). If you deleted it, move into the Project 1 folder and build it again first:</li></ul>
+<pre><code>cd ~/devops-practice/my-site
+docker build -t my-site:1.0 .</code></pre>
+<h2>Why kind</h2>
+<p>This kit uses kind (short for &quot;Kubernetes in Docker&quot;). It runs a whole cluster as containers on your machine, so it needs only Docker, which you already have. The other common choice is minikube, but this kit uses kind only, so every command below matches.</p>
+<h2>Step 1 — Install kubectl and kind (Linux AMD64)</h2>
+<p>These download links are for AMD64 Linux. On an ARM64 machine, swap <code>amd64</code> for <code>arm64</code> in the links (and check kind&#x27;s install page if a link fails). <code>kubectl</code> is the command tool for talking to a cluster. <code>kind</code> is the tool that creates the cluster.</p>
+<pre><code>curl -LO &quot;https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl&quot;
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/kubectl</code></pre>
+<pre><code>curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.23.0/kind-linux-amd64
+chmod +x ./kind
+sudo mv ./kind /usr/local/bin/kind</code></pre>
+<p>Check both installed:</p>
+<pre><code>kind version
+kubectl version --client</code></pre>
+<p>Both should print a version number. Note: the kind version number changes over time — if that download link fails, take the newest link from kind&#x27;s install page. Mac and Windows install steps differ (Homebrew or choco) and are unverified in this kit.</p>
+<h2>Step 2 — Start the cluster</h2>
+<pre><code>kind create cluster --name devops-practice</code></pre>
+<p>The first run downloads the cluster&#x27;s node image, so it takes a few minutes. Then check it:</p>
+<pre><code>kubectl get nodes</code></pre>
+<p>You should see one node with STATUS Ready. If you see nothing, make sure Docker is running and try again.</p>
+<h2>Step 3 — Load your image into the cluster</h2>
+<p>A kind cluster cannot see images sitting in your local Docker by itself. This is the step most beginners forget. Copy your image in:</p>
+<pre><code>kind load docker-image my-site:1.0 --name devops-practice</code></pre>
+<p>Without this step, the cluster would try to download your image from the internet and fail, because your image only exists on your machine.</p>
+<h2>Step 4 — Run your app with a Deployment</h2>
+<p>A Deployment (a way to say &quot;keep copies of my app running&quot;) is described in a file. Make a file called <code>deployment.yaml</code>:</p>
+<pre><code class="language-yaml">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-site
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-site
+  template:
+    metadata:
+      labels:
+        app: my-site
+    spec:
+      containers:
+        - name: web
+          image: my-site:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80</code></pre>
+<p><code>imagePullPolicy: IfNotPresent</code> tells Kubernetes to use the image you loaded in Step 3 instead of trying to download it again. <code>replicas: 1</code> means one copy of your app.</p>
+<p>Apply it and look at your pods (a pod is the smallest thing Kubernetes runs, usually one container):</p>
+<pre><code>kubectl apply -f deployment.yaml
+kubectl get pods</code></pre>
+<p>You should see one pod named like <code>my-site-xxxx</code>, with READY 1/1 and STATUS Running. Pod names differ every time — copy the real name from the output for the commands below.</p>
+<p>Open your app in the browser:</p>
+<pre><code>kubectl port-forward deployment/my-site 8080:80</code></pre>
+<p>This connects port 8080 on your machine to your app. Open <code>http://localhost:8080</code> — you should see your Project 1 site. Keep this terminal open while you look; stopping it with Ctrl+C only stops the forwarding, not your app.</p>
+<p>Expose it with a Service: a Service gives your app a stable address inside the cluster, even when pods come and go. Make a file called <code>service.yaml</code>:</p>
+<pre><code class="language-yaml">apiVersion: v1
+kind: Service
+metadata:
+  name: my-site
+spec:
+  selector:
+    app: my-site
+  ports:
+    - port: 80</code></pre>
+<p><code>selector</code> connects the Service to pods labelled <code>app: my-site</code> — the same label your Deployment gives its pods. Apply and check:</p>
+<pre><code>kubectl apply -f service.yaml
+kubectl get services</code></pre>
+<p>You should see <code>my-site</code> with a CLUSTER-IP.</p>
+<p>Stop the first port-forward with Ctrl+C first — both use port 8080, so they cannot run at the same time. Stopping it ends only the forwarding, not your app.</p>
+<p>Open it through the Service instead of the Deployment:</p>
+<pre><code>kubectl port-forward service/my-site 8080:80</code></pre>
+<p>Open <code>http://localhost:8080</code> again — same site, now reached through the Service. This is the address other things inside the cluster would use. Your browser reaches it here only through the port-forward above — that does not expose the app publicly.</p>
+<p>Read about your pod:</p>
+<pre><code>kubectl describe pod &lt;pod-name&gt;
+kubectl logs &lt;pod-name&gt;</code></pre>
+<p><code>describe</code> shows details and recent events. <code>logs</code> shows what your app printed. When something breaks, these two commands are where you look first.</p>
+<h2>Step 5 — Break it, then fix it</h2>
+<p>Break it: change the image in <code>deployment.yaml</code> to a tag that does not exist, for example <code>my-site:badtag</code>, and apply it again:</p>
+<pre><code>kubectl apply -f deployment.yaml
+kubectl get pods</code></pre>
+<p>Your pod will not reach Running. Its STATUS will show something like ImagePullBackOff or ErrImagePull, and its restarts may climb.</p>
+<p>Find it:</p>
+<pre><code>kubectl describe pod &lt;pod-name&gt;</code></pre>
+<p>Read the Events at the bottom. They will say the image could not be pulled or was not found. The lesson: the Deployment file is wrong, not the pod. A pod only does what its Deployment says.</p>
+<p>Fix it: change the image back to <code>my-site:1.0</code> in <code>deployment.yaml</code>, apply it again, and check:</p>
+<pre><code>kubectl apply -f deployment.yaml
+kubectl rollout status deployment/my-site
+kubectl get pods</code></pre>
+<p>Wait for the rollout to finish: the expected result is a pod with READY 1/1 and STATUS Running. <code>kubectl apply</code> alone does not mean the app is healthy yet — if the rollout fails, read the pod Events and status again.</p>
+<p>A new pod starts and reaches Running. Deleting the broken pod alone would NOT have fixed it — the Deployment would simply have made the same broken pod again. Fix the Deployment, and the pod follows.</p>
+<p>Try self-healing once: on the healthy pod, run <code>kubectl delete pod &lt;pod-name&gt;</code>, then <code>kubectl get pods</code> again. The Deployment makes a replacement by itself, to keep your chosen number of copies running. That is not proof the app itself is healthy — replacing a pod and knowing it works are different things. Later, learn readiness and liveness probes, which are how Kubernetes checks real health.</p>
+<h2>Clean up</h2>
+<p>Remove your app but keep the cluster:</p>
+<pre><code>kubectl delete -f deployment.yaml
+kubectl delete -f service.yaml</code></pre>
+<p>Remove the whole cluster when you are done with this lab:</p>
+<pre><code>kind delete cluster --name devops-practice</code></pre>
+<p>Your Docker images stay on your machine, so you can start again any time with <code>kind create cluster --name devops-practice</code>.</p>
+<h2>Note on what is unverified here</h2>
+<p>This lab was not run end-to-end while writing this kit, and kind version links change over time — if a download link fails, take the newest link from kind&#x27;s install page. Mac and Windows steps are unverified here. If a step fails, read the error message first, as in every lab in this kit.</p>
+<h2>What comes next</h2>
+<p>Kubernetes runs your app. Phase 1 teaches the data tier your app talks to: Kafka, PostgreSQL with a standby copy, Redis, Moto and a load balancer. The end-to-end lab there runs all of them together on one machine.</p><div class="pager"><span><a href="p2-zero-cost.html">← Previous: Zero-Cost Lab — One Machine, No Cloud Bill</a></span><span><a href="p2-break-fix.html">Next: Break-and-Fix Labs — Learn Like On-Call Work →</a></span></div></div></body></html>

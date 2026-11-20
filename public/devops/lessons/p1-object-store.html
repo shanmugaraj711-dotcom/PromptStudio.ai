@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Object Store Lab — A File Cupboard</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="top"><h1>Object Store Lab — A File Cupboard</h1><p>Phase 1 · DevOps Kit · fake data only</p></header><nav class="crumbs"><a href="../index.html">Home</a> / Phase 1</nav><div class="wrap"><div class="simbox">▶ Try it first: <a href="../sims/object-store.html">Object Store Simulation — A File Cupboard</a><br>Simulation — practice version. Run the real lab with Docker to do it for real.</div><h2>Test status</h2>
+<p>Syntax-checked only (20 November 2026). The compose file, the Dockerfile and the shell script were checked for correct syntax. This lab was not run end-to-end on this machine, because this machine has no Docker. Follow it on your own machine with Docker, and if a step fails, read the error first — that is the real skill.</p>
+<p>v2 (20 November 2026): the stores are now Moto, not MinIO. MinIO&#x27;s free images are no longer available to download, so this lab uses Moto instead — a free stand-in for Amazon S3 that speaks the same S3 language. The file commands are now the <code>aws</code> tool, not <code>mc</code>. Still syntax-checked only, not run end to end.</p>
+<h2>What this lab is</h2>
+<p>You will run two file stores on your own machine with Moto — a free S3-compatible stand-in that works the same way as the paid stores. You will put fake receipt files into the first store and watch them appear in the second store by themselves. All files are fake.</p>
+<h2>What you need first</h2>
+<ul><li>Docker running (Phase 2, zero-cost-lab.md).</li><li>The files in this folder: <code>docker-compose.yml</code>, <code>Dockerfile</code>, <code>mirror.sh</code>, and the <code>files/</code> folder with two fake receipts.</li></ul>
+<h2>Words you need here</h2>
+<ul><li><strong>Object store</strong> — a big file cupboard. You store a file by a name, and you ask for it back by the same name. It does not care what is inside the file.</li><li><strong>Bucket</strong> — a named box inside the store. Files live in buckets. This lab uses one bucket called <code>incoming</code>.</li><li><strong>Moto</strong> — a free stand-in for Amazon S3. It speaks the same S3 language as the paid stores, so what you learn here transfers. It keeps everything in memory: stop the lab and the files are gone. That is fine for learning.</li><li><strong>aws</strong> — the command tool for S3 stores. It works like the <code>cp</code> and <code>ls</code> commands, but for buckets. Every command below says which store it talks to, with <code>--endpoint-url</code>.</li><li><strong>Mirror</strong> — a copy that follows the original. When a new file lands in the first store, the mirror copies it to the second store.</li></ul>
+<h2>Step 1 — Start both stores</h2>
+<p>From inside this folder:</p>
+<pre><code>docker compose up -d --build</code></pre>
+<p>The first start builds the small <code>aws</code> image, so it takes a couple of minutes. Check:</p>
+<pre><code>docker compose ps</code></pre>
+<p>You should see <code>moto-a</code>, <code>moto-b</code>, <code>mirror</code> and <code>awscli</code> with STATUS &quot;Up&quot;. The mirror service waits for both stores, so give it a minute. Check the first store answers:</p>
+<pre><code>docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 ls</code></pre>
+<p>You should see nothing (no buckets yet) and no error. An empty answer with no error means the store is up.</p>
+<p>If it breaks: if <code>docker compose ps</code> shows a container as &quot;Exited&quot;, read its log with <code>docker compose logs &lt;name&gt;</code> and look for the error line.</p>
+<h2>Step 2 — Make the bucket (once)</h2>
+<p>The <code>awscli</code> container holds the file commands. Make the bucket in the first store:</p>
+<pre><code>docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 mb s3://incoming</code></pre>
+<p>You should see:</p>
+<pre><code>make_bucket: incoming</code></pre>
+<p>If it breaks: &quot;BucketAlreadyExists&quot; means you already made it — skip this step. If the command fails, the store is not up yet — wait and try again.</p>
+<h2>Step 3 — Put a fake file in</h2>
+<p>Copy the first fake receipt into the bucket:</p>
+<pre><code>docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 cp /files/receipt-001.txt s3://incoming/</code></pre>
+<p>You should see:</p>
+<pre><code>upload: /files/receipt-001.txt to s3://incoming/receipt-001.txt</code></pre>
+<p>List the bucket to prove it is there:</p>
+<pre><code>docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 ls s3://incoming/</code></pre>
+<p>You should see a line like:</p>
+<pre><code>2026-11-20 00:00:00        126 receipt-001.txt</code></pre>
+<p>(The date and time will match when you ran it, not the line above.)</p>
+<h2>Step 4 — Watch it appear in the second store</h2>
+<p>The mirror service copies new files from a to b every 10 seconds. Wait 30 seconds, then list the second store:</p>
+<pre><code>docker compose exec awscli aws --endpoint-url http://moto-b:5000 s3 ls s3://incoming/</code></pre>
+<p>You should see <code>receipt-001.txt</code> there too. The copy happened by itself — you did not copy it twice.</p>
+<p>If it breaks: if the file is missing, wait another minute and list again — the mirror checks every 10 seconds. If it is still missing, check the mirror log with <code>docker compose logs mirror</code> and look for the word &quot;ERROR&quot;. The most common cause is that the mirror started before the stores were ready — restart it with <code>docker compose restart mirror</code> and wait a minute.</p>
+<h2>Step 5 — Add a second file and watch it follow</h2>
+<pre><code>docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 cp /files/receipt-002.txt s3://incoming/</code></pre>
+<p>Wait 30 seconds, then:</p>
+<pre><code>docker compose exec awscli aws --endpoint-url http://moto-b:5000 s3 ls s3://incoming/</code></pre>
+<p>You should see both <code>receipt-001.txt</code> and <code>receipt-002.txt</code>. New files follow by themselves.</p>
+<h2>Step 6 — Download a file back</h2>
+<pre><code>docker compose exec awscli aws --endpoint-url http://moto-b:5000 s3 cp s3://incoming/receipt-001.txt -</code></pre>
+<p>You should see the fake receipt text. This proves the file in the second store is a real copy, not just a name in a list.</p>
+<h2>Clean up</h2>
+<pre><code>docker compose down</code></pre>
+<p>The files live only in memory, so stopping the lab wipes them. That is fine — the files were fake. Run the steps again any time you want to practise.</p>
+<h2>What you can now say, truthfully</h2>
+<p>&quot;I ran two Moto object stores (a free S3 stand-in), made a bucket, uploaded files with the aws tool, and set up a mirror that copies new files to the second store by itself.&quot;</p>
+<h2>What this lab does NOT cover</h2>
+<ul><li>Real stores use access keys per app, not one shared login. This lab uses one login on purpose, so you can learn.</li><li>The mirror here copies one way only. Two-way sync is a different setup.</li><li>Large files, versioning and lifecycle rules (auto-deleting old files) are later topics. The ideas are the same; the setup is bigger.</li></ul><div class="pager"><span><a href="p1-redis.html">← Previous: Redis Lab — A Fast Memory Store</a></span><span><a href="p1-load-balancer.html">Next: Load Balancer Lab — One Guard, Three Backends →</a></span></div></div></body></html>
