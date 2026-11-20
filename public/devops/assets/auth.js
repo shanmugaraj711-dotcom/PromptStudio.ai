@@ -19,6 +19,13 @@
   var auth = firebase.auth();
   var db = (firebase.firestore ? firebase.firestore() : null);
 
+  /* Sessions must survive a reload: say so out loud. The default is
+     local persistence, but an explicit call means a future SDK change
+     cannot silently turn reloads into sign-outs. */
+  if (auth.setPersistence) {
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function () {});
+  }
+
   var currentUser = null;
   var listeners = [];
   var stateReady = false;
@@ -47,10 +54,23 @@
     return name.length > 14 ? name.slice(0, 12) + '…' : name;
   }
 
-  /* Header slot: "Sign in" when logged out, name + "Sign out" when in. */
+  /* Header slot: "…" while sign-in is still being checked, "Sign in"
+     when logged out, name + "Sign out" when in. Never show "Sign in"
+     for a user whose sign-in state is still unknown. */
   function renderSlot() {
     var slot = document.getElementById('auth-slot');
     if (!slot) return;
+    slot.innerHTML = '';
+    if (!stateReady) {
+      var hold = document.createElement('button');
+      hold.type = 'button';
+      hold.className = 'auth-btn';
+      hold.disabled = true;
+      hold.textContent = '…';
+      hold.setAttribute('aria-label', 'Checking your sign-in');
+      slot.appendChild(hold);
+      return;
+    }
     if (!currentUser) {
       slot.innerHTML = '';
       var btn = document.createElement('button');
@@ -101,11 +121,14 @@
     listeners.forEach(function (fn) { try { fn(currentUser); } catch (e) {} });
   }
 
+  /* Tell the page at once when sign-in state changes. The profile
+     row is a background job — it must never delay the sign-in state
+     the page shows. */
   auth.onAuthStateChanged(function (user) {
     currentUser = user || null;
     stateReady = true;
-    if (user) ensureProfile(user).then(notify, notify);
-    else notify();
+    notify();
+    if (user) ensureProfile(user).catch(function () {});
   });
 
   /* ---- login modal ---- */

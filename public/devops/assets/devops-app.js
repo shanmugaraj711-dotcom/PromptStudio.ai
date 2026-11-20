@@ -25,6 +25,16 @@
   var state = null; /* { entitlements, progress } from /api/devops-state */
   var stateLoaded = false;
   var currentUser = null;
+  /* While either is true, the page must not show signed-out UI:
+     no "Sign in" button, no locked buy buttons, no lock screen text.
+     authPending = Firebase has not said who is signed in yet.
+     statePending = signed in, but ownership/progress not loaded yet. */
+  var authPending = true;
+  var statePending = false;
+  function isPending() { return authPending || statePending; }
+  function updatePending() {
+    document.body.classList.toggle('app-pending', isPending());
+  }
 
   function page() { return (document.body && document.body.getAttribute('data-page')) || ''; }
   function pagePhase() { return (document.body && document.body.getAttribute('data-phase')) || ''; }
@@ -79,15 +89,19 @@
   }
 
   function refreshState() {
-    if (!currentUser) { state = null; stateLoaded = false; applyPage(); return Promise.resolve(null); }
+    if (!currentUser) { state = null; stateLoaded = false; statePending = false; applyPage(); return Promise.resolve(null); }
+    statePending = true;
+    updatePending();
     return api('/api/devops-state', { method: 'GET' }).then(function (data) {
       state = data;
       stateLoaded = true;
+      statePending = false;
       applyPage();
       return data;
     }).catch(function (err) {
-      state = null;
-      stateLoaded = false;
+      /* Keep the last good state: a failed load must never flash the
+         page back to locked for someone who owns the phase. */
+      statePending = false;
       applyPage();
       throw err;
     });
@@ -103,18 +117,22 @@
 
   /* ---- gating ---- */
   function applyPage() {
+    updatePending();
     var p = page();
     if (p === 'landing') applyLanding();
     else if (p === 'lesson') applyLesson();
     else if (p === 'sim') applySim();
     /* pay buttons everywhere: show the right label for the state.
        Buttons inside a lock screen are managed by applyLesson/applySim
-       (sign-in first when logged out), so skip them here. */
+       (sign-in first when logged out), so skip them here.
+       While the sign-in state is unknown, buttons stay visible but
+       unclickable — never a buy button for an owner, never a dead
+       button for a buyer. */
     document.querySelectorAll('.pay-btn').forEach(function (btn) {
       if (btn.closest('#lock-screen')) return;
       var ph = btn.getAttribute('data-phase');
       if (owns(ph)) { btn.hidden = true; }
-      else { btn.hidden = false; btn.disabled = false; }
+      else { btn.hidden = false; btn.disabled = isPending(); }
     });
     document.querySelectorAll('.owned-download').forEach(function (btn) {
       var ph = btn.getAttribute('data-phase');
@@ -146,7 +164,7 @@
         flag.textContent = ' ← Continue here';
         flag.classList.add('continue');
         row.classList.add('row-continue');
-      } else if (isLocked(ph)) {
+      } else if (isLocked(ph) && !isPending()) {
         flag.textContent = ' 🔒 ' + PHASE_PRICES[ph];
         flag.classList.add('locked');
         row.classList.add('row-locked');
@@ -155,13 +173,14 @@
       }
       main.appendChild(flag);
     });
-    /* sim cards: gated sims show the lock */
+    /* sim cards: gated sims show the lock (never while still loading) */
     document.querySelectorAll('.simcard').forEach(function (card) {
       var sim = card.getAttribute('data-sim');
       var ph = card.getAttribute('data-phase');
       var btn = card.querySelector('.btn');
       if (!sim || !btn) return;
       if (FREE_SIMS[sim]) return;
+      if (isPending()) return;
       if (isLocked(ph)) {
         btn.textContent = '🔒 ' + PHASE_NAMES[ph] + ' — ' + PHASE_PRICES[ph];
       } else {
@@ -201,11 +220,15 @@
         banner.hidden = true;
       }
     }
-    /* sticky bar: buy button becomes "Continue" when owned */
+    /* sticky bar: buy button becomes "Continue" when owned.
+       While the sign-in state is unknown, show neither. */
     var stickyBuy = document.getElementById('sticky-buy');
     var stickyGo = document.getElementById('sticky-continue');
     if (stickyBuy && stickyGo) {
-      if (owns('phase1')) {
+      if (isPending()) {
+        stickyBuy.hidden = true;
+        stickyGo.hidden = true;
+      } else if (owns('phase1')) {
         stickyBuy.hidden = true;
         var last2 = state && state.progress ? state.progress.lastLesson : null;
         stickyGo.hidden = false;
@@ -222,14 +245,28 @@
     var slug = pageLesson();
     var ph = pagePhase();
     var locked = isLocked(ph);
+    var pending = isPending();
     document.body.classList.toggle('locked', locked);
     var lock = document.getElementById('lock-screen');
     if (lock) {
-      lock.hidden = !locked;
-      var signinBtn = lock.querySelector('.lock-signin');
-      var buyBtn = lock.querySelector('.pay-btn');
-      if (signinBtn) signinBtn.hidden = !!currentUser;
-      if (buyBtn) buyBtn.hidden = !currentUser;
+      /* While the sign-in state is unknown AND the phase looks locked,
+         show "Checking your sign-in…" — never the locked message or a
+         buy button. An owned phase never shows a lock screen, even
+         while a state load is still in flight. */
+      var loadingEl = lock.querySelector('.lock-loading');
+      if (pending && locked) {
+        lock.hidden = false;
+        lock.classList.add('loading');
+        if (loadingEl) loadingEl.hidden = false;
+      } else {
+        lock.classList.remove('loading');
+        if (loadingEl) loadingEl.hidden = true;
+        lock.hidden = !locked;
+        var signinBtn = lock.querySelector('.lock-signin');
+        var buyBtn = lock.querySelector('.pay-btn');
+        if (signinBtn) signinBtn.hidden = !!currentUser;
+        if (buyBtn) buyBtn.hidden = !currentUser;
+      }
     }
     /* progress bar: real completion when signed in, scroll when not */
     var fill = document.getElementById('lesson-progress-fill');
@@ -269,14 +306,28 @@
     var sim = pageSim();
     var ph = pagePhase();
     var locked = !FREE_SIMS[sim] && isLocked(ph);
+    var pending = isPending();
     document.body.classList.toggle('locked', locked);
     var lock = document.getElementById('lock-screen');
     if (lock) {
-      lock.hidden = !locked;
-      var signinBtn = lock.querySelector('.lock-signin');
-      var buyBtn = lock.querySelector('.pay-btn');
-      if (signinBtn) signinBtn.hidden = !!currentUser;
-      if (buyBtn) buyBtn.hidden = !currentUser;
+      /* While the sign-in state is unknown AND the sim looks locked,
+         show "Checking your sign-in…" — never the locked message or a
+         buy button. An owned phase never shows a lock screen, even
+         while a state load is still in flight. */
+      var loadingEl = lock.querySelector('.lock-loading');
+      if (pending && locked) {
+        lock.hidden = false;
+        lock.classList.add('loading');
+        if (loadingEl) loadingEl.hidden = false;
+      } else {
+        lock.classList.remove('loading');
+        if (loadingEl) loadingEl.hidden = true;
+        lock.hidden = !locked;
+        var signinBtn = lock.querySelector('.lock-signin');
+        var buyBtn = lock.querySelector('.pay-btn');
+        if (signinBtn) signinBtn.hidden = !!currentUser;
+        if (buyBtn) buyBtn.hidden = !currentUser;
+      }
     }
     /* resume note: show where they stopped */
     var note = document.getElementById('sim-resume-note');
@@ -357,22 +408,63 @@
     });
   }
 
+  /* Re-fetch ownership until the phase shows as owned (or retries run
+     out). Covers the settle delay between "payment done" and the
+     entitlement being readable, without ever asking for a reload. */
+  function refreshStateWithRetry(phase) {
+    var tries = 0;
+    function one() {
+      tries += 1;
+      return refreshState().then(function () {
+        if (phase && !owns(phase) && tries < 4) {
+          return new Promise(function (r) { setTimeout(r, 1500); }).then(one);
+        }
+      }).catch(function (err) {
+        if (tries < 3) {
+          return new Promise(function (r) { setTimeout(r, 1500); }).then(one);
+        }
+        throw err;
+      });
+    }
+    return one();
+  }
+
   function verifyPayment(resp, phase) {
     toast('Checking your payment…');
-    api('/api/devops-verify', {
-      method: 'POST',
-      body: {
-        razorpay_order_id: resp.razorpay_order_id,
-        razorpay_payment_id: resp.razorpay_payment_id,
-        razorpay_signature: resp.razorpay_signature
-      }
-    }).then(function (data) {
-      return refreshState().then(function () {
-        toast('Payment done — ' + PHASE_NAMES[data.phase || phase] + ' is yours. Enjoy learning.');
+    var attempts = 0;
+    function attempt() {
+      attempts += 1;
+      api('/api/devops-verify', {
+        method: 'POST',
+        body: {
+          razorpay_order_id: resp.razorpay_order_id,
+          razorpay_payment_id: resp.razorpay_payment_id,
+          razorpay_signature: resp.razorpay_signature
+        }
+      }).then(function (data) {
+        var donePhase = data.phase || phase;
+        /* Unlock on the page at once — then confirm it from the
+           server. No reload, no sign-in again, for the unlock to show. */
+        if (!state) state = { entitlements: {}, progress: { lessons: {}, lastLesson: null, sims: {} } };
+        state.entitlements = state.entitlements || {};
+        state.entitlements[donePhase] = true;
+        stateLoaded = true;
+        applyPage();
+        return refreshStateWithRetry(donePhase).then(function () {
+          toast('Payment done — ' + PHASE_NAMES[donePhase] + ' is yours. Enjoy learning.');
+        });
+      }).catch(function (err) {
+        /* The payment can land a moment before Razorpay reports the
+           order as paid. Retry the check instead of giving up. */
+        if (err && err.code === 'payment_not_captured' && attempts < 5) {
+          toast('Payment done — waiting for it to settle…');
+          setTimeout(attempt, 2000);
+          return;
+        }
+        toast('Payment went through but we could not unlock it yet. ' + ((err && err.message) || 'Try refreshing the page.'));
       });
-    }).catch(function (err) {
-      toast('Payment went through but we could not unlock it yet: ' + ((err && err.message) || 'try refreshing the page.'));
-    });
+    }
+    attempt();
   }
 
   /* ---- download ---- */
@@ -462,13 +554,21 @@
     wire();
     applyPage();
     if (window.DevOpsAuth) {
+      /* If sign-in state never resolves (scripts blocked, storage
+         off), do not leave the page in "checking" forever: after
+         20 seconds, fall back to the signed-out view. */
+      setTimeout(function () {
+        if (authPending) { authPending = false; applyPage(); }
+      }, 20000);
       window.DevOpsAuth.onAuth(function (user) {
         currentUser = user || null;
+        authPending = false;
         applyLesson._recorded = false;
         refreshState().catch(function () {});
       });
     } else {
       /* sign-in scripts failed: keep the page locked-safe, pay asks to retry */
+      authPending = false;
       applyPage();
     }
   }

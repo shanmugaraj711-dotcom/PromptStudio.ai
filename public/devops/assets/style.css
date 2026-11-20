@@ -345,6 +345,13 @@ body.modal-open { overflow: hidden; }
 .lock-screen p { color: var(--muted); font-size: 14px; margin: 0 auto 16px; max-width: 420px; }
 .lock-screen .btn { margin: 4px; }
 .lock-screen .lock-back { display: block; margin-top: 14px; font-size: 13px; }
+/* auth / state loading — while the sign-in state is unknown, never
+   show a "Sign in" or buy button as if the user were signed out. */
+.auth-btn[disabled] { opacity: .55; cursor: default; }
+body.app-pending .pay-btn { opacity: .45; pointer-events: none; }
+.lock-screen .lock-loading { display: none; color: var(--muted); font-size: 14px; margin: 0 auto; max-width: 420px; }
+.lock-screen.loading .lock-icon, .lock-screen.loading h2, .lock-screen.loading p:not(.lock-loading), .lock-screen.loading .btn, .lock-screen.loading .lock-back { display: none; }
+.lock-screen.loading .lock-loading { display: block; }
 body.locked #lesson-content { display: none; }
 body.locked .sim-shell > :not(#lock-screen) { display: none; }
 body.locked #lock-screen { display: block; }
