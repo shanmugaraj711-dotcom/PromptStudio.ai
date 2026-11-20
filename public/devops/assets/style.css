@@ -378,6 +378,12 @@ body.locked #lock-screen { display: block; }
 .owned-note { color: var(--green); font-size: 13px; font-weight: 700; margin: 8px 0 0; }
 .owned-note[hidden] { display: none; }
 .pay-btn[hidden] { display: none; }
+/* The sign-in button in a lock screen is a .btn (display: inline-flex),
+   which beats the browser's built-in [hidden] rule — without this rule
+   "Sign in to buy" stayed visible for signed-in users even after JS set
+   hidden=true. Same for the sticky-bar "Continue learning" link. */
+.lock-signin[hidden] { display: none; }
+#sticky-continue[hidden] { display: none; }
 
 /* mark-as-done (lesson pages) */
 .mark-done { margin: 16px 0 0; }
