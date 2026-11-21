@@ -366,6 +366,11 @@ body.app-pending .pay-btn { opacity: .45; pointer-events: none; }
 body.locked #lesson-content { display: none; }
 body.locked .sim-shell > :not(#lock-screen) { display: none; }
 body.locked #lock-screen { display: block; }
+/* Locked sim: the lock card is the only visible child of the 100dvh
+   flex-column shell, so auto vertical margins centre it instead of
+   leaving it stuck at the top with empty space below. Scoped to the
+   sim shell only — lesson pages keep their normal margin. */
+body.locked .sim-shell > #lock-screen { margin-top: auto; margin-bottom: auto; }
 
 /* continue banner (landing) */
 .continue-banner { background: var(--mint); border: 1px solid #bbf7d0; border-radius: 12px; padding: 12px 16px; margin: 16px auto 0; max-width: 720px; font-size: 14px; color: var(--ink); }
