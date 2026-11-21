@@ -3,12 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Resume Bullets — From Your Projects, In Simple Words</title>
+<title>Resume Bullets — From Your Projects, In Simple Words — DevOps Kit</title>
 <link rel="stylesheet" href="/devops/assets/style.css">
 </head>
-<body>
-<div class="brandbar"><a href="/devops/index.html">PromptStudio<span class="dot">.</span></a><span class="tag">DevOps Kit</span></div>
-<header class="top"><h1>Resume Bullets — From Your Projects, In Simple Words</h1><p>Phase 2 · The Rest of DevOps · fake data only</p></header><nav class="crumbs"><a href="../index.html">Home</a> / Phase 2</nav><div class="wrap"><div class="progress">Lesson 15 of 16</div><div class="progressbar"><span style="width:94%"></span></div><span class="phasebadge">Phase 2 · The Rest of DevOps</span><h2>Rules before you copy anything</h2>
+<body data-page="lesson" data-lesson="p2-resume" data-phase="phase2">
+<header class="lesson-header">
+  <div class="lh-row">
+    <a class="wordmark" href="/devops/index.html">DevOps Kit</a>
+    <span class="lh-meta">Phase 2 · Lesson 15 of 16</span>
+    <span class="auth-slot" id="auth-slot"></span>
+  </div>
+  <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
+</header>
+<main class="lesson-wrap">
+<div class="lock-screen" id="lock-screen" hidden><p class="lock-loading" hidden>Checking your sign-in…</p><span class="lock-icon">🔒</span><h2>This lesson is in Phase 2 — ₹799, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase2" type="button" hidden>Buy Phase 2 — ₹799</button><a class="lock-back" href="/devops/index.html">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><h1>Resume Bullets — From Your Projects, In Simple Words</h1><span class="phasebadge">Phase 2 · The Rest of DevOps</span><h2>Rules before you copy anything</h2>
 <ul><li>Write only what you actually did. Fill in the blanks with your real project details.</li><li>Never invent numbers, company names, or job titles.</li><li>One bullet = one fact + one result. Keep each bullet to one line.</li><li>If a bullet is not true for you yet, leave it out until it is.</li></ul>
 <h2>From Project 1 — Website in a container</h2>
 <ul><li>Built and ran a containerised website using Docker and nginx, reachable at a mapped port on a local machine.</li><li>Wrote a Dockerfile that builds the website image from a simple web page.</li><li>[Your detail:] Deployed the site image version [version] and verified it in a browser.</li></ul>
@@ -23,4 +31,32 @@
 <h2>A short summary you can adapt</h2>
 <p>&quot;Beginner DevOps learner. Built a containerised website, a CI/CD pipeline, a Terraform + monitoring demo, and a data pipeline with a proven failover, all on GitHub. Can read logs, fix failed builds, and explain my own projects.&quot;</p>
 <h2>What NOT to write</h2>
-<ul><li>Do not write &quot;expert&quot; or &quot;experienced DevOps engineer&quot; unless a real job gave you that role.</li><li>Do not list tools you only watched videos about. List tools you actually ran.</li><li>Do not copy someone else&#x27;s project description. Yours is smaller and true — that is better.</li></ul><div class="pager"><span><a href="p2-portfolio.html">← Previous: Portfolio Projects — Proof, Not Just Notes</a></span><span><a href="p2-best-sites.html">Next: Best Sites — What To Pick, And Why →</a></span></div></div></body></html>
+<ul><li>Do not write &quot;expert&quot; or &quot;experienced DevOps engineer&quot; unless a real job gave you that role.</li><li>Do not list tools you only watched videos about. List tools you actually ran.</li><li>Do not copy someone else&#x27;s project description. Yours is smaller and true — that is better.</li></ul><nav class="pager"><a class="prev" href="/devops/lessons/p2-portfolio.html"><span>← Previous lesson</span><span class="pname">Portfolio</span></a><a class="next" href="/devops/lessons/p2-best-sites.html"><span>Next lesson →</span><span class="pname">Best Sites</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
+<div class="auth-modal" id="auth-modal" hidden>
+  <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
+    <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
+    <h2>Sign in to DevOps Kit</h2>
+    <p class="auth-sub">Your progress saves, so you can stop and come back.</p>
+    <button class="btn auth-google" id="auth-google" type="button">Continue with Google</button>
+    <div class="auth-or"><span>or with email</span></div>
+    <div class="auth-tabs">
+      <button type="button" id="auth-tab-signin" class="active">Sign in</button>
+      <button type="button" id="auth-tab-signup">Create account</button>
+    </div>
+    <form id="auth-form">
+      <label>Email<input id="auth-email" type="email" autocomplete="email" required></label>
+      <label>Password<input id="auth-password" type="password" autocomplete="current-password" required minlength="6"></label>
+      <p class="auth-error" id="auth-error" hidden></p>
+      <button class="btn amber auth-submit" id="auth-submit" type="submit">Sign in</button>
+    </form>
+    <p class="auth-switch"><span id="auth-switch-note">No account yet? </span><button type="button" id="auth-switch-link" class="linklike">Create one</button></p>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="/devops/assets/auth.js"></script>
+<script src="/devops/assets/devops-app.js"></script>
+<script src="/devops/assets/lesson.js"></script></body></html>

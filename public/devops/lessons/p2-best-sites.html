@@ -3,12 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Best Sites — What To Pick, And Why</title>
+<title>Best Sites — What To Pick, And Why — DevOps Kit</title>
 <link rel="stylesheet" href="/devops/assets/style.css">
 </head>
-<body>
-<div class="brandbar"><a href="/devops/index.html">PromptStudio<span class="dot">.</span></a><span class="tag">DevOps Kit</span></div>
-<header class="top"><h1>Best Sites — What To Pick, And Why</h1><p>Phase 2 · The Rest of DevOps · fake data only</p></header><nav class="crumbs"><a href="../index.html">Home</a> / Phase 2</nav><div class="wrap"><div class="progress">Lesson 16 of 16</div><div class="progressbar"><span style="width:100%"></span></div><span class="phasebadge">Phase 2 · The Rest of DevOps</span><h2>A warning first</h2>
+<body data-page="lesson" data-lesson="p2-best-sites" data-phase="phase2">
+<header class="lesson-header">
+  <div class="lh-row">
+    <a class="wordmark" href="/devops/index.html">DevOps Kit</a>
+    <span class="lh-meta">Phase 2 · Lesson 16 of 16</span>
+    <span class="auth-slot" id="auth-slot"></span>
+  </div>
+  <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
+</header>
+<main class="lesson-wrap">
+<div class="lock-screen" id="lock-screen" hidden><p class="lock-loading" hidden>Checking your sign-in…</p><span class="lock-icon">🔒</span><h2>This lesson is in Phase 2 — ₹799, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase2" type="button" hidden>Buy Phase 2 — ₹799</button><a class="lock-back" href="/devops/index.html">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><h1>Best Sites — What To Pick, And Why</h1><span class="phasebadge">Phase 2 · The Rest of DevOps</span><h2>A warning first</h2>
 <p>Prices change often. Prices below come from earlier research done in October 2026 and are NOT freshly verified here — check the site itself before paying anything. Free options are listed first on purpose: start free, pay only when you know what you need. If any link below fails, search for the site&#x27;s name.</p>
 <h2>The map (free, start here)</h2>
 <ul><li><strong>roadmap.sh/devops</strong> (roadmap.sh/devops) — Pick this first to see the whole path in one picture: Linux, Git, Docker, Kubernetes, Terraform, CI/CD, monitoring, in order. Why: it answers &quot;what do I learn next?&quot; in one page. It teaches little by itself, so use it as a map, not a course.</li></ul>
@@ -22,4 +30,32 @@
 <h2>What NOT to buy first</h2>
 <ul><li>A big bootcamp (tens of thousands of rupees) before you have finished the free map, the zero-cost lab, and one portfolio project. If you cannot finish free work, an expensive course will not finish it for you.</li><li>Any course that promises a job or a salary. No course can promise that, whatever its page says.</li></ul>
 <h2>The simple rule</h2>
-<p>Map first (roadmap.sh), free guides second, one paid course only for the topic you are stuck on, and your own projects all the way through. The projects are the part employers can actually see.</p><div class="pager"><span><a href="p2-resume.html">← Previous: Resume Bullets — From Your Projects, In Simple Words</a></span><span></span></div></div></body></html>
+<p>Map first (roadmap.sh), free guides second, one paid course only for the topic you are stuck on, and your own projects all the way through. The projects are the part employers can actually see.</p><nav class="pager"><a class="prev" href="/devops/lessons/p2-resume.html"><span>← Previous lesson</span><span class="pname">Resume Bullets</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
+<div class="auth-modal" id="auth-modal" hidden>
+  <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
+    <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
+    <h2>Sign in to DevOps Kit</h2>
+    <p class="auth-sub">Your progress saves, so you can stop and come back.</p>
+    <button class="btn auth-google" id="auth-google" type="button">Continue with Google</button>
+    <div class="auth-or"><span>or with email</span></div>
+    <div class="auth-tabs">
+      <button type="button" id="auth-tab-signin" class="active">Sign in</button>
+      <button type="button" id="auth-tab-signup">Create account</button>
+    </div>
+    <form id="auth-form">
+      <label>Email<input id="auth-email" type="email" autocomplete="email" required></label>
+      <label>Password<input id="auth-password" type="password" autocomplete="current-password" required minlength="6"></label>
+      <p class="auth-error" id="auth-error" hidden></p>
+      <button class="btn amber auth-submit" id="auth-submit" type="submit">Sign in</button>
+    </form>
+    <p class="auth-switch"><span id="auth-switch-note">No account yet? </span><button type="button" id="auth-switch-link" class="linklike">Create one</button></p>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="/devops/assets/auth.js"></script>
+<script src="/devops/assets/devops-app.js"></script>
+<script src="/devops/assets/lesson.js"></script></body></html>

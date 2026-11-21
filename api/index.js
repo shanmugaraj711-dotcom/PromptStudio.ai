@@ -18,6 +18,10 @@ import razorpayOrderHandler from "../server/api/razorpay-order.js";
 import razorpaySubscriptionHandler from "../server/api/razorpay-subscription.js";
 import razorpayVerifyHandler from "../server/api/razorpay-verify.js";
 import razorpayWebhookHandler from "../server/api/razorpay-webhook.js";
+import devopsOrderHandler from "../server/api/devops-order.js";
+import devopsVerifyHandler from "../server/api/devops-verify.js";
+import devopsStateHandler from "../server/api/devops-state.js";
+import devopsDownloadHandler from "../server/api/devops-download.js";
 import referenceCodingHandler from "../server/api/reference-coding.js";
 import sharePromptHandler from "../server/api/share-prompt.js";
 import studioHandler from "../server/api/studio.js";
@@ -54,6 +58,10 @@ const STATIC_HANDLERS = {
   "/api/razorpay-subscription": razorpaySubscriptionHandler,
   "/api/razorpay-verify": razorpayVerifyHandler,
   "/api/razorpay-webhook": razorpayWebhookHandler,
+  "/api/devops-order": devopsOrderHandler,
+  "/api/devops-verify": devopsVerifyHandler,
+  "/api/devops-state": devopsStateHandler,
+  "/api/devops-download": devopsDownloadHandler,
   "/api/reference-coding": referenceCodingHandler,
   "/api/share-prompt": sharePromptHandler,
   "/api/studio-delivery": studioDeliveryHandler,

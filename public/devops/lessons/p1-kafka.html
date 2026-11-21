@@ -3,12 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kafka Lab — Messages in a Line</title>
+<title>Kafka Lab — Messages in a Line — DevOps Kit</title>
 <link rel="stylesheet" href="/devops/assets/style.css">
 </head>
-<body>
-<div class="brandbar"><a href="/devops/index.html">PromptStudio<span class="dot">.</span></a><span class="tag">DevOps Kit</span></div>
-<header class="top"><h1>Kafka Lab — Messages in a Line</h1><p>Phase 1 · The Data Tier · fake data only</p></header><nav class="crumbs"><a href="../index.html">Home</a> / Phase 1</nav><div class="wrap"><div class="progress">Lesson 2 of 16</div><div class="progressbar"><span style="width:12%"></span></div><span class="phasebadge">Phase 1 · The Data Tier</span><div class="simbox"><b>&#9654; Try the simulation first</b> — a real terminal on this page, free. No install, works on your phone.<br><a class="btn" href="../sims/kafka.html">Open the Kafka Simulation — Messages in a Line</a><br>Simulation — practice version. Run the real lab with Docker to do it for real.</div><h2>Test status</h2>
+<body data-page="lesson" data-lesson="p1-kafka" data-phase="phase1">
+<header class="lesson-header">
+  <div class="lh-row">
+    <a class="wordmark" href="/devops/index.html">DevOps Kit</a>
+    <span class="lh-meta">Phase 1 · Lesson 2 of 16</span>
+    <span class="auth-slot" id="auth-slot"></span>
+  </div>
+  <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
+</header>
+<main class="lesson-wrap">
+<div class="lock-screen" id="lock-screen" hidden><p class="lock-loading" hidden>Checking your sign-in…</p><span class="lock-icon">🔒</span><h2>This lesson is in Phase 1 — ₹399, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase1" type="button" hidden>Buy Phase 1 — ₹399</button><a class="lock-back" href="/devops/index.html">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><h1>Kafka Lab — Messages in a Line</h1><span class="phasebadge">Phase 1 · The Data Tier</span><div class="simbox"><b>&#9654; Try the simulation first</b> — a real terminal on this page, free. No install, works on your phone.<br><a class="btn" href="/devops/sims/kafka.html">Open the Kafka Simulation — Messages in a Line</a><br>Simulation — practice version. Run the real lab with Docker to do it for real.</div><h2>Test status</h2>
 <p>Syntax-checked only (20 November 2026). The compose file and the properties files were checked for correct syntax. This lab was not run end-to-end on this machine, because this machine has no Docker. Follow it on your own machine with Docker, and if a step fails, read the error first — that is the real skill.</p>
 <h2>What this lab is</h2>
 <p>You will run two small Kafka clusters on your own machine, send messages into the first one, read them back, then watch MirrorMaker 2 copy them to the second one. All data is fake: order numbers and item names you make up.</p>
@@ -20,59 +28,83 @@
 <p>Kafka tells every client the address to come back to. In this lab that address is the container&#x27;s own name (<code>kafka-a</code>), so Kafka commands must run *inside* the container with <code>docker exec</code>. Do not run them from your own terminal — your machine does not know the name <code>kafka-a</code>. This is normal. The lab shows every command with <code>docker exec</code> already in it.</p>
 <h2>Step 1 — Start both clusters</h2>
 <p>From inside this folder:</p>
-<pre><code>docker compose up -d</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose up -d</code></pre></div>
 <p>You should see three containers start: <code>kafka-a</code>, <code>kafka-b</code>, <code>mm2</code>. Check:</p>
-<pre><code>docker compose ps</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose ps</code></pre></div>
 <p>You should see all three with STATUS &quot;Up&quot; (mm2 may take a minute — it waits for both clusters). If a container shows &quot;Exited&quot;, run <code>docker compose logs mm2</code> and read the last lines before moving on.</p>
 <p>If it breaks: <code>docker compose down</code> then <code>docker compose up -d</code> again. The first start downloads the Kafka image, so it takes a few minutes the first time.</p>
 <h2>Step 2 — Make the topic</h2>
 <p>A topic is the line messages wait in. Make one called <code>orders</code> on cluster a:</p>
-<pre><code>docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic orders --partitions 1 --replication-factor 1</code></pre>
-<p>You should see:</p>
-<pre><code>Created topic orders.</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic orders --partitions 1 --replication-factor 1</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Created topic orders.</code></pre></div></div>
 <p>If it breaks: &quot;Topic &#x27;orders&#x27; already exists&quot; means you already made it — skip this step. &quot;Connection refused&quot; means kafka-a is not up yet — wait a minute and run <code>docker compose ps</code> again.</p>
 <h2>Step 3 — Send three fake messages</h2>
 <p>The producer reads lines you type and sends each line as one message. Run it, type three lines, then press Ctrl+C to stop it:</p>
-<pre><code>docker exec -it kafka-a /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic orders</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec -it kafka-a /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic orders</code></pre></div>
 <p>Type these three lines (fake orders — made up for this lab):</p>
-<pre><code>order-101, notebook, 250
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>order-101, notebook, 250
 order-102, pen, 40
-order-103, mug, 350</code></pre>
+order-103, mug, 350</code></pre></div>
 <p>Then press Ctrl+C. Each line you typed is now one message in the topic, in order. Nothing prints while you type — that is normal.</p>
 <p>If it breaks: if the producer exits at once with an error about the topic, go back to Step 2 and check the topic exists with:</p>
-<pre><code>docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list</code></pre></div>
 <p>You should see <code>orders</code> in the list.</p>
 <h2>Step 4 — Read the messages back</h2>
 <p>A consumer reads from the start of the topic and prints every message:</p>
-<pre><code>docker exec kafka-a /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --from-beginning</code></pre>
-<p>You should see your three lines, in order:</p>
-<pre><code>order-101, notebook, 250
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-a /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --from-beginning</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>order-101, notebook, 250
 order-102, pen, 40
-order-103, mug, 350</code></pre>
+order-103, mug, 350</code></pre></div></div>
 <p>Press Ctrl+C to stop it. This proves the messages are stored in Kafka, not just sent and lost.</p>
 <p>If it breaks: if you see nothing, check you typed the messages into the same topic (<code>orders</code>) and the same cluster (<code>kafka-a</code>). Kafka keeps messages even after you read them once, so reading again with <code>--from-beginning</code> shows them again.</p>
 <h2>Step 5 — Watch MirrorMaker 2 copy them</h2>
 <p>MirrorMaker 2 is already running in the <code>mm2</code> container. It copies the <code>orders</code> topic from cluster a to cluster b. The copy appears on cluster b with the source name in front: <code>a.orders</code>.</p>
 <p>List the topics on cluster b:</p>
-<pre><code>docker exec kafka-b /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-b /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list</code></pre></div>
 <p>You should see <code>a.orders</code> in the list (plus small topics MM2 makes for itself — those start with <code>mm2-</code> or <code>heartbeats</code>). Now read the copied messages from cluster b:</p>
-<pre><code>docker exec kafka-b /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic a.orders --from-beginning</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-b /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic a.orders --from-beginning</code></pre></div>
 <p>You should see the same three lines. Press Ctrl+C to stop it. The same messages now live on two clusters. If cluster a dies, cluster b still has the copy.</p>
 <p>If it breaks: if <code>a.orders</code> is missing, wait one minute (MM2 copies every few seconds, not instantly) and list the topics again. If it is still missing, check the MM2 logs:</p>
-<pre><code>docker compose logs mm2</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose logs mm2</code></pre></div>
 <p>Look for the word &quot;ERROR&quot; in the last lines. The most common cause is that MM2 started before kafka-b was ready — restart it with <code>docker compose restart mm2</code> and wait a minute.</p>
 <h2>Step 6 — Send one more message and watch it follow</h2>
 <p>Send a fourth message to cluster a (same producer command as Step 3):</p>
-<pre><code>docker exec -it kafka-a /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic orders</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec -it kafka-a /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic orders</code></pre></div>
 <p>Type:</p>
-<pre><code>order-104, mouse pad, 150</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>order-104, mouse pad, 150</code></pre></div>
 <p>Press Ctrl+C. Wait 30 seconds, then read cluster b again:</p>
-<pre><code>docker exec kafka-b /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic a.orders --from-beginning</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-b /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic a.orders --from-beginning</code></pre></div>
 <p>You should see all four messages, including <code>order-104</code>. The copy follows new messages by itself. Press Ctrl+C.</p>
 <h2>Clean up</h2>
-<pre><code>docker compose down</code></pre>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose down</code></pre></div>
 <p>This stops and removes the three containers. The messages are gone — that is fine, they were fake. Run <code>docker compose up -d</code> any time to start again.</p>
 <h2>What you can now say, truthfully</h2>
 <p>&quot;I ran two Kafka clusters on my own machine, made a topic, sent messages with a producer, read them with a consumer, and copied the topic to a second cluster with MirrorMaker 2.&quot;</p>
 <h2>What this lab does NOT cover</h2>
-<ul><li>Real clusters run three or more brokers, not one. The ideas are the same; the setup is bigger.</li><li>MirrorMaker 2 can also copy in the other direction. This lab copies one way only, on purpose.</li><li>Kafka keeps messages for a set time, then deletes them. This lab does not change that setting.</li></ul><div class="pager"><span><a href="p1-start.html">← Previous: Start Here — Phase 1: The Data Tier</a></span><span><a href="p1-postgresql.html">Next: PostgreSQL Lab — Main Database, Standby, Failover →</a></span></div></div></body></html>
+<ul><li>Real clusters run three or more brokers, not one. The ideas are the same; the setup is bigger.</li><li>MirrorMaker 2 can also copy in the other direction. This lab copies one way only, on purpose.</li><li>Kafka keeps messages for a set time, then deletes them. This lab does not change that setting.</li></ul><nav class="pager"><a class="prev" href="/devops/lessons/p1-start.html"><span>← Previous lesson</span><span class="pname">Start Here</span></a><a class="next" href="/devops/lessons/p1-postgresql.html"><span>Next lesson →</span><span class="pname">PostgreSQL</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
+<div class="auth-modal" id="auth-modal" hidden>
+  <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
+    <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
+    <h2>Sign in to DevOps Kit</h2>
+    <p class="auth-sub">Your progress saves, so you can stop and come back.</p>
+    <button class="btn auth-google" id="auth-google" type="button">Continue with Google</button>
+    <div class="auth-or"><span>or with email</span></div>
+    <div class="auth-tabs">
+      <button type="button" id="auth-tab-signin" class="active">Sign in</button>
+      <button type="button" id="auth-tab-signup">Create account</button>
+    </div>
+    <form id="auth-form">
+      <label>Email<input id="auth-email" type="email" autocomplete="email" required></label>
+      <label>Password<input id="auth-password" type="password" autocomplete="current-password" required minlength="6"></label>
+      <p class="auth-error" id="auth-error" hidden></p>
+      <button class="btn amber auth-submit" id="auth-submit" type="submit">Sign in</button>
+    </form>
+    <p class="auth-switch"><span id="auth-switch-note">No account yet? </span><button type="button" id="auth-switch-link" class="linklike">Create one</button></p>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="/devops/assets/auth.js"></script>
+<script src="/devops/assets/devops-app.js"></script>
+<script src="/devops/assets/lesson.js"></script></body></html>
