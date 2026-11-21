@@ -110,6 +110,17 @@ th { background: #f2f2f7; }
 .simdeck .lead { color: #c7cbd1; }
 .simdeck-scroll { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding: 4px 16px 16px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .simdeck-scroll::-webkit-scrollbar { display: none; }
+.buygrid { display: grid; gap: 12px; margin-top: 16px; }
+@media (min-width: 640px) { .buygrid { grid-template-columns: repeat(3, 1fr); } }
+.buycard { background: #1f232b; border: 1px solid #343a45; border-radius: 14px; padding: 18px; }
+.buycard .buytag { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); background: var(--amber); border-radius: 9999px; padding: 5px 10px; }
+.buycard:first-child .buytag { background: #fff; }
+.buycard .buyprice { font-size: 26px; font-weight: 800; color: #fff; margin: 12px 0 4px; }
+.buycard .buyprice small { font-size: 13px; font-weight: 600; color: #c7cbd1; }
+.buycard ul { margin: 6px 0 0; padding: 0; list-style: none; }
+.buycard ul li { padding: 5px 0 5px 26px; position: relative; font-size: 15px; color: #e5e7eb; }
+.buycard ul li::before { content: "✓"; position: absolute; left: 2px; color: var(--amber); font-weight: 800; }
+.buy-note { color: #c7cbd1; font-size: 14px; line-height: 1.55; margin: 16px 0 0; max-width: 62ch; }
 .simcard { min-width: 280px; scroll-snap-align: start; background: #1e2128; border: 1px solid #2e333f; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
 .simcard .steppill { display: inline-block; align-self: flex-start; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--amber); background: rgba(240, 180, 41, 0.12); border: 1px solid rgba(240, 180, 41, 0.3); border-radius: 9999px; padding: 4px 9px; }
 .simcard h3 { margin: 0; color: #fff; font-size: 16px; }
@@ -395,4 +406,13 @@ body.locked #lock-screen { display: block; }
 @media (max-width: 480px) {
   .auth-chip { max-width: 80px; }
   .stickybar .btn { padding: 0 10px; font-size: 12px; }
+  /* Landing header at phone width: wordmark + pill + Sign in button
+     measured ~427px at 360px, so the button was cut off at the right
+     edge. Hide the decorative pill and the "by PromptStudio" suffix
+     (the hero carries the same message) so the full button fits. */
+  .site-header { padding: 0 12px; gap: 8px; }
+  .site-header .bill-pill { display: none; }
+  .site-header .wordmark small { display: none; }
+  .site-header .auth-slot { flex-shrink: 0; }
+  .site-header .auth-btn { flex-shrink: 0; }
 }
