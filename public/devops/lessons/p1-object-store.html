@@ -10,7 +10,7 @@
 <header class="lesson-header">
   <div class="lh-row">
     <a class="wordmark" href="/devops/index.html">DevOps Kit</a>
-    <span class="lh-meta">Phase 1 · Lesson 5 of 16</span>
+    <span class="lh-meta">Phase 1 · Lesson 6 of 18</span>
     <span class="auth-slot" id="auth-slot"></span>
   </div>
   <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
@@ -63,7 +63,13 @@
 <h2>What you can now say, truthfully</h2>
 <p>&quot;I ran two Moto object stores (a free S3 stand-in), made a bucket, uploaded files with the aws tool, and set up a mirror that copies new files to the second store by itself.&quot;</p>
 <h2>What this lab does NOT cover</h2>
-<ul><li>Real stores use access keys per app, not one shared login. This lab uses one login on purpose, so you can learn.</li><li>The mirror here copies one way only. Two-way sync is a different setup.</li><li>Large files, versioning and lifecycle rules (auto-deleting old files) are later topics. The ideas are the same; the setup is bigger.</li></ul><nav class="pager"><a class="prev" href="/devops/lessons/p1-redis.html"><span>← Previous lesson</span><span class="pname">Redis</span></a><a class="next" href="/devops/lessons/p1-load-balancer.html"><span>Next lesson →</span><span class="pname">Load Balancer</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
+<ul><li>Real stores use access keys per app, not one shared login. This lab uses one login on purpose, so you can learn.</li><li>The mirror here copies one way only. Two-way sync is a different setup.</li><li>Large files, versioning and lifecycle rules (auto-deleting old files) are later topics. The ideas are the same; the setup is bigger.</li></ul>
+<h2>Save your proof</h2>
+<p>The proof for this lab is the same file listed in both stores. Save both listings with these commands, run from inside this folder:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir -p ../portfolio/proof
+docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 ls s3://incoming/ &gt; ../portfolio/proof/object-store-mirror.txt
+docker compose exec awscli aws --endpoint-url http://moto-b:5000 s3 ls s3://incoming/ &gt;&gt; ../portfolio/proof/object-store-mirror.txt</code></pre></div>
+<p>Open the file and check both <code>receipt-001.txt</code> and <code>receipt-002.txt</code> appear twice — once per store. That file is your proof.</p><nav class="pager"><a class="prev" href="/devops/lessons/p1-redis.html"><span>← Previous lesson</span><span class="pname">Redis</span></a><a class="next" href="/devops/lessons/p1-load-balancer.html"><span>Next lesson →</span><span class="pname">Load Balancer</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
 <div class="auth-modal" id="auth-modal" hidden>
   <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
     <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>

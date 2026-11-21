@@ -10,7 +10,7 @@
 <header class="lesson-header">
   <div class="lh-row">
     <a class="wordmark" href="/devops/index.html">DevOps Kit</a>
-    <span class="lh-meta">Phase 1 · Lesson 7 of 16</span>
+    <span class="lh-meta">Phase 1 · Lesson 8 of 18</span>
     <span class="auth-slot" id="auth-slot"></span>
   </div>
   <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
@@ -121,7 +121,42 @@ EOF</code></pre></div>
 <h2>What you can now say, truthfully</h2>
 <p>&quot;I built a pipeline where a fake order file flows through an object store, Kafka, PostgreSQL and Redis, behind a load balancer — then I killed the main database, promoted the standby, and a new order still flowed through.&quot;</p>
 <h2>What this lab does NOT cover</h2>
-<ul><li>Real pipelines run each part on its own machines, not all on one machine. The ideas are the same; the setup is bigger.</li><li>Moto keeps files in memory only. If you stop the lab, the files are gone. The database rows and the Redis counter live in named volumes, so they survive a restart — the files do not.</li><li>This lab has no automatic failover (no Patroni here). The promotion in Step 6 is by hand. The Patroni part of the PostgreSQL lab shows the automatic version.</li><li>The load balancer here serves three tiny backends. A real app behind it is a bigger setup — but the guard works the same way.</li></ul><nav class="pager"><a class="prev" href="/devops/lessons/p1-load-balancer.html"><span>← Previous lesson</span><span class="pname">Load Balancer</span></a><a class="next" href="/devops/lessons/p2-start.html"><span>Next lesson →</span><span class="pname">Start Here</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
+<ul><li>Real pipelines run each part on its own machines, not all on one machine. The ideas are the same; the setup is bigger.</li><li>Moto keeps files in memory only. If you stop the lab, the files are gone. The database rows and the Redis counter live in named volumes, so they survive a restart — the files do not.</li><li>This lab has no automatic failover (no Patroni here). The promotion in Step 6 is by hand. The Patroni part of the PostgreSQL lab shows the automatic version.</li><li>The load balancer here serves three tiny backends. A real app behind it is a bigger setup — but the guard works the same way.</li></ul>
+<h2>Fill in the map</h2>
+<p>Draw the order flow from memory. Each blank is one hop: what travels, and which tool holds it. Write your answers on paper or in a text file, then check them at the end of this section.</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>A customer places a fake order.
+
+  incoming/order-005.json
+  (a small file: id, item, amount, buyer)
+            |
+            v
+  1. ___ holds a copy of the file
+            |
+            v
+  2. ___ carries the order as a message
+            |
+            v
+  3. ___ saves the order as a row
+            |
+            v
+  4. ___ counts the orders (orders:count)
+            |
+            v
+  The order is saved, and the counter says 5.
+
+Meanwhile, on the front door:
+
+  visitor --&gt; 5. ___ --&gt; web1 / web2 / web3</code></pre></div>
+<p>Fill in each blank with the tool name:</p>
+<ol><li>___ — which tool holds the copy of the file?</li><li>___ — which tool carries the order as a message?</li><li>___ — which tool saves the order as a row?</li><li>___ — which tool counts the orders?</li><li>___ — which tool spreads visitors across the three backends?</li></ol>
+<h3>Answers (no peeking)</h3>
+<ol><li>Object store (Moto, bucket <code>incoming</code>) — ingest stores a copy of the file there.</li><li>Kafka (topic <code>orders</code>) — ingest sends the order there, and the worker reads it from there.</li><li>PostgreSQL (table <code>orders</code>) — the worker saves the order as a row there.</li><li>Redis (key <code>orders:count</code>) — the worker adds 1 to the counter there each time an order is saved.</li><li>Load balancer (NGINX, the <code>lb</code> service) — it spreads visitors across web1, web2 and web3.</li></ol>
+<h2>Save your proof</h2>
+<p>The proof for this lab is the 5-row order table and the counter at 5. Save both with these commands, run from inside this folder after Step 8:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir -p ../portfolio/proof
+docker compose exec postgres-replica psql -U learner -d practice -c &quot;SELECT * FROM orders ORDER BY id;&quot; &gt; ../portfolio/proof/end-to-end-trace.txt
+docker compose exec redis redis-cli GET orders:count &gt;&gt; ../portfolio/proof/end-to-end-trace.txt</code></pre></div>
+<p>Open the file and check it shows 5 rows, including order 105, and the counter <code>&quot;5&quot;</code>. Then add the hostnames from the curl loop by hand, using <code>portfolio/proof/end-to-end-trace-TEMPLATE.txt</code>. That file is your proof.</p><nav class="pager"><a class="prev" href="/devops/lessons/p1-load-balancer.html"><span>← Previous lesson</span><span class="pname">Load Balancer</span></a><a class="next" href="/devops/lessons/p2-start.html"><span>Next lesson →</span><span class="pname">Start Here</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
 <div class="auth-modal" id="auth-modal" hidden>
   <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
     <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>

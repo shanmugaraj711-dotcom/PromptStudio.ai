@@ -7,6 +7,8 @@
   'use strict';
 
   var LESSON_TITLES = {
+    "lesson-0": "Lesson 0 — Before the Terminal",
+    "error-decoder": "Error Decoder",
     "p1-start": "Start Here — Phase 1", "p1-kafka": "Kafka Lab",
     "p1-postgresql": "PostgreSQL Lab", "p1-redis": "Redis Lab",
     "p1-object-store": "Object Store Lab", "p1-load-balancer": "Load Balancer Lab",
@@ -19,6 +21,7 @@
   var PHASE1_LESSONS = ["p1-start", "p1-kafka", "p1-postgresql", "p1-redis", "p1-object-store", "p1-load-balancer", "p1-end-to-end"];
   var PHASE2_LESSONS = ["p2-start", "p2-zero-cost", "p2-kubernetes", "p2-break-fix", "p2-cheat-sheets", "p2-interview", "p2-portfolio", "p2-resume", "p2-best-sites"];
   var FREE_SIMS = { kafka: true };
+  var FREE_LESSONS = { "lesson-0": true, "error-decoder": true };
   var PHASE_NAMES = { phase1: "Phase 1", phase2: "Phase 2" };
   var PHASE_PRICES = { phase1: "₹399", phase2: "₹799" };
 
@@ -164,7 +167,7 @@
         flag.textContent = ' ← Continue here';
         flag.classList.add('continue');
         row.classList.add('row-continue');
-      } else if (isLocked(ph) && !isPending()) {
+      } else if (!FREE_LESSONS[slug] && isLocked(ph) && !isPending()) {
         flag.textContent = ' 🔒 ' + PHASE_PRICES[ph];
         flag.classList.add('locked');
         row.classList.add('row-locked');
@@ -192,7 +195,8 @@
     if (banner) {
       var last = state && state.progress ? state.progress.lastLesson : null;
       var lessons = state && state.progress ? state.progress.lessons : {};
-      var done = Object.keys(lessons).filter(function (k) { return lessons[k] && lessons[k].completed; }).length;
+      var paidList = PHASE1_LESSONS.concat(PHASE2_LESSONS);
+      var done = paidList.filter(function (k) { return lessons[k] && lessons[k].completed; }).length;
       if (currentUser && last && LESSON_TITLES[last]) {
         banner.hidden = false;
         banner.innerHTML = '';
@@ -244,7 +248,7 @@
   function applyLesson() {
     var slug = pageLesson();
     var ph = pagePhase();
-    var locked = isLocked(ph);
+    var locked = !FREE_LESSONS[slug] && isLocked(ph);
     var pending = isPending();
     document.body.classList.toggle('locked', locked);
     var lock = document.getElementById('lock-screen');
@@ -271,7 +275,7 @@
     /* progress bar: real completion when signed in, scroll when not */
     var fill = document.getElementById('lesson-progress-fill');
     if (fill && currentUser && stateLoaded) {
-      var list = ph === 'phase1' ? PHASE1_LESSONS : PHASE2_LESSONS;
+      var list = ph === 'phase1' ? PHASE1_LESSONS : (ph === 'phase2' ? PHASE2_LESSONS : [slug]);
       var lessons = state.progress.lessons || {};
       var done = list.filter(function (s) { return lessons[s] && lessons[s].completed; }).length;
       window.__DEVOPS_COMPLETION_BAR__ = true;
@@ -490,7 +494,7 @@
     }).then(function (blob) {
       var a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = phase === 'phase1' ? 'devops-kit-phase1-v3.zip' : 'devops-kit-phase2-v3.zip';
+      a.download = phase === 'phase1' ? 'devops-kit-phase1-v4.zip' : 'devops-kit-phase2-v4.zip';
       document.body.appendChild(a);
       a.click();
       setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);

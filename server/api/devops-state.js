@@ -5,6 +5,7 @@ import { adminDb, json, requireUser } from "./_firebaseAdmin.js";
    GET  -> { entitlements: {phase1, phase2}, progress: {lessons, lastLesson, sims} }
    POST -> save one visit: { lesson, completed? } or { sim, step, completed? } */
 const LESSON_SLUGS = new Set([
+  "lesson-0", "error-decoder",
   "p1-start", "p1-kafka", "p1-postgresql", "p1-redis", "p1-object-store",
   "p1-load-balancer", "p1-end-to-end",
   "p2-start", "p2-zero-cost", "p2-kubernetes", "p2-break-fix",

@@ -10,7 +10,7 @@
 <header class="lesson-header">
   <div class="lh-row">
     <a class="wordmark" href="/devops/index.html">DevOps Kit</a>
-    <span class="lh-meta">Phase 1 · Lesson 2 of 16</span>
+    <span class="lh-meta">Phase 1 · Lesson 3 of 18</span>
     <span class="auth-slot" id="auth-slot"></span>
   </div>
   <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
@@ -79,7 +79,12 @@ order-103, mug, 350</code></pre></div></div>
 <h2>What you can now say, truthfully</h2>
 <p>&quot;I ran two Kafka clusters on my own machine, made a topic, sent messages with a producer, read them with a consumer, and copied the topic to a second cluster with MirrorMaker 2.&quot;</p>
 <h2>What this lab does NOT cover</h2>
-<ul><li>Real clusters run three or more brokers, not one. The ideas are the same; the setup is bigger.</li><li>MirrorMaker 2 can also copy in the other direction. This lab copies one way only, on purpose.</li><li>Kafka keeps messages for a set time, then deletes them. This lab does not change that setting.</li></ul><nav class="pager"><a class="prev" href="/devops/lessons/p1-start.html"><span>← Previous lesson</span><span class="pname">Start Here</span></a><a class="next" href="/devops/lessons/p1-postgresql.html"><span>Next lesson →</span><span class="pname">PostgreSQL</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
+<ul><li>Real clusters run three or more brokers, not one. The ideas are the same; the setup is bigger.</li><li>MirrorMaker 2 can also copy in the other direction. This lab copies one way only, on purpose.</li><li>Kafka keeps messages for a set time, then deletes them. This lab does not change that setting.</li></ul>
+<h2>Save your proof</h2>
+<p>The proof for this lab is the mirrored messages on cluster b. Save them to a file with this command, run from inside this folder (the consumer stops by itself after 5 seconds):</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir -p ../portfolio/proof
+docker exec kafka-b /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic a.orders --from-beginning --timeout-ms 5000 &gt; ../portfolio/proof/kafka-mirror.txt</code></pre></div>
+<p>Open the file and check it holds all four messages, including <code>order-104, mouse pad, 150</code>. That file is your proof.</p><nav class="pager"><a class="prev" href="/devops/lessons/p1-start.html"><span>← Previous lesson</span><span class="pname">Start Here</span></a><a class="next" href="/devops/lessons/p1-postgresql.html"><span>Next lesson →</span><span class="pname">PostgreSQL</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
 <div class="auth-modal" id="auth-modal" hidden>
   <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
     <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
