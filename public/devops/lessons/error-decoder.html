@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Error Decoder — Find Your Error, Fix It — DevOps Kit</title>
+<link rel="stylesheet" href="/devops/assets/style.css">
+</head>
+<body data-page="lesson" data-lesson="error-decoder" data-phase="free">
+<header class="lesson-header">
+  <div class="lh-row">
+    <a class="wordmark" href="/devops/index.html">DevOps Kit</a>
+    <span class="lh-meta">Free · Error decoder</span>
+    <span class="auth-slot" id="auth-slot"></span>
+  </div>
+  <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
+</header>
+<main class="lesson-wrap">
+<div class="lesson-content" id="lesson-content"><h1>Error Decoder — Find Your Error, Fix It</h1><span class="phasebadge">Free</span><p>Press Ctrl+F (or Cmd+F on Mac) and type part of the error message.</p>
+<p>Read the error first. The error tells you what broke. Do not guess. Find your error below, read what it means, run the one fix, then run the check. If the check passes, move on.</p>
+<h2>Docker</h2>
+<h3><code>Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?</code></h3>
+<p>What it means: Docker itself is not running on your machine. The fix: start Docker. On Docker Desktop, open the Docker app and wait until it says it is running. On Linux, run <code>sudo systemctl start docker</code>. Check it worked: <code>docker ps</code> prints a list (even an empty list) with no error.</p>
+<h3><code>Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock</code></h3>
+<p>What it means: Docker is running, but your user is not allowed to talk to it. The fix: <code>sudo usermod -aG docker $USER</code> — then log out and log back in (or run <code>newgrp docker</code>). Check it worked: <code>docker ps</code> works without <code>sudo</code> in front of it.</p>
+<h3><code>docker: command not found</code></h3>
+<p>What it means: Docker is not installed, or your terminal cannot find it. The fix: install Docker Desktop (or Docker Engine on Linux), then open a new terminal window. Check it worked: <code>docker --version</code> prints a version number.</p>
+<h3><code>docker: &#x27;compose&#x27; is not a docker command.</code></h3>
+<p>What it means: your Docker is too old to have the Compose plugin. The fix: update Docker Desktop to the newest version. On an old setup, try <code>docker-compose</code> (with a hyphen) instead of <code>docker compose</code>. Check it worked: <code>docker compose version</code> prints a version number.</p>
+<h3><code>Error response from daemon: No such container: web2</code></h3>
+<p>What it means: no container with that name exists. You typed the name wrong, or the container was removed. The fix: run <code>docker compose ps</code> and use one of the names it shows. Check it worked: the name you want appears in <code>docker compose ps</code>.</p>
+<h3><code>Error response from daemon: Container &lt;container id&gt; is not running</code></h3>
+<p>What it means: the container exists, but it is stopped. The fix: start it again, for example <code>docker compose start web2</code>. Check it worked: <code>docker compose ps</code> shows the container with STATUS &quot;Up&quot;.</p>
+<h3><code>Error response from daemon: pull access denied for my-image, repository does not exist or may require &#x27;docker login&#x27;</code></h3>
+<p>What it means: the image name is wrong, the image is private, or you are not logged in. The fix: check the spelling of the image name. If the image is private, run <code>docker login</code> first, then try again. Check it worked: <code>docker pull &lt;image-name&gt;</code> finishes with no error.</p>
+<h2>Docker Compose</h2>
+<h3><code>yaml: line 4: mapping values are not allowed in this context</code></h3>
+<p>What it means: a spacing or colon mistake in <code>docker-compose.yml</code>. The usual cause is a missing space after a colon, or a tab character. YAML does not allow tabs. The fix: open the file at the line number in the error, fix the spacing, and use spaces only. Then run <code>docker compose config</code> to check the file. Check it worked: <code>docker compose config</code> prints the file back with no error.</p>
+<h3><code>service &quot;web&quot; has neither an image nor a build context specified</code></h3>
+<p>What it means: a service in <code>docker-compose.yml</code> has no <code>image:</code> and no <code>build:</code> — Compose does not know what to run for it. The fix: add an <code>image:</code> line (for example <code>image: nginx</code>) or a <code>build:</code> block to that service in the file. Check it worked: <code>docker compose config</code> prints no error.</p>
+<h3><code>Error response from daemon: network &lt;name&gt; not found</code></h3>
+<p>What it means: the compose file asks for a network that does not exist on your machine. The fix: run <code>docker compose down</code> and then <code>docker compose up -d</code> again, so Compose makes its own network. If the file names a network by hand, remove that <code>networks:</code> line. Check it worked: <code>docker compose ps</code> shows the containers with STATUS &quot;Up&quot;.</p>
+<h2>Ports</h2>
+<h3><code>Bind for 0.0.0.0:8080 failed: port is already allocated</code></h3>
+<p>What it means: another container (or another program) already uses port 8080. The fix: run <code>docker compose ps</code> to find the container using it, and stop that one first. Or change the port number in <code>docker-compose.yml</code> (for example, 8081) and try again. Check it worked: <code>docker compose up -d</code> starts with no error.</p>
+<h3><code>listen tcp 0.0.0.0:8080: bind: address already in use</code></h3>
+<p>What it means: something on your machine already holds port 8080, so nothing else can use it. The fix: stop the program that holds the port, or use a different port (for example, open <code>http://localhost:8081</code> instead). Check it worked: <code>curl http://localhost:8080/</code> answers, or the new port answers.</p>
+<h2>PostgreSQL</h2>
+<h3><code>psql: error: connection to server at &quot;localhost&quot; (::1), port 5432 failed: Connection refused</code></h3>
+<p>What it means: no database is listening on that port. The database is not up. The fix: run <code>docker compose ps</code>. If the database is not &quot;Up&quot;, run <code>docker compose up -d</code> and wait a minute. Check it worked: <code>docker exec pg-primary psql -U learner -d practice -c &quot;SELECT 1;&quot;</code> answers with a row.</p>
+<h3><code>psql: error: connection to server at &quot;localhost&quot; (::1), port 5432 failed: FATAL: password authentication failed for user &quot;learner&quot;</code></h3>
+<p>What it means: the password (or the user name) is wrong. The fix: open <code>docker-compose.yml</code> and check the password there. Use exactly that password and user name in your command. Check it worked: the same <code>psql</code> command connects and answers.</p>
+<h3><code>ERROR: cannot execute INSERT in a read-only transaction</code></h3>
+<p>What it means: you tried to write on the standby (replica). A standby takes reads only. This is correct — do not try to fix it. The fix: run the INSERT on the main database instead, for example <code>docker exec pg-primary psql -U learner -d practice -c &quot;INSERT INTO orders VALUES (104, &#x27;pen stand&#x27;, 120);&quot;</code>. Check it worked: the INSERT on the main database prints <code>INSERT 0 1</code>.</p>
+<h3><code>ERROR: relation &quot;orders&quot; already exists</code></h3>
+<p>What it means: the table <code>orders</code> is already made. You ran the CREATE step twice. The fix: skip the CREATE part and run only the INSERT. Or drop the table first with <code>DROP TABLE orders;</code> and start the step again. Check it worked: <code>docker exec pg-primary psql -U learner -d practice -c &quot;SELECT * FROM orders ORDER BY id;&quot;</code> shows the rows.</p>
+<h3><code>FATAL: database &quot;practice&quot; does not exist</code></h3>
+<p>What it means: the database name in your command is wrong. The fix: use the name from the lab. In Part 1 of the PostgreSQL lab the name is <code>practice</code>. In the Patroni part the name is <code>postgres</code>. Check it worked: <code>psql</code> connects, and <code>SELECT * FROM orders;</code> shows rows (or &quot;no rows&quot; for an empty table, not an error).</p>
+<h2>Redis</h2>
+<h3><code>(error) NOAUTH Authentication required.</code></h3>
+<p>What it means: this Redis store needs a password, and you gave none. The fix: add the password to the command with <code>-a</code>, for example <code>docker exec redis-a redis-cli -a &lt;your-password&gt; ping</code>. Use the password from your compose file. Check it worked: the command answers <code>PONG</code>.</p>
+<h3><code>(error) READONLY You can&#x27;t write against a read only replica.</code></h3>
+<p>What it means: you tried to write on the copy (redis-b). A one-way copy takes reads only. This is correct — do not try to fix it. The fix: write on the main store instead: <code>docker exec redis-a redis-cli SET user:102 Ravi</code>. Check it worked: the SET on redis-a prints <code>OK</code>.</p>
+<h2>Kafka</h2>
+<h3><code>Topic &#x27;orders&#x27; already exists.</code></h3>
+<p>What it means: the topic <code>orders</code> is already made. You ran the create step twice. The fix: skip the create step and move on. Check it worked: <code>docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list</code> shows <code>orders</code> in the list.</p>
+<h3><code>LEADER_NOT_AVAILABLE</code></h3>
+<p>What it means: the topic has no leader yet. The broker is still starting, or the topic was just made. The fix: wait one minute and try the same command again. Do not delete the topic. Check it worked: the consumer command prints your messages.</p>
+<h3><code>org.apache.kafka.common.errors.TimeoutException: Topic orders not present in metadata after 60000 ms</code></h3>
+<p>What it means: the producer cannot find the topic <code>orders</code> on this cluster. The topic does not exist here. The fix: make the topic on the same cluster: <code>docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic orders --partitions 1 --replication-factor 1</code>. Check it worked: the <code>--list</code> command shows <code>orders</code>, and the producer starts without the error.</p>
+<h2>Object store</h2>
+<h3><code>An error occurred (NoSuchBucket) when calling the ListObjectsV2 operation: The specified bucket does not exist</code></h3>
+<p>What it means: the bucket name is wrong, or the bucket was never made. The fix: make the bucket in the first store: <code>docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 mb s3://incoming</code>. Check it worked: <code>docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 ls s3://incoming/</code> lists the files with no error.</p>
+<h3><code>An error occurred (BucketAlreadyExists) when calling the CreateBucket operation: The specified bucket already exists</code></h3>
+<p>What it means: the bucket is already made. You ran the make-bucket step twice. The fix: skip the make-bucket step and move on. Check it worked: <code>docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 ls</code> shows the bucket name with no error.</p>
+<h2>Load balancer</h2>
+<h3><code>curl: (7) Failed to connect to localhost port 8080: Connection refused</code></h3>
+<p>What it means: nothing answers on port 8080. The load balancer is not up yet. The fix: wait a few seconds, check <code>docker compose ps</code>, and if <code>lb</code> is not &quot;Up&quot;, run <code>docker compose up -d</code> again. Check it worked: <code>curl http://localhost:8080/</code> prints a line starting with <code>Hostname: web1</code> (or web2, or web3).</p>
+<h3><code>nginx: [emerg] host not found in upstream &quot;web2&quot;</code></h3>
+<p>What it means: <code>nginx.conf</code> names a backend that does not exist. The name is spelled wrong, or that backend never started. The fix: open <code>nginx.conf</code>, fix the backend name so it matches the service name in <code>docker-compose.yml</code>, then run <code>docker compose up -d</code> again. Check it worked: <code>docker compose logs lb</code> shows no <code>emerg</code> line, and <code>docker compose ps</code> shows <code>lb</code> with STATUS &quot;Up&quot;.</p>
+<h3><code>502 Bad Gateway</code></h3>
+<p>What it means: the load balancer is up, but no backend answered it. A backend is down. The fix: run <code>docker compose ps</code> to find the dead backend, then start it with <code>docker compose start web2</code> (use the real name). If it stops again, read its log with <code>docker compose logs web2</code>. Check it worked: <code>curl http://localhost:8080/</code> prints a line starting with <code>Hostname:</code>.</p>
+<h2>General</h2>
+<h3><code>bash: ./reset.sh: Permission denied</code></h3>
+<p>What it means: the file is not marked as runnable. The fix: <code>chmod +x reset.sh</code>, then run it again. Check it worked: the script runs with no permission error.</p>
+<h3><code>chmod: cannot access &#x27;01-replicator.sql&#x27;: No such file or directory</code></h3>
+<p>What it means: you are in the wrong folder, or the file name is spelled wrong. The fix: run <code>ls</code> to see where you are, then <code>cd</code> into the right lab folder and try again. Check it worked: <code>ls</code> shows the file name you want.</p>
+<h3><code>ModuleNotFoundError: No module named &#x27;kafka&#x27;</code></h3>
+<p>What it means: Python cannot find the Kafka library. It is not installed where the program runs. The fix: install the package the lab uses: <code>pip install kafka-python-ng</code>. Check it worked: <code>python -c &quot;import kafka&quot;</code> prints no error.</p>
+<h3><code>ERROR: Could not find a version that satisfies the requirement kafka-python-ng</code></h3>
+<p>What it means: pip cannot find that package. The name is spelled wrong, or pip cannot reach the internet. The fix: check the spelling against <code>requirements.txt</code>, check your internet connection, and try again. Check it worked: <code>pip install kafka-python-ng</code> finishes with <code>Successfully installed</code>.</p>
+<h3><code>no space left on device</code></h3>
+<p>What it means: your disk is full. Docker has nowhere to write. The fix: free space. On your practice machine only, run <code>docker system prune</code> to remove unused images and containers. It asks first — read what it will remove before you say yes. Check it worked: <code>docker compose up -d</code> starts with no error, and your disk shows free space again.</p>
+<h3><code>manifest for nginx:99.0 not found: manifest unknown: manifest unknown</code></h3>
+<p>What it means: that image tag does not exist. There is no <code>nginx:99.0</code>. The fix: use a tag that exists, for example <code>nginx:latest</code>, and run <code>docker pull nginx:latest</code>. Check it worked: <code>docker pull nginx:latest</code> finishes with no error.</p>
+<h3><code>exec: &quot;psql&quot;: executable file not found in $PATH: unknown</code></h3>
+<p>What it means: the program you asked for is not inside that container. <code>psql</code> lives in the database container, not in every container. The fix: run the command in the right container, for example <code>docker exec pg-primary psql -U learner -d practice -c &quot;SELECT 1;&quot;</code>. Check it worked: the command in the right container answers.</p>
+<h3><code>timeout waiting for container &lt;name&gt; to become healthy</code></h3>
+<p>What it means: a container with a health check never turned healthy. Something inside it is failing. The fix: read its log — <code>docker compose logs &lt;name&gt;</code> — fix the error the log shows, then run <code>docker compose restart &lt;name&gt;</code>. Check it worked: <code>docker compose ps</code> shows the container with STATUS &quot;Up&quot; (and healthy, if a health check is set).</p><nav class="pager"><a class="prev" href="/devops/lessons/lesson-0.html"><span>← Previous lesson</span><span class="pname">Lesson 0</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
+<div class="auth-modal" id="auth-modal" hidden>
+  <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
+    <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
+    <h2>Sign in to DevOps Kit</h2>
+    <p class="auth-sub">Your progress saves, so you can stop and come back.</p>
+    <button class="btn auth-google" id="auth-google" type="button">Continue with Google</button>
+    <div class="auth-or"><span>or with email</span></div>
+    <div class="auth-tabs">
+      <button type="button" id="auth-tab-signin" class="active">Sign in</button>
+      <button type="button" id="auth-tab-signup">Create account</button>
+    </div>
+    <form id="auth-form">
+      <label>Email<input id="auth-email" type="email" autocomplete="email" required></label>
+      <label>Password<input id="auth-password" type="password" autocomplete="current-password" required minlength="6"></label>
+      <p class="auth-error" id="auth-error" hidden></p>
+      <button class="btn amber auth-submit" id="auth-submit" type="submit">Sign in</button>
+    </form>
+    <p class="auth-switch"><span id="auth-switch-note">No account yet? </span><button type="button" id="auth-switch-link" class="linklike">Create one</button></p>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="/devops/assets/auth.js"></script>
+<script src="/devops/assets/devops-app.js"></script>
+<script src="/devops/assets/lesson.js"></script></body></html>

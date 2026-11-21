@@ -10,7 +10,7 @@
 <header class="lesson-header">
   <div class="lh-row">
     <a class="wordmark" href="/devops/index.html">DevOps Kit</a>
-    <span class="lh-meta">Phase 1 · Lesson 3 of 16</span>
+    <span class="lh-meta">Phase 1 · Lesson 4 of 18</span>
     <span class="auth-slot" id="auth-slot"></span>
   </div>
   <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
@@ -27,7 +27,7 @@
 <ul><li><strong>Primary</strong> — the main database. It takes writes (new rows).</li><li><strong>Replica / standby</strong> — a copy that follows the primary. It takes reads only. It becomes the new primary on failover.</li><li><strong>WAL</strong> — the write-ahead log. A list of every change, written down first, before the real data changes. The replica reads this list to stay in sync. WAL streaming means the replica reads the list live, as changes happen.</li><li><strong>Replication slot</strong> — a bookmark the primary keeps, so it does not throw away WAL entries the replica still needs.</li><li><strong>Failover</strong> — the standby taking over as the new primary.</li><li><strong>Patroni</strong> — a program that watches the databases and does the failover by itself.</li></ul>
 <h2>Part 1 — Primary and replica</h2>
 <h3>Step 1 — Start both databases</h3>
-<p>From inside this folder, first make the database setup file readable. The database runs as its own user, and it cannot read a file that is private to you. This one command fixes that:</p>
+<p>From inside this folder, first make the database setup file readable. The database runs as its own user, and it cannot read a file that is private to you. This one command fixes that. <code>chmod</code> is short for &quot;change mode&quot; — it changes who can read a file. <code>-R</code> means every file in this folder, and <code>a+r</code> means everyone can read.</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>chmod -R a+r .</code></pre></div>
 <p>Then start both databases:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose up -d</code></pre></div>
@@ -111,7 +111,43 @@ docker compose up -d</code></pre></div>
 <h2>What you can now say, truthfully</h2>
 <p>&quot;I ran a PostgreSQL primary and a standby with WAL streaming, proved the standby had the same data, promoted it by hand when the primary died, and ran a Patroni cluster that did the same failover by itself.&quot;</p>
 <h2>What this lab does NOT cover</h2>
-<ul><li>Real clusters run three or more database nodes, not two.</li><li><code>pg_rewind</code> (used in the Patroni setup) lets an old primary rejoin faster. The plain lab in Part 1 does not use it — that is why the old primary must be rebuilt there.</li><li>Backups are a different job from replication. Replication protects you when a machine dies. Backups protect you when data is deleted by mistake. You need both in real work.</li></ul><nav class="pager"><a class="prev" href="/devops/lessons/p1-kafka.html"><span>← Previous lesson</span><span class="pname">Kafka</span></a><a class="next" href="/devops/lessons/p1-redis.html"><span>Next lesson →</span><span class="pname">Redis</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
+<ul><li>Real clusters run three or more database nodes, not two.</li><li><code>pg_rewind</code> (used in the Patroni setup) lets an old primary rejoin faster. The plain lab in Part 1 does not use it — that is why the old primary must be rebuilt there.</li><li>Backups are a different job from replication. Replication protects you when a machine dies. Backups protect you when data is deleted by mistake. You need both in real work.</li></ul>
+<h2>Failure drill — Kill the leader, watch Patroni promote</h2>
+<p>This drill proves Patroni promotes the standby by itself when the leader dies, and no rows are lost.</p>
+<p>Do Part 2 first, up to Step 2, so row 201 is already saved.</p>
+<p>Step 1 — Go into the Patroni folder and stop the leader:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cd patroni
+docker compose stop patroni-1</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>✔ Container patroni-1  Stopped</code></pre></div></div>
+<p>Step 2 — Wait 30 seconds, then check the cluster on the second node&#x27;s port:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8009/cluster</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>{ &quot;members&quot;: [
+  {&quot;name&quot;: &quot;patroni-2&quot;, &quot;role&quot;: &quot;leader&quot;},
+  {&quot;name&quot;: &quot;patroni-1&quot;, &quot;role&quot;: &quot;replica&quot;} ] }</code></pre></div></div>
+<p>(The real answer is longer. The two lines above are the part that matters.)</p>
+<p>Step 3 — Prove the new leader takes writes:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec patroni-2 psql -U learner -d postgres -c &quot;INSERT INTO orders VALUES (202, &#x27;ruler&#x27;); SELECT * FROM orders;&quot;</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>INSERT 0 1
+ id  |  item
+-----+---------
+ 201 | stapler
+ 202 | ruler
+(2 rows)</code></pre></div></div>
+<p>Both rows are there. Row 201 survived, and row 202 is new.</p>
+<p>Step 4 — Bring the old leader back:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose start patroni-1</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>✔ Container patroni-1  Started</code></pre></div></div>
+<p>Wait a minute, then check the cluster:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8008/cluster</code></pre></div>
+<p>You should see <code>patroni-1</code> back, now as a <code>&quot;replica&quot;</code>.</p>
+<p>Checklist — tick each one when you have seen it:</p>
+<ul><li>☐ The leader changed: <code>patroni-2</code> became the leader.</li><li>☐ No rows lost: row 201 is still there after the failover.</li><li>☐ New row saved: row 202 was written to the new leader.</li></ul>
+<p>Reset — run this from the <code>phase1</code> folder to wipe the drill and start fresh:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>bash reset.sh postgresql-lab/patroni</code></pre></div>
+<p>Or, from inside the <code>patroni</code> folder, the plain way:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose down -v &amp;&amp; docker compose up -d</code></pre></div>
+<p>That stops everything and wipes the data. The data was fake.</p>
+<h2>Save your proof</h2>
+<p>The proof for this lab is the failover log: the cluster output showing the new leader, and the row count before and after. Save the cluster output with this command, run from inside the <code>patroni/</code> folder, after the drill:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir -p ../../portfolio/proof
+curl http://localhost:8009/cluster &gt; ../../portfolio/proof/failover-log.txt</code></pre></div>
+<p>Then open <code>portfolio/proof/failover-log-TEMPLATE.txt</code>, copy it to <code>failover-log.txt</code> if you want the full format, and add the row counts by hand. That file is your proof.</p><nav class="pager"><a class="prev" href="/devops/lessons/p1-kafka.html"><span>← Previous lesson</span><span class="pname">Kafka</span></a><a class="next" href="/devops/lessons/p1-redis.html"><span>Next lesson →</span><span class="pname">Redis</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
 <div class="auth-modal" id="auth-modal" hidden>
   <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
     <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>

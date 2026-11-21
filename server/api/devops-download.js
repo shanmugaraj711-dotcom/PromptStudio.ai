@@ -8,8 +8,8 @@ import { adminDb, json, requireUser } from "./_firebaseAdmin.js";
    server/downloads/ (the repo cannot hold binary files through the
    GitHub connector), bundled into the function with includeFiles. */
 const FILES = {
-  1: { b64: "devops-kit-phase1-v3.zip.b64", name: "devops-kit-phase1-v3.zip", field: "devopsPhase1" },
-  2: { b64: "devops-kit-phase2-v3.zip.b64", name: "devops-kit-phase2-v3.zip", field: "devopsPhase2" },
+  1: { b64: "devops-kit-phase1-v4.zip.b64", name: "devops-kit-phase1-v4.zip", field: "devopsPhase1" },
+  2: { b64: "devops-kit-phase2-v4.zip.b64", name: "devops-kit-phase2-v4.zip", field: "devopsPhase2" },
 };
 
 export default async function handler(req, res) {
