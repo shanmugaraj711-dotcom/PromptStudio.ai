@@ -7,7 +7,9 @@
 // up/down/ps/logs/exec/stop/start/run, docker exec, kafka-topics,
 // kafka-console-producer/consumer, psql -c, redis-cli, aws s3, curl,
 // heredocs, for-loops, pipes to grep, && chains) plus common shell
-// commands (ls, cd, pwd, echo, cat, history, help, clear, whoami, date).
+// commands (ls, cd, pwd, echo, cat, history, help, clear, whoami, date)
+// plus quick checks (python --version, ip addr, uname) and a hint for
+// ipconfig, which is a Windows command.
 // Wrong commands get a realistic error, like a real terminal.
 // The simulated world is state-driven: containers start/stop, topics
 // gain messages, keys get set, rows get inserted, mirrors copy files.
@@ -461,6 +463,9 @@
       var cmd = toks[0];
       if (!cmd) return okOut([]);
       if (cmd === 'sudo') return runSingleNoPipe(toks.slice(1));
+      // Windows users type Ipconfig out of habit; answer the confusion
+      // instead of "command not found" (matched case-insensitively).
+      if (cmd.toLowerCase() === 'ipconfig') return okOut(['ipconfig is a Windows command. On Linux, try: ip addr']);
       switch (cmd) {
         case 'help': return okOut(helpText());
         case 'clear': return { lines: [], kind: 'out', clear: true };
@@ -476,9 +481,35 @@
         case 'chmod': return chmodCmd(toks.slice(1));
         case 'docker': return dockerCmd(toks.slice(1));
         case 'curl': return curlCmd(toks.slice(1));
+        case 'python':
+        case 'python3': return pythonCmd(toks.slice(1));
+        case 'ip': return ipCmd(toks.slice(1));
+        case 'uname': return unameCmd(toks.slice(1));
         default:
           return errOut(['bash: ' + cmd + ': command not found', 'Type help to see what this practice terminal understands.']);
       }
+    }
+
+    // Quick checks people type first in a new box. Fixed outputs, in
+    // the same style as the rest of the engine: real syntax, one answer.
+    function pythonCmd(args) {
+      if (args[0] === '--version' || args[0] === '-V') return okOut(['Python 3.12.3']);
+      return okOut(['Python 3.12.3', 'Interactive mode and scripts are not available in this practice terminal. Try: python --version']);
+    }
+
+    function ipCmd(args) {
+      if (args[0] === 'addr' || args[0] === 'a') return okOut([
+        '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536',
+        '    inet 127.0.0.1/8 scope host lo',
+        '2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500',
+        '    inet 172.18.0.5/16 scope global eth0'
+      ]);
+      return errOut(['ip: this practice terminal only answers "ip addr". Try: ip addr']);
+    }
+
+    function unameCmd(args) {
+      if (args[0] === '-a') return okOut(['Linux devops-kit 6.8.0-generic x86_64 GNU/Linux']);
+      return okOut(['Linux']);
     }
 
     function helpText() {
@@ -498,6 +529,7 @@
         '  aws --endpoint-url http://moto-a:5000 s3 ls / mb / cp',
         '  curl http://localhost:8080/  try the load balancer',
         '  cat > file << \'EOF\'         write a file (type EOF to finish)',
+        '  python --version / ip addr / uname   quick checks this box answers',
         '',
         '  ls  cd  pwd  echo  cat  history  clear  help',
         '',
@@ -1094,7 +1126,7 @@
       advanceTime: function (ms) { w.timeOffset += ms; },
       getWorld: function () { return w; },
       completions: function (prefix) {
-        var words = ['docker', 'compose', 'up', 'down', 'ps', 'logs', 'exec', 'stop', 'start', 'run', 'curl', 'ls', 'cd', 'pwd', 'echo', 'cat', 'chmod', 'help', 'history', 'clear', 'whoami', 'exit',
+        var words = ['docker', 'compose', 'up', 'down', 'ps', 'logs', 'exec', 'stop', 'start', 'run', 'curl', 'ls', 'cd', 'pwd', 'echo', 'cat', 'chmod', 'help', 'history', 'clear', 'whoami', 'exit', 'python', 'python3', 'ip', 'uname', 'ipconfig',
           'kafka-topics.sh', 'kafka-console-producer.sh', 'kafka-console-consumer.sh', 'psql', 'redis-cli', 'aws', 's3', 'mb', 'cp'];
         for (var n in w.containers) words.push(n);
         for (var d in w.fs) { w.fs[d].forEach(function (f) { words.push(f); }); }
@@ -1163,7 +1195,7 @@
     if (freePlay || stepIdx >= steps.length) {
       stepCard.style.display = 'none';
       freeBanner.style.display = 'block';
-      stepCount.textContent = 'Guided steps done — free play. Type any command.';
+      stepCount.textContent = 'Guided steps done — free play. Try the lab commands, or type help.';
       lightMap(null);
       return;
     }
@@ -1189,7 +1221,7 @@
       stepIdx++;
       if (stepIdx >= steps.length) {
         freePlay = true;
-        printLine('— Guided steps done. Free play: type any command to explore. —', 'hint');
+        printLine('— Guided steps done. Free play: try the lab commands, or type help to see them. —', 'hint');
       } else {
         printLine('— Step done. Next: —', 'hint');
       }
@@ -1235,7 +1267,7 @@
         stepIdx++;
         if (stepIdx >= steps.length) {
           freePlay = true;
-          printLine('— Guided steps done. Free play: type any command to explore. —', 'hint');
+          printLine('— Guided steps done. Free play: try the lab commands, or type help to see them. —', 'hint');
         }
         showStep();
       }
@@ -1266,7 +1298,7 @@
     stepIdx++;
     if (stepIdx >= steps.length) {
       freePlay = true;
-      printLine('— Guided steps done. Free play: type any command to explore. —', 'hint');
+      printLine('— Guided steps done. Free play: try the lab commands, or type help to see them. —', 'hint');
     }
     showStep();
     input.focus();
@@ -1275,7 +1307,7 @@
   function skipAll() {
     stepIdx = steps.length;
     freePlay = true;
-    printLine('— Free play: type any command to explore. —', 'hint');
+    printLine('— Free play: try the lab commands, or type help to see them. —', 'hint');
     showStep();
     input.focus();
   }
