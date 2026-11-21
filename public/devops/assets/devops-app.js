@@ -312,6 +312,31 @@
     var locked = !FREE_SIMS[sim] && isLocked(ph);
     var pending = isPending();
     document.body.classList.toggle('locked', locked);
+    /* Belt-and-braces lock: hide the sim content itself with inline
+       styles, not only through the body.locked CSS rule. A locked
+       page has been seen rendering the step card with an empty white
+       space where the terminal should be, so the lock must not
+       depend on one stylesheet rule taking effect. Only elements
+       this block hid are restored, so sim.js keeps owning the
+       free-play banner and the step card in free play. */
+    var simBits = [
+      document.querySelector('.sim-topbar'),
+      document.querySelector('.sim-about'),
+      document.getElementById('step-card'),
+      document.getElementById('free-banner'),
+      document.getElementById('term')
+    ];
+    for (var i = 0; i < simBits.length; i++) {
+      var bit = simBits[i];
+      if (!bit) continue;
+      if (locked) {
+        if (bit.style.display !== 'none') bit.setAttribute('data-lock-hidden', '1');
+        bit.style.display = 'none';
+      } else if (bit.getAttribute('data-lock-hidden')) {
+        bit.removeAttribute('data-lock-hidden');
+        bit.style.display = '';
+      }
+    }
     var lock = document.getElementById('lock-screen');
     if (lock) {
       /* While the sign-in state is unknown AND the sim looks locked,
