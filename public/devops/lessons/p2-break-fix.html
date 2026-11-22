@@ -11,7 +11,7 @@
   <div class="lh-row">
     <button class="sidebar-toggle" id="btn-sidebar" type="button" aria-expanded="false" aria-controls="lesson-sidebar">&#9776; Lessons</button>
     <a class="wordmark" href="/devops/index.html">DevOps Kit</a>
-    <span class="lh-meta">Phase 2 · Lesson 12 of 18</span>
+    <span class="lh-meta">Lesson 12 of 18</span>
     <span class="auth-slot" id="auth-slot"></span>
   </div>
   <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
@@ -21,12 +21,12 @@
 <p>These labs teach you <strong>fixing</strong>: each one breaks something on purpose, so you practise finding the cause.</p>
 <p>In real work, fixing is the job itself — a broken system stays broken until someone reads the symptom and finds the cause.</p>
 <p>Each lab follows the same order: break it, read the symptom, find the cause, fix it. Do not read the fix first.</p>
-<div class="ladder"><div class="ladder-title">Practice labs — Docker, Git and ports</div><div class="ladder-note">These labs are extra practice, not one topic&rsquo;s ladder. Six small breaks to fix: a wrong image name, a container that dies, a missing test file, a merge conflict, a closed port, a wrong Dockerfile. They practise Docker, Git and ports — the same skills the Docker, Linux and on-call ladders teach.</div></div><div class="simbox"><b>&#9654; Try the simulation </b> — included with Phase 2. A real terminal on this page. No install, works on your phone.<br><a class="btn" href="/devops/sims/p2-break-fix.html">Open the Break-and-Fix Simulation — Break It, Then Fix It</a><br>Simulation — practice version. Run the real lab with Docker to do it for real.</div><h2>How to use these labs</h2>
+<div class="ladder"><div class="ladder-title">Practice labs — Docker, Git and ports</div><div class="ladder-note">These labs are extra practice, not one topic&rsquo;s ladder. Six small breaks to fix: a wrong image name, a container that dies, a missing test file, a merge conflict, a closed port, a wrong Dockerfile. They practise Docker, Git and ports — the same skills the Docker, Linux and on-call ladders teach.</div></div><h2>How to use these labs</h2>
 <p>Each lab breaks something on purpose. Do not read the fix first. Read the symptom, try to find the cause with the commands you know, then check the fix. In real on-call work (being the person who fixes things when they break), this order — symptom, logs, cause, fix — is the whole job.</p>
 <hr>
 <h2>Lab 1 — The container that will not start</h2>
 <h3>Break it</h3>
-<div class="tryit"><a class="btn amber" href="/devops/sims/p2-break-fix.html">Try it Yourself &raquo;</a><span>Open the practice terminal and run it yourself — nothing installs.</span></div><div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker run -d --name broken-web nginxg</code></pre></div>
+<div class="tryit"><a class="btn amber" href="/devops/sims/p2-break-fix.html">Try it Yourself &raquo;</a><span>Open the practice terminal and run it yourself — nothing installs. Included with Phase 2. Simulation — practice version. Run the real lab with Docker to do it for real.</span></div><div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker run -d --name broken-web nginxg</code></pre></div>
 <p>(<code>nginxg</code> is a typing mistake on purpose. There is no such image.)</p>
 <h3>Symptom</h3>
 <p>Docker prints an error and no container runs.</p>
@@ -211,7 +211,7 @@ docker build -t fail-demo:1.0 .</code></pre></div>
 <h2>After all six labs</h2>
 <p>You can now say, truthfully: &quot;I can read container logs, fix a port clash, fix a bad image name, resolve a merge conflict, find a missing port mapping, fix a failed build, and read a failed pipeline log.&quot; That sentence is worth more than a certificate with no practice.</p>
 <h2>Keep practising with the data tier (Phase 1)</h2>
-<p>The same break-and-fix habit applies to databases and queues. Phase 1 has its own practice built in: the PostgreSQL lab makes you kill the main database and promote the standby by hand, the load balancer lab makes you kill a backend and watch the site stay up, and the end-to-end lab puts it all together. Do those after these six labs.</p><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> What four steps should you follow in order when practising how to fix a broken system?</p><details class="exercise-answer"><summary>Show answer</summary><p>Break it, read the symptom, find the cause, and then fix it.</p></details></div><nav class="pager"><a class="prev" href="/devops/lessons/p2-kubernetes.html"><span>← Previous lesson</span><span class="pname">Kubernetes</span></a><a class="next" href="/devops/lessons/p2-cheat-sheets.html"><span>Next lesson →</span><span class="pname">Cheat Sheets</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></div></main>
+<p>The same break-and-fix habit applies to databases and queues. Phase 1 has its own practice built in: the PostgreSQL lab makes you kill the main database and promote the standby by hand, the load balancer lab makes you kill a backend and watch the site stay up, and the end-to-end lab puts it all together. Do those after these six labs.</p><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> What four steps should you follow in order when practising how to fix a broken system?</p><p><a href="/devops/sims/p2-break-fix.html">Open the practice terminal to test this &rarr;</a></p><details class="exercise-answer"><summary>Show answer</summary><p>Break it, read the symptom, find the cause, and then fix it.</p></details></div><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button><nav class="pager"><a class="prev" href="/devops/lessons/p2-kubernetes.html"><span>← Previous lesson</span><span class="pname">Kubernetes</span></a><a class="next" href="/devops/lessons/p2-cheat-sheets.html"><span>Next lesson →</span><span class="pname">Cheat Sheets</span></a></nav></div></div></main>
 <div class="auth-modal" id="auth-modal" hidden>
   <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
     <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>

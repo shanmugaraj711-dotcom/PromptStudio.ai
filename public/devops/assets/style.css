@@ -123,9 +123,12 @@ th { background: #f2f2f7; }
 .buy-note { color: #c7cbd1; font-size: 14px; line-height: 1.55; margin: 16px 0 0; max-width: 62ch; }
 .simcard { min-width: 280px; scroll-snap-align: start; background: #1e2128; border: 1px solid #2e333f; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
 .simcard .steppill { display: inline-block; align-self: flex-start; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--amber); background: rgba(240, 180, 41, 0.12); border: 1px solid rgba(240, 180, 41, 0.3); border-radius: 9999px; padding: 4px 9px; }
+.simcard .simpills { display: flex; gap: 6px; flex-wrap: wrap; }
+.simcard .tierpill { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--amber); background: rgba(240, 180, 41, 0.12); border: 1px solid rgba(240, 180, 41, 0.3); border-radius: 9999px; padding: 4px 9px; }
+.simcard .tierpill.free { color: var(--green); background: rgba(22, 163, 74, 0.12); border-color: rgba(22, 163, 74, 0.3); }
 .simcard h3 { margin: 0; color: #fff; font-size: 16px; }
 .simcard p { margin: 0; color: #c7cbd1; font-size: 14px; line-height: 1.5; flex: 1; }
-.simprog { display: flex; align-items: center; gap: 3px; font-family: var(--mono); font-size: 11px; color: #8b949e; }
+.simprog { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; font-family: var(--mono); font-size: 11px; color: #8b949e; }
 .simprog i { width: 10px; height: 10px; background: #2e333f; border-radius: 2px; display: inline-block; }
 .simprog i.on { background: var(--amber); }
 .simcard .btn { width: 100%; }
@@ -191,7 +194,7 @@ details.curriculum .cbody-inner { overflow: hidden; min-height: 0; }
 .stickybar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; height: 64px; padding: 8px 16px; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-top: 1px solid var(--hair); display: flex; gap: 12px; align-items: center; justify-content: space-between; }
 .stickybar .sb-prices { font-size: 12px; font-weight: 600; color: var(--ink); line-height: 1.35; white-space: nowrap; }
 .stickybar .sb-prices small { display: block; font-size: 11px; font-weight: 400; color: #667085; }
-.stickybar .btn { height: 40px; min-height: 40px; padding: 0 16px; font-size: 13px; flex-shrink: 0; }
+.stickybar .btn { height: 44px; min-height: 44px; padding: 0 16px; font-size: 13px; flex-shrink: 0; }
 .has-sticky footer.site { padding-bottom: 110px; }
 footer.site { border-top: 1px solid var(--hair); padding: 22px 18px 40px; color: var(--muted); font-size: 13px; text-align: center; }
 footer.site b { color: var(--ink); }
@@ -227,7 +230,7 @@ footer.site b { color: var(--ink); }
 .codeblock { border-radius: 10px; overflow: hidden; margin: 16px 0; border: 1px solid #2e333f; }
 .codeblock-head { background: #1e2128; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; }
 .codeblock-head .cb-label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8b949e; }
-.codeblock-head .cb-copy { height: 28px; min-height: 28px; padding: 0 10px; font-size: 11px; font-weight: 600; border-radius: 6px; border: 1px solid #3a3f4b; background: #272b34; color: #e5e7eb; cursor: pointer; }
+.codeblock-head .cb-copy { height: 36px; min-height: 36px; padding: 0 10px; font-size: 11px; font-weight: 600; border-radius: 6px; border: 1px solid #3a3f4b; background: #272b34; color: #e5e7eb; cursor: pointer; }
 .codeblock-head .cb-copy:active { transform: scale(0.97); }
 .codeblock pre { margin: 0; border-radius: 0; background: var(--ink); color: #f8fafc; padding: 12px 14px; font-size: 13px; font-family: var(--mono); line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .codeblock pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
@@ -251,9 +254,6 @@ footer.site b { color: var(--ink); }
 .pager a { background: #fff; border: 1px solid var(--hair); border-radius: 12px; padding: 12px 14px; text-decoration: none; color: var(--ink); font-weight: 600; font-size: 14px; min-height: 48px; display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-card); }
 .pager a.next { background: var(--blue); border-color: var(--blue); color: #fff; justify-content: flex-end; text-align: right; }
 .pager a:active { transform: scale(0.985); }
-.simbox { background: #eef4ff; border: 1px solid #b9d0ff; border-radius: 14px; padding: 16px; margin: 18px 0; font-size: 15px; }
-.simbox a { font-weight: 700; }
-.simbox .btn { display: block; margin-top: 10px; width: 100%; }
 
 /* ---------- simulation pages: split mobile layout ---------- */
 .sim-shell { height: var(--sim-h, 100dvh); display: flex; flex-direction: column; background: var(--canvas); overflow: hidden; }
@@ -281,7 +281,7 @@ footer.site b { color: var(--ink); }
 .stepcard { flex-shrink: 0; background: #fff; border: 2px solid var(--blue); border-radius: 12px; padding: 14px 16px; margin: 0 12px 8px; box-shadow: 0 4px 12px rgba(20, 22, 26, 0.08); }
 .stepcard .step-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .stepcount { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--blue); }
-.hint-toggle { font-size: 12px; color: var(--muted); text-decoration: underline; background: none; border: none; cursor: pointer; padding: 6px 4px; min-height: 32px; }
+.hint-toggle { font-size: 12px; color: var(--muted); text-decoration: underline; background: none; border: none; cursor: pointer; padding: 6px 4px; min-height: 44px; }
 .stepcard.hint-hidden .snote { display: none; }
 #step-text { font-size: 14.5px; line-height: 1.45; color: var(--ink); margin-top: 6px; }
 .stepcard .scmd { display: inline-block; font-family: var(--mono); background: #f1f3f7; padding: 6px 10px; border-radius: 6px; margin-top: 8px; font-size: 12.5px; color: var(--ink); cursor: pointer; overflow-wrap: anywhere; word-break: break-all; }
@@ -290,6 +290,9 @@ footer.site b { color: var(--ink); }
 .stepcard .stepactions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
 .stepcard button, .termbar button { font-size: 14px; padding: 10px 16px; border-radius: 9px; border: none; background: var(--blue); color: #fff; font-weight: 600; cursor: pointer; min-height: 44px; }
 .stepcard button.ghost, .termbar button.ghost { background: #e8e4db; color: #1a1a1a; }
+/* "Skip this step" must not look like the primary action — only
+   "Skip all" was ghost before, so Skip read as the main button. */
+#btn-skip { background: #e8e4db; color: #1a1a1a; }
 .stepcard button:disabled, .termbar button:disabled { opacity: 0.45; cursor: default; }
 .step-done-badge { display: none; margin-top: 10px; font-size: 13px; font-weight: 700; color: #15803d; }
 .stepcard.done-flash { border-color: var(--green); background: var(--mint); animation: step-pulse 260ms cubic-bezier(0.34, 1.56, 0.64, 1); }
@@ -357,7 +360,7 @@ footer.site b { color: var(--ink); }
 .exercise h2 { margin-top: 0 !important; }
 .exercise p { margin-bottom: 10px; }
 .exercise code { font-family: var(--mono); background: #e8eefc; padding: 1px 5px; border-radius: 4px; font-size: 13.5px; white-space: pre-wrap; }
-.exercise-answer summary { cursor: pointer; font-weight: 700; color: var(--blue); padding: 6px 0; min-height: 32px; }
+.exercise-answer summary { cursor: pointer; font-weight: 700; color: var(--blue); padding: 6px 0; min-height: 44px; }
 .exercise-answer p { margin: 6px 0 0; }
 
 /* ---------- motion: GPU only (transform / opacity) ---------- */
@@ -369,7 +372,7 @@ footer.site b { color: var(--ink); }
 }
 
 /* header sign-in slot */
-.auth-slot { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.auth-slot { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
 .auth-btn { height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--hair); background: var(--card); color: var(--ink); font-size: 13px; font-weight: 600; font-family: var(--sans); cursor: pointer; white-space: nowrap; }
 .auth-btn:active { background: #f1f3f7; }
 .auth-chip { font-size: 13px; font-weight: 600; color: var(--muted); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -458,7 +461,7 @@ body.locked .sim-shell > #lock-screen { margin-top: auto; margin-bottom: auto; }
 #sticky-continue[hidden] { display: none; }
 
 /* mark-as-done (lesson pages) */
-.mark-done { margin: 16px 0 0; }
+.mark-done { width: 100%; margin: 20px 0 0; }
 .mark-done[hidden] { display: none; }
 
 /* toast */
@@ -480,6 +483,21 @@ body.locked .sim-shell > #lock-screen { margin-top: auto; margin-bottom: auto; }
      long stage pill can never squeeze the title into a sliver. */
   .lesson-row { flex-direction: column; gap: 6px; }
   .lesson-row .rowtags { align-self: flex-start; flex-direction: row; flex-wrap: wrap; margin-top: 2px; }
+  /* Sticky bar at 320px: let the prices wrap to two lines and hide the
+     small print, so the Buy button is never pushed off-screen. */
+  .stickybar .sb-prices { white-space: normal; }
+  .stickybar .sb-prices small { display: none; }
+  /* Pager at phone width: stack each link's two lines so the lesson
+     title never clips. */
+  .pager a { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .pager a.next { align-items: flex-end; text-align: right; }
+  .pager a span:first-child { font-size: 12px; font-weight: 500; }
+  /* Lesson header at phone width: tighter row so the crumb keeps room. */
+  .lesson-header .lh-row { padding: 0 10px; gap: 6px; }
+  #btn-sidebar { padding: 0 8px; }
+  .lesson-header .auth-btn { padding: 0 10px; }
+  /* Welcome-back banner: sits flush at 360px today. */
+  .continue-banner { margin: 16px 12px 0; }
 }
 @media (max-width: 600px) {
   /* Signed-in header overflow: at ~500px the wordmark + "by PromptStudio"
@@ -499,4 +517,9 @@ body.locked .sim-shell > #lock-screen { margin-top: auto; margin-bottom: auto; }
      fully visible. New total ~301px, fits down to a 320px screen.
      The Lessons button and the Sign out button stay. */
   .auth-chip { display: none; }
+  /* Compact step card on phones: a tall card plus the keyboard leaves
+     no room for terminal output. Cap the command line's height. */
+  .stepcard { padding: 10px 12px; }
+  .stepcard .stepactions { margin-top: 8px; }
+  .stepcard .scmd { max-height: 72px; overflow-y: auto; }
 }
