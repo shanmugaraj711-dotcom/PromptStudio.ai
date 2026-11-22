@@ -490,4 +490,13 @@ body.locked .sim-shell > #lock-screen { margin-top: auto; margin-bottom: auto; }
      the same message) so the header fits at every phone width. */
   .site-header .bill-pill { display: none; }
   .site-header .wordmark small { display: none; }
+  /* Lesson header overflow (owner's phone, 2026-11-22): the "☰ Lessons"
+     button (~95px) plus wordmark (~80px) plus the signed-in name chip
+     (~80px) plus "Sign out" (~64px) plus padding and gaps (~70px)
+     sums to ~389px — wider than a 360px phone, so "Sign out" is cut
+     off at the right edge. The name chip is decorative (the account
+     is already known); hide it at phone width and keep "Sign out"
+     fully visible. New total ~301px, fits down to a 320px screen.
+     The Lessons button and the Sign out button stay. */
+  .auth-chip { display: none; }
 }
