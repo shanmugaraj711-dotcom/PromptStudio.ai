@@ -446,3 +446,13 @@ body.locked .sim-shell > #lock-screen { margin-top: auto; margin-bottom: auto; }
   .lesson-row { flex-direction: column; gap: 6px; }
   .lesson-row .rowtags { align-self: flex-start; flex-direction: row; flex-wrap: wrap; margin-top: 2px; }
 }
+@media (max-width: 600px) {
+  /* Signed-in header overflow: at ~500px the wordmark + "by PromptStudio"
+     + "Zero Cloud Bill" pill + account chip + Sign out button sum to
+     ~510px, wider than the screen, so the page gets a horizontal
+     scrollbar. The 480px cut hides the pill and suffix, but the band
+     481-600px still shows them. Hide them here too (the hero carries
+     the same message) so the header fits at every phone width. */
+  .site-header .bill-pill { display: none; }
+  .site-header .wordmark small { display: none; }
+}
