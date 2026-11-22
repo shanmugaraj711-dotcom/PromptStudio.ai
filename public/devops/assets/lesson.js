@@ -52,4 +52,22 @@
     try { document.execCommand('copy'); } catch (e) { /* ignore */ }
     document.body.removeChild(ta);
   }
+
+  /* Sidebar toggle (narrow widths): the lessons list opens as a drawer
+     over the page. On desktop the sidebar is always visible and the
+     button is hidden by CSS. Tapping a lesson link closes the drawer. */
+  var sbBtn = document.getElementById('btn-sidebar');
+  var sbNav = document.getElementById('lesson-sidebar');
+  if (sbBtn && sbNav) {
+    sbBtn.addEventListener('click', function () {
+      var open = document.body.classList.toggle('sidebar-open');
+      sbBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    sbNav.querySelectorAll('a').forEach(function (a) {
+      a.addEventListener('click', function () {
+        document.body.classList.remove('sidebar-open');
+        sbBtn.setAttribute('aria-expanded', 'false');
+      });
+    });
+  }
 })();
