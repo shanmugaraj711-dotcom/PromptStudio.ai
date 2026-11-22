@@ -173,6 +173,7 @@ details.curriculum .cbody-inner { overflow: hidden; min-height: 0; }
 .ladder .step.done { background: #dcfce7; color: #027a48; }
 .ladder .step.next { background: #fef3c7; color: #92400e; }
 .ladder .step .here { font-weight: 800; color: #1d4ed8; }
+.ladder .step-unit { display: inline-flex; align-items: center; gap: 6px; }
 .ladder .ladder-arrow { color: var(--muted); font-weight: 800; align-self: center; }
 .ladder .ladder-note { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
 .ladder .ladder-note b { color: var(--ink); }
@@ -440,4 +441,8 @@ body.locked .sim-shell > #lock-screen { margin-top: auto; margin-bottom: auto; }
   .site-header .wordmark small { display: none; }
   .site-header .auth-slot { flex-shrink: 0; }
   .site-header .auth-btn { flex-shrink: 0; }
+  /* Lesson rows stack at phone width: tags sit below the title, so a
+     long stage pill can never squeeze the title into a sliver. */
+  .lesson-row { flex-direction: column; gap: 6px; }
+  .lesson-row .rowtags { align-self: flex-start; flex-direction: row; flex-wrap: wrap; margin-top: 2px; }
 }

@@ -722,6 +722,7 @@
         '  git init / status / add / commit / log / branch / checkout / merge',
         '  kubectl get pods / apply -f file.yaml / logs <pod> / port-forward',
         '  kubectl edit deployment <name>   fix a deploy in the editor',
+        '  kubectl scale deployment <name> --replicas=3 / set image deployment/<name> <container>=<image>',
         '  kind create cluster --name demo    start a local cluster',
         '  terraform init / plan / apply / destroy',
         '  mkdir / rm / cp / mv / touch / df -h / free -h / ps aux / top',
@@ -1833,17 +1834,20 @@
       if (file.indexOf('./') === 0 && invoked !== 'bash' && invoked !== 'sh' && !w.execFiles[path]) {
         return errOut(['bash: ' + file + ': Permission denied']);
       }
-      // no canned output: run the script's own lines, one at a time
+      // no canned output: run the script's own lines, one at a time.
+      // If a line fails, the script fails too — so a check script that
+      // calls a broken file reports the failure instead of passing.
       var out = [];
+      var failed = false;
       var scriptLines = textLines(w.fileContents[path] || '');
       for (var li = 0; li < scriptLines.length; li++) {
         var t = scriptLines[li].trim();
         if (!t || t[0] === '#') continue;
         var r = runSingle(tokenize(t));
         out = out.concat(r.lines);
-        if (r.kind === 'err') break;
+        if (r.kind === 'err') { failed = true; break; }
       }
-      return okOut(out);
+      return failed ? errOut(out) : okOut(out);
     }
 
     // ---------- git ----------
@@ -2029,18 +2033,40 @@
       if (sub === 'push') {
         if (!w.git.commits.length) return okOut(['Everything up-to-date']);
         flag(w, 'git_push');
+        // a pre-push hook (Linux/Git Intermediate challenge): saving
+        // work runs the check first, and the push only happens if the
+        // check passes — the whole idea of CI/CD in miniature
+        var hookPath = resolvePath('.git/hooks/pre-push');
+        var hook = w.fileContents[hookPath] || w.fileContents['/home/learner/.git/hooks/pre-push'];
+        var hookOut = [];
+        if (hook !== undefined) {
+          var hookErr = false;
+          textLines(hook).forEach(function (l) {
+            var t = l.trim();
+            if (!t || t[0] === '#') return;
+            var hr = runSingle(tokenize(t));
+            hookOut = hookOut.concat(hr.lines);
+            if (hr.kind === 'err') hookErr = true;
+          });
+          if (hookErr) {
+            return errOut(hookOut.concat([
+              'error: failed to push some refs to \'https://github.com/learner/app.git\'',
+              'hint: the pre-push check failed. Fix the check and try again.'
+            ]));
+          }
+        }
         if (w.git.commits.length === 1) {
-          return okOut([
+          return okOut(hookOut.concat([
             'Enumerating objects: 3, done.',
             'To https://github.com/learner/app.git',
             ' * [new branch]      main -> main'
-          ]);
+          ]));
         }
-        return okOut([
+        return okOut(hookOut.concat([
           'Enumerating objects: 3, done.',
           'To https://github.com/learner/app.git',
           '   ' + w.git.commits[w.git.commits.length - 1].hash + '..' + w.git.commits[0].hash + '  ' + w.git.branch + ' -> ' + w.git.branch
-        ]);
+        ]));
       }
       if (sub === 'pull') return okOut(['Already up to date.']);
       return errOut(["git: '" + sub + "' is not a git command. See 'git --help'."]);
@@ -2055,6 +2081,8 @@
         '  get           Display one or many resources',
         '  apply         Apply a configuration to a resource',
         '  edit          Edit a resource (the practice editor fixes it)',
+        '  scale         Scale a deployment to more or fewer copies',
+        '  set image     Swap a deployment to a new image version',
         '  delete        Delete resources',
         '  describe      Show details of a specific resource',
         '  logs          Print the logs for a container in a pod',
@@ -2191,7 +2219,7 @@
         return okOut([
           'Name:                   ' + dep.name,
           'Namespace:              default',
-          'Replicas:               1 desired | 1 updated | 1 total | 1 available',
+          'Replicas:               ' + dep.replicas + ' desired | ' + dep.replicas + ' updated | ' + dep.replicas + ' total | ' + dep.available + ' available',
           'StrategyType:           RollingUpdate',
           'Pod Template:',
           '  Containers:',
@@ -2250,6 +2278,61 @@
       return okOut(['deployment.apps/' + name + ' edited']);
     }
 
+    // kubectl scale deployment <name> --replicas=N: keep N copies of
+    // the app running (Kubernetes Intermediate challenge). Pods get
+    // deterministic suffixes so the pod table stays readable.
+    var K8S_POD_SUFFIXES = ['abc12', 'def34', 'ghi56', 'jkl78', 'mno90'];
+    function kubectlScale(args) {
+      var res = args[0], name = null, rep = null, i;
+      if (res && res.indexOf('/') >= 0) { name = res.split('/')[1]; }
+      else if (res === 'deployment' || res === 'deploy') { name = args[1]; }
+      else { name = res; }
+      for (i = 0; i < args.length; i++) {
+        var m = /^--replicas=(\d+)$/.exec(args[i]);
+        if (m) rep = parseInt(m[1], 10);
+        else if (args[i] === '--replicas' && args[i + 1]) rep = parseInt(args[i + 1], 10);
+      }
+      if (!name) return errOut(['error: resource name is required. Usage: kubectl scale deployment <name> --replicas=3']);
+      var dep = w.k8s.deployments[name];
+      if (!dep) return errOut(['Error from server (NotFound): deployments.apps "' + name + '" not found']);
+      if (rep === null || isNaN(rep) || rep < 0) return errOut(['error: --replicas is required. Usage: kubectl scale deployment <name> --replicas=3']);
+      if (rep > K8S_POD_SUFFIXES.length) return errOut(['error: this practice terminal scales up to ' + K8S_POD_SUFFIXES.length + ' copies.']);
+      dep.replicas = rep;
+      dep.ready = rep + '/' + rep;
+      dep.upToDate = rep;
+      dep.available = rep;
+      for (var j = 0; j < K8S_POD_SUFFIXES.length; j++) {
+        var pn = name + '-' + K8S_POD_SUFFIXES[j];
+        if (j < rep) {
+          if (!w.k8s.pods[pn]) w.k8s.pods[pn] = { name: pn, ready: '1/1', status: 'Running', restarts: 0, age: '0s', deployment: name, image: dep.image };
+          else { w.k8s.pods[pn].status = 'Running'; w.k8s.pods[pn].ready = '1/1'; w.k8s.pods[pn].image = dep.image; }
+        } else if (w.k8s.pods[pn] && w.k8s.pods[pn].deployment === name) {
+          delete w.k8s.pods[pn];
+        }
+      }
+      flag(w, 'k8s_scale:' + name);
+      return okOut(['deployment.apps/' + name + ' scaled']);
+    }
+
+    // kubectl set image deployment/<name> <container>=<image>: swap a
+    // deployment to a new image version (Kubernetes Intermediate
+    // challenge). The rollout replaces the old copies one by one.
+    function kubectlSetImage(args) {
+      if (args[0] !== 'image') return errOut(['error: unknown command "set ' + (args[0] || '') + '" for "kubectl set"', 'Run \'kubectl set image deployment/<name> <container>=<image>\'.']);
+      var res = args[1], name = null;
+      if (res && res.indexOf('/') >= 0) { name = res.split('/')[1]; }
+      else if (res === 'deployment' || res === 'deploy') { name = args[2]; }
+      var pair = args[args.length - 1];
+      var pm = pair ? /^([^=]+)=(\S+)$/.exec(pair) : null;
+      if (!name || !pm) return errOut(['error: usage: kubectl set image deployment/<name> <container>=<image>']);
+      var dep = w.k8s.deployments[name];
+      if (!dep) return errOut(['Error from server (NotFound): deployments.apps "' + name + '" not found']);
+      dep.image = pm[2];
+      for (var p in w.k8s.pods) { if (w.k8s.pods[p].deployment === name) w.k8s.pods[p].image = pm[2]; }
+      flag(w, 'k8s_set_image:' + name);
+      return okOut(['deployment.apps/' + name + ' image updated']);
+    }
+
     function kubectlPortForward(args) {
       var target = args[0], mapping = args[1];
       if (!target || !mapping) return errOut(['error: port-forward needs a target and ports. Usage: kubectl port-forward service/<name> <local>:<remote>']);
@@ -2286,6 +2369,8 @@
       if (sub === 'get') return kubectlGet(args.slice(1));
       if (sub === 'apply') return kubectlApply(args.slice(1));
       if (sub === 'edit') return kubectlEdit(args.slice(1));
+      if (sub === 'scale') return kubectlScale(args.slice(1));
+      if (sub === 'set') return kubectlSetImage(args.slice(1));
       if (sub === 'delete') return kubectlDelete(args.slice(1));
       if (sub === 'describe') return kubectlDescribe(args.slice(1));
       if (sub === 'logs') return kubectlLogs(args.slice(1));
@@ -2604,7 +2689,7 @@
           'kafka-topics.sh', 'kafka-console-producer.sh', 'kafka-console-consumer.sh', 'kafka-consumer-groups.sh', 'psql', 'pg_ctl', 'redis-cli', 'aws', 's3', 'mb', 'cp',
           'sed', 'tail', 'netstat', 'nano', 'inspect',
           'git', 'kubectl', 'kind', 'terraform', 'mkdir', 'rm', 'mv', 'touch', 'df', 'free', 'top', 'bash', 'sh', '--version', 'version', 'images',
-          'get', 'apply', 'edit', 'delete', 'describe', 'port-forward', 'rollout', 'create', 'cluster', 'clusters', 'pods', 'deployments', 'services', 'nodes',
+          'get', 'apply', 'edit', 'scale', 'set', 'image', 'delete', 'describe', 'port-forward', 'rollout', 'create', 'cluster', 'clusters', 'pods', 'deployments', 'services', 'nodes',
           'init', 'plan', 'destroy', 'status', 'add', 'commit', 'log', 'branch', 'checkout', 'merge', 'clone', 'push', 'pull', 'config', 'load', 'docker-image'];
         for (var n in w.containers) words.push(n);
         for (var pn in w.k8s.pods) words.push(pn);
