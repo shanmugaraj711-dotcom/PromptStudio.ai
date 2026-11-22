@@ -195,8 +195,8 @@
     if (banner) {
       var last = state && state.progress ? state.progress.lastLesson : null;
       var lessons = state && state.progress ? state.progress.lessons : {};
-      var paidList = PHASE1_LESSONS.concat(PHASE2_LESSONS);
-      var done = paidList.filter(function (k) { return lessons[k] && lessons[k].completed; }).length;
+      var allLessons = ["lesson-0"].concat(PHASE1_LESSONS, PHASE2_LESSONS, ["error-decoder"]);
+      var done = allLessons.filter(function (k) { return lessons[k] && lessons[k].completed; }).length;
       if (currentUser && last && LESSON_TITLES[last]) {
         banner.hidden = false;
         banner.innerHTML = '';
@@ -206,7 +206,7 @@
         a.href = '/devops/lessons/' + last + '.html';
         a.textContent = 'Continue: ' + LESSON_TITLES[last];
         var s = document.createElement('span');
-        s.textContent = '  ·  ' + done + ' of 16 lessons done';
+        s.textContent = '  ·  ' + done + ' of ' + allLessons.length + ' lessons done';
         banner.appendChild(b);
         banner.appendChild(a);
         banner.appendChild(s);
@@ -217,7 +217,7 @@
         b2.textContent = 'You are signed in. ';
         var a2 = document.createElement('a');
         a2.href = '/devops/lessons/p1-start.html';
-        a2.textContent = 'Start Lesson 1';
+        a2.textContent = 'Start Phase 1';
         banner.appendChild(b2);
         banner.appendChild(a2);
       } else {
