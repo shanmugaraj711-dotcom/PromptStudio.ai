@@ -34,6 +34,21 @@
   }
   function isNum(s) { return /^-?\d+(\.\d+)?$/.test(String(s)); }
 
+  // Short fixed hashes for practice git commits (deterministic, in order).
+  function gitHash(i) {
+    var hs = ['a1b2c3d', 'e4f5a6b', 'c7d8e9f', 'b2a3c4d', 'f6e5d4c', '9a8b7c6', '1f2e3d4', '5a6b7c8'];
+    return hs[i % hs.length];
+  }
+
+  // Deterministic 12-hex-char id from a name, for practice image listings.
+  function fakeId(s) {
+    var h = 0;
+    for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) % 4294967291; }
+    var hex = h.toString(16);
+    while (hex.length < 12) hex = '0' + hex;
+    return hex;
+  }
+
   // Split file text into lines the way cat shows them:
   // a trailing newline does not make an extra blank line.
   function textLines(s) {
@@ -106,7 +121,14 @@
       producerSessions: 0,
       worker: { status: 'down', dbHost: null, saved: [], waiting: false },
       ingestProcessed: [], // file names processed by ingest
-      timeOffset: 0
+      timeOffset: 0,
+      git: { initialized: false, branch: 'main', branches: ['main'], staged: [], commits: [], conflict: false, conflictFile: null, resolved: false, config: {} },
+      gitConflict: null, // world spec {file, branch}: merging that branch conflicts
+      k8s: { pods: {}, deployments: {}, services: {}, forwards: {} },
+      k8sSuffix: 'abc12', // pod name suffix for deployments created by apply
+      kind: { clusters: [], images: [] },
+      tf: { initialized: false, planned: false, applied: false },
+      dockerRunSeq: 0
     };
     // containers + projects
     var cn, pr;
@@ -141,6 +163,44 @@
     (spec.initial_files || []).forEach(function (f) {
       w.fileContents[f.path] = f.content;
     });
+    // git seed (new lesson sims): a repo the learner starts inside
+    if (spec.git) {
+      var g = spec.git;
+      if (g.initialized) w.git.initialized = true;
+      if (g.branch) w.git.branch = g.branch;
+      if (g.branches) w.git.branches = g.branches.slice();
+      if (w.git.branches.indexOf(w.git.branch) === -1) w.git.branches.push(w.git.branch);
+      if (g.staged) w.git.staged = g.staged.slice();
+      (g.commits || []).forEach(function (c, i) {
+        w.git.commits.push(typeof c === 'string' ? { hash: gitHash(i), msg: c } : { hash: c.hash || gitHash(i), msg: c.msg || '' });
+      });
+    }
+    if (spec.git_conflict) w.gitConflict = spec.git_conflict;
+    // k8s seed (new lesson sims): deployments, pods, services already there
+    var k8sSpec = spec.k8s || {};
+    w.k8sSuffix = k8sSpec.podSuffix || spec.k8s_pod_suffix || 'abc12';
+    w.k8s.services['kubernetes'] = { name: 'kubernetes', type: 'ClusterIP', clusterIP: '10.96.0.1', ports: '443/TCP', age: '10m' };
+    (k8sSpec.services || []).forEach(function (s) {
+      w.k8s.services[s.name] = { name: s.name, type: s.type || 'ClusterIP', clusterIP: s.clusterIP || '10.96.0.10', ports: s.ports || '80/TCP', age: s.age || '5m' };
+    });
+    (k8sSpec.deployments || []).forEach(function (d) {
+      var dep = { name: d.name, image: d.image || 'nginx:1.25', ready: '1/1', upToDate: 1, available: 1, age: d.age || '5m', replicas: d.replicas || 1 };
+      w.k8s.deployments[d.name] = dep;
+      var podName = d.name + '-' + w.k8sSuffix;
+      w.k8s.pods[podName] = { name: podName, ready: '1/1', status: 'Running', restarts: 0, age: '5m', deployment: d.name, image: dep.image };
+    });
+    (k8sSpec.pods || []).forEach(function (p) {
+      w.k8s.pods[p.name] = { name: p.name, ready: p.ready || '1/1', status: p.status || 'Running', restarts: p.restarts || 0, age: p.age || '5m', deployment: p.deployment || null, image: p.image || 'nginx:1.25' };
+    });
+    if (spec.kind) {
+      w.kind.clusters = (spec.kind.clusters || []).slice();
+      w.kind.images = (spec.kind.images || []).slice();
+    }
+    if (spec.tf) {
+      w.tf.initialized = !!spec.tf.initialized;
+      w.tf.planned = !!spec.tf.planned;
+      w.tf.applied = !!spec.tf.applied;
+    }
     return w;
   }
 
@@ -463,6 +523,10 @@
       var cmd = toks[0];
       if (!cmd) return okOut([]);
       if (cmd === 'sudo') return runSingleNoPipe(toks.slice(1));
+      // Running a script by path: ./kit-doctor.sh or /home/learner/x.sh
+      if (cmd.indexOf('./') === 0 || (/\.sh$/.test(cmd) && cmd.indexOf('/') >= 0)) {
+        return scriptCmd([cmd].concat(toks.slice(1)), cmd);
+      }
       // Windows users type Ipconfig out of habit; answer the confusion
       // instead of "command not found" (matched case-insensitively).
       if (cmd.toLowerCase() === 'ipconfig') return okOut(['ipconfig is a Windows command. On Linux, try: ip addr']);
@@ -485,6 +549,21 @@
         case 'python3': return pythonCmd(toks.slice(1));
         case 'ip': return ipCmd(toks.slice(1));
         case 'uname': return unameCmd(toks.slice(1));
+        case 'git': return gitCmd(toks.slice(1));
+        case 'kubectl': return kubectlCmd(toks.slice(1));
+        case 'kind': return kindCmd(toks.slice(1));
+        case 'terraform': return tfCmd(toks.slice(1));
+        case 'mkdir': return mkdirCmd(toks.slice(1));
+        case 'rm': return rmCmd(toks.slice(1));
+        case 'cp': return cpCmd(toks.slice(1));
+        case 'mv': return mvCmd(toks.slice(1));
+        case 'touch': return touchCmd(toks.slice(1));
+        case 'df': return dfCmd(toks.slice(1));
+        case 'free': return freeCmd(toks.slice(1));
+        case 'ps': return psCmd(toks.slice(1));
+        case 'top': return topCmd(toks.slice(1));
+        case 'bash': return scriptCmd(toks.slice(1), 'bash');
+        case 'sh': return scriptCmd(toks.slice(1), 'sh');
         default:
           return errOut(['bash: ' + cmd + ': command not found', 'Type help to see what this practice terminal understands.']);
       }
@@ -528,10 +607,19 @@
         '  redis-cli -h redis-a PING / SET / GET / INCR / TTL / INFO',
         '  aws --endpoint-url http://moto-a:5000 s3 ls / mb / cp',
         '  curl http://localhost:8080/  try the load balancer',
+        '  docker --version / docker version   check the Docker version',
+        '  docker run -d --name web nginx     run one container',
+        '  docker stop / start / rm <name>    stop, start or remove it',
+        '  git init / status / add / commit / log / branch / checkout / merge',
+        '  kubectl get pods / apply -f file.yaml / logs <pod> / port-forward',
+        '  kind create cluster --name demo    start a local cluster',
+        '  terraform init / plan / apply / destroy',
+        '  mkdir / rm / cp / mv / touch / df -h / free -h / ps aux / top',
+        '  bash kit-doctor.sh / ./kit-doctor.sh   run a script',
         '  cat > file << \'EOF\'         write a file (type EOF to finish)',
         '  python --version / ip addr / uname   quick checks this box answers',
         '',
-        '  ls  cd  pwd  echo  cat  history  clear  help',
+        '  ls  cd  pwd  echo  cat  chmod  history  clear  help  bash',
         '',
         'Up and Down arrows repeat earlier commands. Tab completes names.',
         'Type exit or press Ctrl+C to leave a running program.'
@@ -640,9 +728,22 @@
     // ---------- docker ----------
     function dockerCmd(args) {
       if (args[0] === 'compose') return composeCmd(args.slice(1));
+      if (args[0] === '--version' || args[0] === 'version') return okOut(['Docker version 26.1.3, build 26.1.3-0ubuntu1']);
+      if (args[0] === '--help' || args[0] === '-h' || args[0] === 'help') return okOut(dockerHelpText());
+      if (args[0] === 'run') return dockerRunCmd(args.slice(1));
+      if (args[0] === 'stop') return dockerStopCmd(args.slice(1));
+      if (args[0] === 'start') return dockerStartCmd(args.slice(1));
+      if (args[0] === 'rm') return dockerRmCmd(args.slice(1));
+      if (args[0] === 'images') return dockerImagesCmd(args.slice(1));
       if (args[0] === 'ps') {
+        var showAll = args.indexOf('-a') >= 0 || args.indexOf('--all') >= 0;
         var ups = [];
-        for (var n in w.containers) { if (w.containers[n].status === 'up') ups.push(n + '  Up'); }
+        for (var n in w.containers) {
+          var st = w.containers[n].status;
+          if (st === 'up') ups.push(n + '  Up');
+          else if (showAll && st === 'stopped') ups.push(n + '  Exited');
+          else if (showAll && st === 'down') ups.push(n + '  Created');
+        }
         if (!ups.length) return okOut(['No containers are running yet. Run docker compose up -d first.']);
         return okOut(ups);
       }
@@ -653,6 +754,7 @@
 
     function composeCmd(args) {
       var sub = args[0];
+      if (sub === 'version' || sub === '--version') return okOut(['Docker Compose version v2.27.0']);
       if (sub === 'up') {
         var proj = project();
         var names = containersOf(proj);
@@ -1009,11 +1111,836 @@
       return errOut(['aws: unknown s3 subcommand \'' + (sub || '') + '\'. Try ls, mb or cp.']);
     }
 
+    // ---------- docker top-level helpers ----------
+    function dockerHelpText() {
+      return [
+        'Usage:  docker [OPTIONS] COMMAND',
+        '',
+        'Commands:',
+        '  compose     Define and run multi-container applications with Docker',
+        '  exec        Execute a command in a running container',
+        '  images      List images',
+        '  logs        Fetch the logs of a container',
+        '  ps          List containers',
+        '  rm          Remove one or more containers',
+        '  run         Run a command in a new container',
+        '  start       Start one or more stopped containers',
+        '  stop        Stop one or more running containers',
+        '  version     Show the Docker version information',
+        '',
+        'Run \'docker COMMAND --help\' for more information on a command.'
+      ];
+    }
+
+    function dockerImagesAllow() {
+      var list = w.spec.images;
+      if (list && list.length) return list.map(function (i) { return String(i).split(':')[0]; });
+      return ['nginx', 'ubuntu', 'postgres', 'redis', 'alpine', 'busybox'];
+    }
+
+    function dockerImageDisplay() {
+      var list = w.spec.images;
+      if (list && list.length) return list.map(function (i) { return String(i).indexOf(':') >= 0 ? String(i) : String(i) + ':latest'; });
+      return ['nginx:latest', 'ubuntu:latest', 'postgres:latest', 'redis:latest', 'alpine:latest', 'busybox:latest'];
+    }
+
+    function dockerRunCmd(args) {
+      var name = null, image = null;
+      for (var i = 0; i < args.length; i++) {
+        var a = args[i];
+        if (a === '--name' && args[i + 1]) { name = args[i + 1]; i++; }
+        else if (a.indexOf('--name=') === 0) { name = a.slice(7); }
+        else if (a[0] !== '-') { image = a; }
+      }
+      if (!image) return errOut(['"docker run" requires an image name']);
+      var base = image.split(':')[0];
+      var allow = dockerImagesAllow();
+      if (allow.indexOf(base) === -1) {
+        var shown = image.indexOf(':') >= 0 ? image : image + ':latest';
+        return errOut(["Unable to find image '" + shown + "' locally",
+          "docker: Error response from daemon: pull access denied for " + base + ", repository does not exist or may require 'docker login': denied: requested access to the resource is denied."]);
+      }
+      w.dockerRunSeq++;
+      if (!name) name = base + '-' + w.dockerRunSeq;
+      if (w.containers[name]) return errOut(['docker: Error response from daemon: Conflict. The container name "/' + name + '" is already in use.']);
+      w.containers[name] = { project: '', status: 'up', role: null, image: image.indexOf(':') >= 0 ? image : image + ':latest' };
+      flag(w, 'docker_run:' + name);
+      var id = ('a1b2c3d4e5f6'.repeat(6)).slice(0, 64 - String(w.dockerRunSeq).length) + w.dockerRunSeq;
+      return okOut([id]);
+    }
+
+    function dockerStopCmd(args) {
+      var name = args.filter(function (a) { return a[0] !== '-'; })[0];
+      if (!name) return errOut(['"docker stop" requires a container name']);
+      var c = w.containers[name];
+      if (!c) return errOut(['Error: No such container: ' + name]);
+      c.status = 'stopped';
+      flag(w, 'stopped:' + name);
+      return okOut([name]);
+    }
+
+    function dockerStartCmd(args) {
+      var name = args.filter(function (a) { return a[0] !== '-'; })[0];
+      if (!name) return errOut(['"docker start" requires a container name']);
+      var c = w.containers[name];
+      if (!c) return errOut(['Error: No such container: ' + name]);
+      c.status = 'up';
+      flag(w, 'started:' + name);
+      return okOut([name]);
+    }
+
+    function dockerRmCmd(args) {
+      var force = args.some(function (a) { return a === '-f' || a === '--force'; });
+      var names = args.filter(function (a) { return a[0] !== '-'; });
+      if (!names.length) return errOut(['"docker rm" requires a container name']);
+      var out = [];
+      for (var i = 0; i < names.length; i++) {
+        var name = names[i];
+        var c = w.containers[name];
+        if (!c) return errOut(['Error: No such container: ' + name]);
+        if (c.status === 'up' && !force) return errOut(['Error response from daemon: You cannot remove a running container ' + name + '. Stop the container before attempting removal or force remove']);
+        delete w.containers[name];
+        flag(w, 'docker_rm:' + name);
+        out.push(name);
+      }
+      return okOut(out);
+    }
+
+    function dockerImagesCmd(args) {
+      var lines = [padRight('REPOSITORY', 13) + padRight('TAG', 10) + padRight('IMAGE ID', 15) + padRight('CREATED', 15) + 'SIZE'];
+      dockerImageDisplay().forEach(function (entry) {
+        var parts = entry.split(':');
+        var repo = parts[0], tag = parts[1] || 'latest';
+        lines.push(padRight(repo, 13) + padRight(tag, 10) + padRight(fakeId(repo), 15) + padRight('2 weeks ago', 15) + (100 + repo.length * 7) + 'MB');
+      });
+      return okOut(lines);
+    }
+
+    // ---------- file utils (mkdir / rm / cp / mv / touch / df / free) ----------
+    function parentDir(path) { var d = path.split('/').slice(0, -1).join('/'); return d === '' ? '/' : d; }
+    function baseName(path) { return path.split('/').pop(); }
+
+    function ensureDir(path) {
+      if (w.fs[path]) return;
+      var parts = path.split('/').filter(function (p) { return p.length > 0; });
+      var cur = '';
+      for (var i = 0; i < parts.length; i++) {
+        cur += '/' + parts[i];
+        if (!w.fs[cur]) {
+          w.fs[cur] = [];
+          var parent = parentDir(cur);
+          if (w.fs[parent] && w.fs[parent].indexOf(parts[i]) === -1) w.fs[parent].push(parts[i]);
+        }
+      }
+    }
+
+    function addToDir(path) {
+      var dir = parentDir(path), base = baseName(path);
+      if (w.fs[dir] && w.fs[dir].indexOf(base) === -1) w.fs[dir].push(base);
+    }
+
+    function removeFromDir(path) {
+      var dir = parentDir(path), base = baseName(path);
+      if (w.fs[dir]) { var i = w.fs[dir].indexOf(base); if (i >= 0) w.fs[dir].splice(i, 1); }
+    }
+
+    function mkdirCmd(args) {
+      var targets = args.filter(function (a) { return a[0] !== '-'; });
+      var recursive = args.some(function (a) { return a === '-p' || a === '--parents'; });
+      if (!targets.length) return errOut(['mkdir: missing operand', 'Try \'mkdir --help\' for more information.']);
+      for (var i = 0; i < targets.length; i++) {
+        var path = resolvePath(targets[i]);
+        if (w.fs[path] || w.fileContents[path] !== undefined) return errOut(["mkdir: cannot create directory '" + targets[i] + "': File exists"]);
+        if (!recursive && !w.fs[parentDir(path)]) return errOut(["mkdir: cannot create directory '" + targets[i] + "': No such file or directory"]);
+        ensureDir(path);
+        flag(w, 'mkdir:' + path);
+      }
+      return okOut([]);
+    }
+
+    function rmCmd(args) {
+      var recursive = args.some(function (a) { return a[0] === '-' && a.indexOf('r') >= 0; });
+      var force = args.some(function (a) { return a[0] === '-' && a.indexOf('f') >= 0; });
+      var targets = args.filter(function (a) { return a[0] !== '-'; });
+      if (!targets.length) return errOut(['rm: missing operand', 'Try \'rm --help\' for more information.']);
+      for (var i = 0; i < targets.length; i++) {
+        var path = resolvePath(targets[i]);
+        var isDir = w.fs[path] !== undefined;
+        var isFile = w.fileContents[path] !== undefined;
+        if (!isDir && !isFile) {
+          if (force) continue;
+          return errOut(["rm: cannot remove '" + targets[i] + "': No such file or directory"]);
+        }
+        if (isDir && !recursive) return errOut(["rm: cannot remove '" + targets[i] + "': Is a directory"]);
+        if (isDir) {
+          var prefix = path === '/' ? '/' : path + '/';
+          for (var p in w.fs) { if (p === path || p.indexOf(prefix) === 0) delete w.fs[p]; }
+          for (var f in w.fileContents) { if (f === path || f.indexOf(prefix) === 0) { delete w.fileContents[f]; delete w.filesWritten[f]; } }
+          removeFromDir(path);
+        } else {
+          delete w.fileContents[path];
+          delete w.filesWritten[path];
+          removeFromDir(path);
+        }
+        flag(w, 'rm:' + path);
+      }
+      return okOut([]);
+    }
+
+    function cpCmd(args) {
+      var targets = args.filter(function (a) { return a[0] !== '-'; });
+      if (targets.length < 2) return errOut(['cp: missing file operand', 'Try \'cp --help\' for more information.']);
+      var src = resolvePath(targets[0]), dst = resolvePath(targets[1]);
+      if (w.fileContents[src] === undefined) return errOut(["cp: cannot stat '" + targets[0] + "': No such file or directory"]);
+      if (w.fs[dst] !== undefined) dst = dst + '/' + baseName(src);
+      w.fileContents[dst] = w.fileContents[src];
+      w.filesWritten[dst] = true;
+      addToDir(dst);
+      flag(w, 'cp:' + dst);
+      return okOut([]);
+    }
+
+    function mvCmd(args) {
+      var targets = args.filter(function (a) { return a[0] !== '-'; });
+      if (targets.length < 2) return errOut(['mv: missing file operand', 'Try \'mv --help\' for more information.']);
+      var src = resolvePath(targets[0]), dst = resolvePath(targets[1]);
+      if (w.fileContents[src] === undefined && w.fs[src] === undefined) return errOut(["mv: cannot stat '" + targets[0] + "': No such file or directory"]);
+      if (w.fs[dst] !== undefined) dst = dst + '/' + baseName(src);
+      if (w.fileContents[src] !== undefined) {
+        w.fileContents[dst] = w.fileContents[src];
+        w.filesWritten[dst] = true;
+        delete w.fileContents[src];
+        delete w.filesWritten[src];
+      } else {
+        w.fs[dst] = w.fs[src];
+        delete w.fs[src];
+      }
+      removeFromDir(src);
+      addToDir(dst);
+      flag(w, 'mv:' + dst);
+      return okOut([]);
+    }
+
+    function touchCmd(args) {
+      var targets = args.filter(function (a) { return a[0] !== '-'; });
+      if (!targets.length) return errOut(['touch: missing file operand', 'Try \'touch --help\' for more information.']);
+      for (var i = 0; i < targets.length; i++) {
+        var path = resolvePath(targets[i]);
+        if (!w.fs[parentDir(path)]) return errOut(["touch: cannot touch '" + targets[i] + "': No such file or directory"]);
+        if (w.fs[path] === undefined && w.fileContents[path] === undefined) {
+          w.fileContents[path] = '';
+          w.filesWritten[path] = true;
+          addToDir(path);
+        }
+        flag(w, 'touch:' + path);
+      }
+      return okOut([]);
+    }
+
+    function dfCmd(args) {
+      return okOut([
+        padRight('Filesystem', 14) + padRight('Size', 7) + padRight('Used', 7) + padRight('Avail', 7) + padRight('Use%', 5) + 'Mounted on',
+        padRight('/dev/sda1', 14) + padRight('20G', 7) + padRight('8.5G', 7) + padRight('11G', 7) + padRight('44%', 5) + '/',
+        padRight('tmpfs', 14) + padRight('3.9G', 7) + padRight('0', 7) + padRight('3.9G', 7) + padRight('0%', 5) + '/dev/shm'
+      ]);
+    }
+
+    function freeCmd(args) {
+      return okOut([
+        '               total        used        free      shared  buff/cache   available',
+        'Mem:           7.7Gi       1.2Gi       4.9Gi       210Mi       1.6Gi       6.2Gi',
+        'Swap:          2.0Gi          0B       2.0Gi'
+      ]);
+    }
+
+    // ---------- ps / top ----------
+    function psCmd(args) {
+      if (args[0] === 'aux' || args[0] === '-aux' || args[0] === '-ef' || args[0] === 'ef') {
+        return okOut([
+          'USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND',
+          'learner        1  0.0  0.1   1234   512 ?        Ss   09:00   0:00 /bin/bash',
+          'learner       42  0.0  0.2   5678  1024 ?        S    09:01   0:00 nginx: worker process',
+          'learner      101  0.1  0.3   9100  2048 ?        Sl   09:02   0:01 node server.js'
+        ]);
+      }
+      return okOut([
+        '  PID TTY          TIME CMD',
+        '  101 ?        00:00:01 bash',
+        '  202 ?        00:00:00 ps'
+      ]);
+    }
+
+    function topCmd(args) {
+      return okOut([
+        'top - 09:00:00 up 1 day,  1 user,  load average: 0.10, 0.05, 0.01',
+        'Tasks:   3 total,   1 running,   2 sleeping,   0 stopped,   0 zombie',
+        '%Cpu(s):  1.0 us,  0.5 sy,  0.0 ni, 98.5 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st',
+        'MiB Mem :   7888.0 total,   5012.0 free,   1234.0 used,   1642.0 buff/cache',
+        'MiB Swap:   2048.0 total,   2048.0 free,      0.0 used.   6356.0 avail Mem',
+        '',
+        '  PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND',
+        '    1 learner   20   0    1234    512    256 S   0.0   0.1   0:00.00 bash',
+        '  101 learner   20   0    9100   2048   1024 S   0.1   0.3   0:01.00 node'
+      ]);
+    }
+
+    // ---------- script execution: bash x.sh / ./x.sh ----------
+    function scriptCmd(args, invoked) {
+      var file = null;
+      for (var i = 0; i < args.length; i++) { if (args[i][0] !== '-') { file = args[i]; break; } }
+      if (!file) return okOut(['bash: interactive mode is not available in this practice terminal.', 'Run a script instead, for example: bash kit-doctor.sh']);
+      var clean = file.replace(/^\.\//, '');
+      var path = resolvePath(clean);
+      var specScripts = w.spec.scripts || {};
+      var canned = specScripts[path] || specScripts[clean] || specScripts[file] || specScripts[baseName(clean)];
+      var exists = w.fileContents[path] !== undefined || canned !== undefined;
+      if (!exists) return errOut(['bash: ' + file + ': No such file or directory']);
+      flag(w, 'script:' + baseName(clean));
+      if (canned) return okOut(canned.slice());
+      return okOut([]);
+    }
+
+    // ---------- git ----------
+    function gitCmd(args) {
+      var sub = args[0];
+      if (!sub || sub === '--help' || sub === '-h') {
+        return okOut([
+          'usage: git <command> [<args>]',
+          '',
+          'Commands this practice terminal understands:',
+          '  init, status, add, commit, log, branch, checkout, merge, clone, config, push, pull'
+        ]);
+      }
+      if (sub === '--version' || sub === '-v') return okOut(['git version 2.43.0']);
+      if (sub === 'clone') {
+        var url = args[1];
+        if (!url) return errOut(['fatal: You must specify a repository to clone.']);
+        var repo = url.split('/').pop().replace(/\.git$/, '') || 'repo';
+        w.git.initialized = true;
+        w.git.branch = 'main';
+        if (w.git.branches.indexOf('main') === -1) w.git.branches.push('main');
+        if (!w.git.commits.length) w.git.commits.push({ hash: gitHash(0), msg: 'Initial commit' });
+        ensureDir(resolvePath(repo));
+        flag(w, 'git_clone');
+        return okOut([
+          "Cloning into '" + repo + "'...",
+          'remote: Enumerating objects: 3, done.',
+          'remote: Total 3 (delta 0), reused 0 (delta 0), pack-reused 0',
+          'Receiving objects: 100% (3/3), done.'
+        ]);
+      }
+      if (sub === 'config') {
+        var rest = args.slice(1).filter(function (a) { return a !== '--global' && a !== '--local'; });
+        if (rest.indexOf('--list') >= 0 || rest.indexOf('-l') >= 0) {
+          return okOut(['user.name=' + (w.git.config['user.name'] || 'learner'), 'user.email=' + (w.git.config['user.email'] || 'learner@example.com')]);
+        }
+        if (rest.length >= 2) { w.git.config[rest[0]] = rest[1]; return okOut([]); }
+        if (rest.length === 1) {
+          var val = w.git.config[rest[0]];
+          if (val === undefined) val = rest[0] === 'user.name' ? 'learner' : rest[0] === 'user.email' ? 'learner@example.com' : '';
+          return okOut([val]);
+        }
+        return okOut(['usage: git config [<options>] [<name> [<value>]]']);
+      }
+      if (!w.git.initialized) {
+        if (sub === 'init') {
+          w.git.initialized = true;
+          return okOut(['Initialized empty Git repository in /home/learner/.git/']);
+        }
+        return errOut(['fatal: not a git repository (or any of the parent directories): .git']);
+      }
+      if (sub === 'init') {
+        return okOut(['Reinitialized existing Git repository in /home/learner/.git/']);
+      }
+      if (sub === 'status') {
+        var lines = ['On branch ' + w.git.branch];
+        if (w.git.conflict) {
+          lines.push('You have unmerged paths.');
+          lines.push('  (fix conflicts and run "git commit")');
+          lines.push('Unmerged paths:');
+          lines.push('        both modified:   ' + w.git.conflictFile);
+          return okOut(lines);
+        }
+        if (w.git.staged.length) {
+          lines.push('Changes to be committed:');
+          lines.push('  (use "git restore --staged <file>..." to unstage)');
+          w.git.staged.forEach(function (f) { lines.push('        new file:   ' + f); });
+          return okOut(lines);
+        }
+        lines.push('nothing to commit, working tree clean');
+        return okOut(lines);
+      }
+      if (sub === 'add') {
+        var target = args[1];
+        if (!target) return errOut(['Nothing specified, nothing added.', 'Maybe you wanted to say \'git add .\'?']);
+        if (target === '.' || target === '-A' || target === '--all') {
+          var names = (w.fs[cwd] || []).slice();
+          for (var p in w.fileContents) {
+            var dir = p.split('/').slice(0, -1).join('/') || '/';
+            if (dir === cwd) { var b = p.split('/').pop(); if (names.indexOf(b) === -1) names.push(b); }
+          }
+          w.git.staged = names;
+          if (w.git.conflictFile && names.indexOf(w.git.conflictFile) >= 0) w.git.resolved = true;
+          return okOut([]);
+        }
+        var apath = resolvePath(target);
+        if (w.fileContents[apath] === undefined && w.fs[apath] === undefined) {
+          return errOut(["fatal: pathspec '" + target + "' did not match any files known to git"]);
+        }
+        if (w.git.staged.indexOf(target) === -1) w.git.staged.push(target);
+        if (w.git.conflictFile === target) w.git.resolved = true;
+        return okOut([]);
+      }
+      if (sub === 'commit') {
+        var mi = args.indexOf('-m');
+        var msg = mi >= 0 ? args[mi + 1] : null;
+        if (!msg) return errOut(['Aborting commit due to empty commit message.']);
+        if (w.git.conflict && !w.git.resolved) {
+          return errOut(['error: Committing is not possible because you have unmerged files.', "hint: Fix them up in the work tree, and then use 'git add/rm <file>' as appropriate to mark resolution and make a commit."]);
+        }
+        if (!w.git.staged.length && !w.git.conflict) return okOut(['On branch ' + w.git.branch, 'nothing to commit, working tree clean']);
+        var hash = gitHash(w.git.commits.length);
+        var count = w.git.staged.length || 1;
+        w.git.commits.unshift({ hash: hash, msg: msg });
+        w.git.staged = [];
+        w.git.conflict = false;
+        w.git.conflictFile = null;
+        w.git.resolved = false;
+        flag(w, 'git_commit');
+        return okOut(['[' + w.git.branch + ' ' + hash + '] ' + msg, ' ' + count + (count === 1 ? ' file changed, 1 insertion(+)' : ' files changed, ' + count + ' insertions(+)')]);
+      }
+      if (sub === 'log') {
+        if (!w.git.commits.length) return errOut(["fatal: your current branch '" + w.git.branch + "' does not have any commits yet"]);
+        return okOut(w.git.commits.map(function (c) { return c.hash + ' ' + c.msg; }));
+      }
+      if (sub === 'branch') {
+        if (args[1] === '-d' && args[2]) {
+          var del = args[2];
+          if (del === w.git.branch) return errOut(["error: Cannot delete branch '" + del + "' checked out at '" + cwd + "'"]);
+          var di = w.git.branches.indexOf(del);
+          if (di === -1) return errOut(["error: branch '" + del + "' not found."]);
+          w.git.branches.splice(di, 1);
+          return okOut(['Deleted branch ' + del + '.']);
+        }
+        if (args[1]) {
+          if (w.git.branches.indexOf(args[1]) === -1) w.git.branches.push(args[1]);
+          return okOut([]);
+        }
+        return okOut(w.git.branches.map(function (b) { return (b === w.git.branch ? '* ' : '  ') + b; }));
+      }
+      if (sub === 'checkout') {
+        if (args[1] === '-b' && args[2]) {
+          if (w.git.branches.indexOf(args[2]) === -1) w.git.branches.push(args[2]);
+          w.git.branch = args[2];
+          flag(w, 'git_checkout');
+          return okOut(["Switched to a new branch '" + args[2] + "'"]);
+        }
+        var br = args[1];
+        if (!br) return errOut(['usage: git checkout <branch>']);
+        if (w.git.branches.indexOf(br) === -1) return errOut(["error: pathspec '" + br + "' did not match any file(s) known to git"]);
+        w.git.branch = br;
+        flag(w, 'git_checkout');
+        return okOut(["Switched to branch '" + br + "'"]);
+      }
+      if (sub === 'merge') {
+        var mb = args[1];
+        if (!mb) return errOut(['usage: git merge <branch>']);
+        if (w.git.branches.indexOf(mb) === -1) return errOut(['merge: ' + mb + ' - not something we can merge']);
+        if (w.gitConflict && w.gitConflict.branch === mb) {
+          w.git.conflict = true;
+          w.git.conflictFile = w.gitConflict.file;
+          w.git.resolved = false;
+          flag(w, 'git_conflict');
+          return okOut([
+            'Auto-merging ' + w.gitConflict.file,
+            'CONFLICT (content): Merge conflict in ' + w.gitConflict.file,
+            'Automatic merge failed; fix conflicts and then commit the result.'
+          ]);
+        }
+        var mhash = gitHash(w.git.commits.length);
+        w.git.commits.unshift({ hash: mhash, msg: "Merge branch '" + mb + "'" });
+        flag(w, 'git_merge');
+        return okOut([
+          "Merge made by the 'ort' strategy.",
+          ' ' + (w.gitConflict ? w.gitConflict.file : 'app.py') + ' | 1 +',
+          ' 1 file changed, 1 insertion(+)'
+        ]);
+      }
+      if (sub === 'push') {
+        if (!w.git.commits.length) return okOut(['Everything up-to-date']);
+        flag(w, 'git_push');
+        if (w.git.commits.length === 1) {
+          return okOut([
+            'Enumerating objects: 3, done.',
+            'To https://github.com/learner/app.git',
+            ' * [new branch]      main -> main'
+          ]);
+        }
+        return okOut([
+          'Enumerating objects: 3, done.',
+          'To https://github.com/learner/app.git',
+          '   ' + w.git.commits[w.git.commits.length - 1].hash + '..' + w.git.commits[0].hash + '  ' + w.git.branch + ' -> ' + w.git.branch
+        ]);
+      }
+      if (sub === 'pull') return okOut(['Already up to date.']);
+      return errOut(["git: '" + sub + "' is not a git command. See 'git --help'."]);
+    }
+
+    // ---------- kubectl ----------
+    function kubectlHelp() {
+      return [
+        'kubectl controls the Kubernetes cluster manager.',
+        '',
+        'Basic Commands:',
+        '  get           Display one or many resources',
+        '  apply         Apply a configuration to a resource',
+        '  delete        Delete resources',
+        '  describe      Show details of a specific resource',
+        '  logs          Print the logs for a container in a pod',
+        '  port-forward  Forward one or more local ports to a pod',
+        '  rollout       Manage the rollout of a resource',
+        '  version       Print the client and server version information'
+      ];
+    }
+
+    function k8sPodTable() {
+      // Self-healing: a deployment recreates its pod when it is gone.
+      for (var d in w.k8s.deployments) {
+        var found = false;
+        for (var p in w.k8s.pods) { if (w.k8s.pods[p].deployment === d) { found = true; break; } }
+        if (!found) {
+          var dep = w.k8s.deployments[d];
+          var name = d + '-' + w.k8sSuffix;
+          w.k8s.pods[name] = { name: name, ready: '1/1', status: 'Running', restarts: 0, age: '0s', deployment: d, image: dep.image };
+          flag(w, 'k8s_self_heal:' + name);
+        }
+      }
+      var names = Object.keys(w.k8s.pods).sort();
+      var lines = [trimEnd(padRight('NAME', 18) + padRight('READY', 8) + padRight('STATUS', 10) + padRight('RESTARTS', 11) + 'AGE')];
+      names.forEach(function (n) {
+        var pod = w.k8s.pods[n];
+        lines.push(trimEnd(padRight(n, 18) + padRight(pod.ready, 8) + padRight(pod.status, 10) + padRight(String(pod.restarts), 11) + pod.age));
+      });
+      return lines;
+    }
+
+    function kubectlGet(args) {
+      var kind = null;
+      for (var i = 0; i < args.length; i++) { if (args[i][0] !== '-') { kind = args[i]; break; } }
+      if (!kind) return errOut(['error: resource type is required. Usage: kubectl get <pods|nodes|deployments|services>']);
+      if (kind === 'pods' || kind === 'pod' || kind === 'po') {
+        var names = Object.keys(w.k8s.pods);
+        if (!names.length && !Object.keys(w.k8s.deployments).length) return okOut(['No resources found in default namespace.']);
+        return okOut(k8sPodTable());
+      }
+      if (kind === 'nodes' || kind === 'node' || kind === 'no') {
+        return okOut([
+          trimEnd(padRight('NAME', 20) + padRight('STATUS', 9) + padRight('ROLES', 16) + padRight('AGE', 6) + 'VERSION'),
+          trimEnd(padRight('kind-control-plane', 20) + padRight('Ready', 9) + padRight('control-plane', 16) + padRight('10m', 6) + 'v1.30.0')
+        ]);
+      }
+      if (kind === 'deployments' || kind === 'deployment' || kind === 'deploy') {
+        var deps = Object.keys(w.k8s.deployments).sort();
+        if (!deps.length) return okOut(['No resources found in default namespace.']);
+        var lines = [trimEnd(padRight('NAME', 10) + padRight('READY', 8) + padRight('UP-TO-DATE', 13) + padRight('AVAILABLE', 12) + 'AGE')];
+        deps.forEach(function (n) {
+          var dep = w.k8s.deployments[n];
+          lines.push(trimEnd(padRight(n, 10) + padRight(dep.ready, 8) + padRight(String(dep.upToDate), 13) + padRight(String(dep.available), 12) + dep.age));
+        });
+        return okOut(lines);
+      }
+      if (kind === 'services' || kind === 'service' || kind === 'svc') {
+        var svcs = Object.keys(w.k8s.services).sort();
+        var slines = [trimEnd(padRight('NAME', 12) + padRight('TYPE', 12) + padRight('CLUSTER-IP', 13) + padRight('EXTERNAL-IP', 13) + padRight('PORT(S)', 9) + 'AGE')];
+        svcs.forEach(function (n) {
+          var s = w.k8s.services[n];
+          slines.push(trimEnd(padRight(n, 12) + padRight(s.type, 12) + padRight(s.clusterIP, 13) + padRight('<none>', 13) + padRight(s.ports, 9) + s.age));
+        });
+        return okOut(slines);
+      }
+      return errOut(['error: the server doesn\'t have a resource type "' + kind + '"']);
+    }
+
+    function kubectlApply(args) {
+      var fi = args.indexOf('-f');
+      var file = fi >= 0 ? args[fi + 1] : null;
+      if (!file) return errOut(['error: -f <file> is required. Usage: kubectl apply -f <file>']);
+      var path = resolvePath(file);
+      var content = w.fileContents[path];
+      if (content === undefined) return errOut(['error: the path "' + file + '" does not exist']);
+      var nameM = /^\s*name:\s*([A-Za-z0-9][A-Za-z0-9.-]*)/m.exec(content);
+      var imgM = /^\s*image:\s*(\S+)/m.exec(content);
+      if (!nameM) return errOut(['error: no name found in ' + file]);
+      var name = nameM[1], image = imgM ? imgM[1] : 'nginx:1.25';
+      var existed = !!w.k8s.deployments[name];
+      w.k8s.deployments[name] = { name: name, image: image, ready: '1/1', upToDate: 1, available: 1, age: '0s', replicas: 1 };
+      var podName = name + '-' + w.k8sSuffix;
+      w.k8s.pods[podName] = { name: podName, ready: '1/1', status: 'Running', restarts: 0, age: '0s', deployment: name, image: image };
+      flag(w, 'k8s_apply:' + name);
+      return okOut(['deployment.apps/' + name + (existed ? ' configured' : ' created')]);
+    }
+
+    function kubectlDelete(args) {
+      var type = args[0], name = args[1];
+      if (!type || !name) return errOut(['error: resource type and name are required. Usage: kubectl delete <type> <name>']);
+      if (type === 'pod' || type === 'pods' || type === 'po') {
+        if (!w.k8s.pods[name]) return errOut(['Error from server (NotFound): pods "' + name + '" not found']);
+        delete w.k8s.pods[name];
+        flag(w, 'k8s_delete_pod:' + name);
+        return okOut(['pod "' + name + '" deleted']);
+      }
+      if (type === 'deployment' || type === 'deployments' || type === 'deploy') {
+        if (!w.k8s.deployments[name]) return errOut(['Error from server (NotFound): deployments.apps "' + name + '" not found']);
+        delete w.k8s.deployments[name];
+        for (var p in w.k8s.pods) { if (w.k8s.pods[p].deployment === name) delete w.k8s.pods[p]; }
+        return okOut(['deployment.apps "' + name + '" deleted']);
+      }
+      if (type === 'service' || type === 'services' || type === 'svc') {
+        if (!w.k8s.services[name]) return errOut(['Error from server (NotFound): services "' + name + '" not found']);
+        delete w.k8s.services[name];
+        return okOut(['service "' + name + '" deleted']);
+      }
+      return errOut(['error: the server doesn\'t have a resource type "' + type + '"']);
+    }
+
+    function kubectlDescribe(args) {
+      var type = args[0], name = args[1];
+      if (!type || !name) return errOut(['error: resource type and name are required. Usage: kubectl describe <type> <name>']);
+      if (type === 'pod' || type === 'pods' || type === 'po') {
+        var pod = w.k8s.pods[name];
+        if (!pod) return errOut(['Error from server (NotFound): pods "' + name + '" not found']);
+        return okOut([
+          'Name:             ' + pod.name,
+          'Namespace:        default',
+          'Status:           ' + pod.status,
+          'IP:               10.244.0.5',
+          'Containers:',
+          '  ' + (pod.deployment || pod.name) + ':',
+          '    Image:          ' + pod.image,
+          '    Port:           80/TCP',
+          '    State:          ' + pod.status
+        ]);
+      }
+      if (type === 'deployment' || type === 'deployments' || type === 'deploy') {
+        var dep = w.k8s.deployments[name];
+        if (!dep) return errOut(['Error from server (NotFound): deployments.apps "' + name + '" not found']);
+        return okOut([
+          'Name:                   ' + dep.name,
+          'Namespace:              default',
+          'Replicas:               1 desired | 1 updated | 1 total | 1 available',
+          'StrategyType:           RollingUpdate',
+          'Pod Template:',
+          '  Containers:',
+          '   ' + dep.name + ':',
+          '    Image:      ' + dep.image,
+          '    Port:       80/TCP'
+        ]);
+      }
+      return errOut(['error: the server doesn\'t have a resource type "' + type + '"']);
+    }
+
+    function kubectlLogs(args) {
+      var name = null;
+      for (var i = 0; i < args.length; i++) { if (args[i][0] !== '-') { name = args[i]; break; } }
+      if (!name) return errOut(['error: pod name is required. Usage: kubectl logs <pod>']);
+      if (name.indexOf('/') >= 0) name = name.split('/')[1];
+      if (!w.k8s.pods[name]) return errOut(['Error from server (NotFound): pods "' + name + '" not found']);
+      flag(w, 'k8s_logs:' + name);
+      if (args.indexOf('--previous') >= 0) return okOut(['(no previous log — this container has not restarted)']);
+      return okOut(['Starting web server on port 80', 'Listening on 0.0.0.0:80']);
+    }
+
+    function kubectlPortForward(args) {
+      var target = args[0], mapping = args[1];
+      if (!target || !mapping) return errOut(['error: port-forward needs a target and ports. Usage: kubectl port-forward service/<name> <local>:<remote>']);
+      var parts = target.split('/');
+      var ttype = parts[0], tname = parts[1];
+      if ((ttype === 'service' || ttype === 'svc') && !w.k8s.services[tname]) return errOut(['Error from server (NotFound): services "' + tname + '" not found']);
+      if (ttype === 'pod' && !w.k8s.pods[tname]) return errOut(['Error from server (NotFound): pods "' + tname + '" not found']);
+      if (ttype !== 'service' && ttype !== 'svc' && ttype !== 'pod') return errOut(['error: unknown port-forward target "' + target + '"']);
+      var mm = /^(\d+):(\d+)$/.exec(mapping);
+      if (!mm) return errOut(['error: invalid port mapping "' + mapping + '". Use <local>:<remote>.']);
+      w.k8s.forwards[tname] = { local: mm[1], remote: mm[2], type: ttype };
+      flag(w, 'k8s_forward:' + tname);
+      return okOut(['Forwarding from 127.0.0.1:' + mm[1] + ' -> ' + mm[2], 'Forwarding from [::1]:' + mm[1] + ' -> ' + mm[2]]);
+    }
+
+    function kubectlRolloutStatus(args) {
+      var res = args[1], name = null;
+      if (res && res.indexOf('/') >= 0) { name = res.split('/')[1]; }
+      else if (res === 'deployment' || res === 'deploy') { name = args[2]; }
+      else { name = res; }
+      if (!name) return errOut(['error: rollout status needs a resource. Usage: kubectl rollout status deployment/<name>']);
+      if (!w.k8s.deployments[name]) return errOut(['Error from server (NotFound): deployments.apps "' + name + '" not found']);
+      flag(w, 'k8s_rollout:' + name);
+      return okOut(['deployment "' + name + '" successfully rolled out']);
+    }
+
+    function kubectlCmd(args) {
+      var sub = args[0];
+      if (!sub || sub === '--help' || sub === '-h' || sub === 'help') return okOut(kubectlHelp());
+      if (sub === 'version' || sub === '--version') {
+        if (args.indexOf('--client') >= 0) return okOut(['Client Version: v1.30.0']);
+        return okOut(['Client Version: v1.30.0', 'Server Version: v1.30.0']);
+      }
+      if (sub === 'get') return kubectlGet(args.slice(1));
+      if (sub === 'apply') return kubectlApply(args.slice(1));
+      if (sub === 'delete') return kubectlDelete(args.slice(1));
+      if (sub === 'describe') return kubectlDescribe(args.slice(1));
+      if (sub === 'logs') return kubectlLogs(args.slice(1));
+      if (sub === 'port-forward') return kubectlPortForward(args.slice(1));
+      if (sub === 'rollout') {
+        if (args[1] === 'status') return kubectlRolloutStatus(args.slice(1));
+        return errOut(['error: unknown rollout command "' + (args[1] || '') + '" for "kubectl rollout"']);
+      }
+      return errOut(['error: unknown command "' + sub + '" for "kubectl"', 'Run \'kubectl --help\' for usage.']);
+    }
+
+    // ---------- kind ----------
+    function kindCmd(args) {
+      var sub = args[0];
+      if (!sub || sub === '--help' || sub === '-h') {
+        return okOut([
+          'kind creates and manages local Kubernetes clusters using Docker.',
+          '',
+          'Commands:',
+          '  create cluster --name <name>      Create a cluster',
+          '  get clusters                      List clusters',
+          '  load docker-image <image> --name <cluster>   Load an image into a cluster',
+          '  delete cluster --name <name>      Delete a cluster',
+          '  version                           Print the kind version'
+        ]);
+      }
+      if (sub === '--version' || sub === 'version') return okOut(['kind v0.23.0 go1.22.2 linux/amd64']);
+      if (sub === 'create') {
+        var name = optVal(args, '--name') || 'kind';
+        if (w.kind.clusters.indexOf(name) >= 0) return errOut(['ERROR: a cluster with the name "' + name + '" already exists']);
+        w.kind.clusters.push(name);
+        flag(w, 'kind_create:' + name);
+        return okOut([
+          'Creating cluster "' + name + '" ...',
+          ' ✓ Ensuring node image (kindest/node:v1.30.0)',
+          ' ✓ Preparing nodes',
+          ' ✓ Writing configuration',
+          ' ✓ Starting control-plane',
+          ' ✓ Installing CNI',
+          ' ✓ Installing StorageClass',
+          'Set kubectl context to "kind-' + name + '"',
+          'You can now use your cluster with:',
+          '',
+          'kubectl cluster-info --all-namespaces'
+        ]);
+      }
+      if (sub === 'get') {
+        if (args[1] && args[1] !== 'clusters') return errOut(['ERROR: unknown command "get ' + args[1] + '" for "kind"']);
+        if (!w.kind.clusters.length) return okOut(['No kind clusters found.']);
+        return okOut(w.kind.clusters.slice());
+      }
+      if (sub === 'load') {
+        var img = args[2];
+        var cname = optVal(args, '--name') || 'kind';
+        if (args[1] !== 'docker-image' || !img) return errOut(['ERROR: usage: kind load docker-image <image> --name <cluster>']);
+        if (w.kind.clusters.indexOf(cname) === -1) return errOut(['ERROR: cluster "' + cname + '" does not exist. Create it first with: kind create cluster --name ' + cname]);
+        if (w.kind.images.indexOf(img) === -1) w.kind.images.push(img);
+        flag(w, 'kind_load:' + img);
+        return okOut(['Image: "' + img + '" loaded into cluster "' + cname + '"']);
+      }
+      if (sub === 'delete') {
+        var dname = optVal(args, '--name') || 'kind';
+        if (w.kind.clusters.indexOf(dname) === -1) return errOut(['ERROR: cluster "' + dname + '" does not exist']);
+        w.kind.clusters.splice(w.kind.clusters.indexOf(dname), 1);
+        flag(w, 'kind_delete:' + dname);
+        return okOut(['Deleting cluster "' + dname + '" ...', 'Deleted cluster "' + dname + '"']);
+      }
+      return errOut(['ERROR: unknown command "' + sub + '" for "kind"', 'Run \'kind --help\' for usage.']);
+    }
+
+    // ---------- terraform ----------
+    function tfCmd(args) {
+      var sub = args[0];
+      if (!sub || sub === '--help' || sub === '-h') {
+        return okOut([
+          'Usage: terraform [global options] <subcommand> [args]',
+          '',
+          'Common commands:',
+          '  init       Prepare your working directory for other commands',
+          '  plan       Show changes required by the current configuration',
+          '  apply      Create or update infrastructure',
+          '  destroy    Destroy previously-created infrastructure'
+        ]);
+      }
+      if (sub === '--version' || sub === 'version') return okOut(['Terraform v1.8.0']);
+      if (sub === 'init') {
+        w.tf.initialized = true;
+        flag(w, 'tf_init');
+        return okOut([
+          'Initializing the backend...',
+          '',
+          'Initializing provider plugins...',
+          '- Finding latest version of hashicorp/docker...',
+          '- Installing hashicorp/docker v3.0.2...',
+          '- Installed hashicorp/docker v3.0.2',
+          '',
+          'Terraform has been successfully initialized!'
+        ]);
+      }
+      if (sub === 'plan') {
+        if (!w.tf.initialized) return errOut(['Error: Terraform has not been initialized.', 'Run "terraform init" first.']);
+        w.tf.planned = true;
+        flag(w, 'tf_plan');
+        return okOut([
+          'Terraform will perform the following actions:',
+          '',
+          '  # docker_container.web will be created',
+          '  + resource "docker_container" "web" {',
+          '      + image = "nginx:1.25"',
+          '      + name  = "web"',
+          '    }',
+          '',
+          'Plan: 2 to add, 0 to change, 0 to destroy.'
+        ]);
+      }
+      if (sub === 'apply') {
+        if (!w.tf.initialized) return errOut(['Error: Terraform has not been initialized.', 'Run "terraform init" first.']);
+        w.tf.applied = true;
+        w.tf.planned = true;
+        flag(w, 'tf_apply');
+        return okOut([
+          'docker_container.web: Creating...',
+          'docker_container.web: Creation complete after 1s [id=abc123def456]',
+          'docker_container.db: Creating...',
+          'docker_container.db: Creation complete after 1s [id=def456abc123]',
+          '',
+          'Apply complete! Resources: 2 added, 0 changed, 0 destroyed.'
+        ]);
+      }
+      if (sub === 'destroy') {
+        if (!w.tf.applied) return okOut(['No changes. No objects need to be destroyed.', '', 'Destroy complete! Resources: 0 destroyed.']);
+        w.tf.applied = false;
+        w.tf.planned = false;
+        flag(w, 'tf_destroy');
+        return okOut([
+          'docker_container.web: Destroying... [id=abc123def456]',
+          'docker_container.web: Destruction complete after 0s',
+          'docker_container.db: Destroying... [id=def456abc123]',
+          'docker_container.db: Destruction complete after 0s',
+          '',
+          'Destroy complete! Resources: 2 destroyed.'
+        ]);
+      }
+      return errOut(['Terraform has no command named "' + sub + '".', 'Run "terraform --help" for usage.']);
+    }
+
     // ---------- curl ----------
     function curlCmd(args) {
       var url = null;
       args.forEach(function (a) { if (a.indexOf('http') === 0) url = a; });
       if (!url) return errOut(['curl: no URL specified']);
+      // World-spec canned responses: if the URL contains a map key, print it.
+      var cmap = w.spec.curl_map || {};
+      for (var ckey in cmap) {
+        if (url.indexOf(ckey) >= 0) { flag(w, 'curl_map:' + ckey); return okOut(cmap[ckey].slice()); }
+      }
       var m = /^http:\/\/localhost:(\d+)(\/.*)?$/.exec(url);
       if (!m) return errOut(['curl: (7) Failed to connect to ' + url.replace(/^https?:\/\//, '').split('/')[0] + ': Connection refused']);
       var port = m[1], path = m[2] || '/';
@@ -1099,6 +2026,26 @@
         var e3 = st3 && st3.keys[cond.ttl_set.key];
         return !!(e3 && e3.exp !== undefined);
       }
+      if (cond.git_initialized) return !!w.git.initialized;
+      if (cond.git_commits) return w.git.commits.length >= (cond.git_commits.min || 1);
+      if (cond.git_branch) return w.git.branch === cond.git_branch;
+      if (cond.git_conflict !== undefined) return w.git.conflict === cond.git_conflict;
+      if (cond.k8s_pod) {
+        if (cond.k8s_pod.name) {
+          var pd = w.k8s.pods[cond.k8s_pod.name];
+          return !!pd && (!cond.k8s_pod.status || pd.status === cond.k8s_pod.status);
+        }
+        var plist = Object.keys(w.k8s.pods).map(function (n) { return w.k8s.pods[n]; });
+        return plist.some(function (p) { return !cond.k8s_pod.status || p.status === cond.k8s_pod.status; });
+      }
+      if (cond.k8s_deployment) return !!w.k8s.deployments[cond.k8s_deployment.name || cond.k8s_deployment];
+      if (cond.k8s_service) return !!w.k8s.services[cond.k8s_service.name || cond.k8s_service];
+      if (cond.tf_initialized) return !!w.tf.initialized;
+      if (cond.tf_planned) return !!w.tf.planned;
+      if (cond.tf_applied) return !!w.tf.applied;
+      if (cond.kind_cluster) return w.kind.clusters.indexOf(cond.kind_cluster.name || cond.kind_cluster) >= 0;
+      if (cond.file_exists) return w.fileContents[cond.file_exists] !== undefined || w.fs[cond.file_exists] !== undefined;
+      if (cond.dir_exists) return w.fs[cond.dir_exists] !== undefined;
       return false;
     }
 
@@ -1127,8 +2074,16 @@
       getWorld: function () { return w; },
       completions: function (prefix) {
         var words = ['docker', 'compose', 'up', 'down', 'ps', 'logs', 'exec', 'stop', 'start', 'run', 'curl', 'ls', 'cd', 'pwd', 'echo', 'cat', 'chmod', 'help', 'history', 'clear', 'whoami', 'exit', 'python', 'python3', 'ip', 'uname', 'ipconfig',
-          'kafka-topics.sh', 'kafka-console-producer.sh', 'kafka-console-consumer.sh', 'psql', 'redis-cli', 'aws', 's3', 'mb', 'cp'];
+          'kafka-topics.sh', 'kafka-console-producer.sh', 'kafka-console-consumer.sh', 'psql', 'redis-cli', 'aws', 's3', 'mb', 'cp',
+          'git', 'kubectl', 'kind', 'terraform', 'mkdir', 'rm', 'mv', 'touch', 'df', 'free', 'top', 'bash', 'sh', '--version', 'version', 'images',
+          'get', 'apply', 'delete', 'describe', 'port-forward', 'rollout', 'create', 'cluster', 'clusters', 'pods', 'deployments', 'services', 'nodes',
+          'init', 'plan', 'destroy', 'status', 'add', 'commit', 'log', 'branch', 'checkout', 'merge', 'clone', 'push', 'pull', 'config', 'load', 'docker-image'];
         for (var n in w.containers) words.push(n);
+        for (var pn in w.k8s.pods) words.push(pn);
+        for (var dn in w.k8s.deployments) words.push(dn);
+        for (var sn in w.k8s.services) words.push(sn);
+        w.kind.clusters.forEach(function (c) { words.push(c); });
+        w.git.branches.forEach(function (b) { words.push(b); });
         for (var d in w.fs) { w.fs[d].forEach(function (f) { words.push(f); }); }
         // full file paths, so Tab completes a path the learner is typing
         for (var p in w.fileContents) words.push(p);

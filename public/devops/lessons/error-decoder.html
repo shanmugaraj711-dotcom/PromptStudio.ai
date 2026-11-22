@@ -16,9 +16,13 @@
   <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
 </header>
 <main class="lesson-wrap">
-<div class="lesson-content" id="lesson-content"><h1>Error Decoder — Find Your Error, Fix It</h1><span class="phasebadge">Free</span><p>Press Ctrl+F (or Cmd+F on Mac) and type part of the error message.</p>
+<div class="lesson-content" id="lesson-content"><h1>Error Decoder — Find Your Error, Fix It</h1><span class="phasebadge">Free</span><h2>What this is and why it matters</h2>
+<p>The <strong>error decoder</strong> is your first aid page: find your error message here and it tells you the fix.</p>
+<p>In real work, a broken lab usually stops on one error line. Guessing wastes hours — reading it tells you exactly what broke.</p>
+<p>Every entry has three parts: what the error means, the one fix to run, and how to check the fix worked.</p>
+<p>Press Ctrl+F (or Cmd+F on Mac) and type part of the error message.</p>
 <p>Read the error first. The error tells you what broke. Do not guess. Find your error below, read what it means, run the one fix, then run the check. If the check passes, move on.</p>
-<h2>Docker</h2>
+<div class="simbox"><b>&#9654; Try the simulation first</b> — a real terminal on this page, free. No install, works on your phone.<br><a class="btn" href="/devops/sims/error-decoder.html">Open the Error Decoder Simulation — Find Your Error, Fix It</a><br>Simulation — practice version. Run the real lab with Docker to do it for real.</div><h2>Docker</h2>
 <h3><code>Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?</code></h3>
 <p>What it means: Docker itself is not running on your machine. The fix: start Docker. On Docker Desktop, open the Docker app and wait until it says it is running. On Linux, run <code>sudo systemctl start docker</code>. Check it worked: <code>docker ps</code> prints a list (even an empty list) with no error.</p>
 <h3><code>Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock</code></h3>
@@ -96,7 +100,9 @@
 <h3><code>exec: &quot;psql&quot;: executable file not found in $PATH: unknown</code></h3>
 <p>What it means: the program you asked for is not inside that container. <code>psql</code> lives in the database container, not in every container. The fix: run the command in the right container, for example <code>docker exec pg-primary psql -U learner -d practice -c &quot;SELECT 1;&quot;</code>. Check it worked: the command in the right container answers.</p>
 <h3><code>timeout waiting for container &lt;name&gt; to become healthy</code></h3>
-<p>What it means: a container with a health check never turned healthy. Something inside it is failing. The fix: read its log — <code>docker compose logs &lt;name&gt;</code> — fix the error the log shows, then run <code>docker compose restart &lt;name&gt;</code>. Check it worked: <code>docker compose ps</code> shows the container with STATUS &quot;Up&quot; (and healthy, if a health check is set).</p><nav class="pager"><a class="prev" href="/devops/lessons/lesson-0.html"><span>← Previous lesson</span><span class="pname">Lesson 0</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
+<p>What it means: a container with a health check never turned healthy. Something inside it is failing. The fix: read its log — <code>docker compose logs &lt;name&gt;</code> — fix the error the log shows, then run <code>docker compose restart &lt;name&gt;</code>. Check it worked: <code>docker compose ps</code> shows the container with STATUS &quot;Up&quot; (and healthy, if a health check is set).</p>
+<h2>Nothing here matches your error</h2>
+<p>Do not guess. Copy the exact error line, then email it to support@promptstudioai.in with the step you were on. We reply within 24 hours.</p><nav class="pager"><a class="prev" href="/devops/lessons/lesson-0.html"><span>← Previous lesson</span><span class="pname">Lesson 0</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
 <div class="auth-modal" id="auth-modal" hidden>
   <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
     <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
