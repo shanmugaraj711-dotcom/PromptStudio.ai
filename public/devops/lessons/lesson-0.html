@@ -16,9 +16,13 @@
   <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
 </header>
 <main class="lesson-wrap">
-<div class="lesson-content" id="lesson-content"><h1>Lesson 0: Before the Terminal</h1><span class="phasebadge">Free</span><p>This lesson is for a true beginner. If you have never used a terminal, never installed Docker, and do not know what Linux or Ubuntu is, start here. Do this lesson first. Then go to Lesson 1.</p>
+<div class="lesson-content" id="lesson-content"><h1>Lesson 0: Before the Terminal</h1><span class="phasebadge">Free</span><h2>What this is and why it matters</h2>
+<p>This lesson is the <strong>setup</strong> step: it gets your computer ready before any real lab begins.</p>
+<p>Without it, every later lab fails at the first step, because the tools it needs are not installed or not running.</p>
+<p>You will learn the basic words, install one free program, and run two quick checks that prove it works.</p>
+<p>This lesson is for a true beginner. If you have never used a terminal, never installed Docker, and do not know what Linux or Ubuntu is, start here. Do this lesson first. Then go to Lesson 1.</p>
 <p>One idea per step. Do the steps in order. Do not skip ahead.</p>
-<h2>1. What these words mean</h2>
+<div class="simbox"><b>&#9654; Try the simulation first</b> — a real terminal on this page, free. No install, works on your phone.<br><a class="btn" href="/devops/sims/lesson-0.html">Open the Lesson 0 Simulation — Before the Terminal</a><br>Simulation — practice version. Run the real lab with Docker to do it for real.</div><h2>1. What these words mean</h2>
 <p><strong>Computer.</strong> The machine on your desk or in your lap. It runs programs, stores your files, and shows you the screen.</p>
 <p><strong>Operating system.</strong> The main program that runs your computer. It starts when you switch the machine on. It lets your other programs use the screen, the keyboard, and the files. Windows and macOS are operating systems.</p>
 <p><strong>Linux.</strong> An operating system, like Windows and macOS, but free and open. Many servers run Linux. You do not need to learn Linux to start this kit. You only need to know the word.</p>
@@ -43,23 +47,38 @@
 <h2>3. First checks</h2>
 <p>Open your terminal. Type each command exactly as shown, then press Enter.</p>
 <p>First, check Docker itself:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker --version</code></pre></div>
-<p>Good output shows a version number, not an error. It will look like the word Docker, then a version number. If you see an error instead, Docker is not installed right, or Docker Desktop is not running yet. Go back to section 2 and check Docker Desktop is open and running.</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker --version</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Docker version 27.5.1, build 9f9e405</code></pre></div></div>
+<p>Your version number will be different — that is fine. What matters is a version number, not an error.</p>
+<p>If it breaks: &quot;command not found&quot; means Docker is not installed — go back to section 2 and install it. &quot;Cannot connect to the Docker daemon&quot; means Docker Desktop is not running yet — open Docker Desktop and wait until it says it is running.</p>
 <p>Next, check Compose, the tool that starts several containers together from one file:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose version</code></pre></div>
-<p>Good output shows a version number, not an error. If you see an error, Docker Desktop may still be starting. Wait a minute and try again.</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose version</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Docker Compose version v2.32.4-desktop.1</code></pre></div></div>
+<p>Again, your version number will be different — that is fine.</p>
+<p>If it breaks: if you see an error, Docker Desktop may still be starting. Wait a minute and try again. If it says &quot;compose is not a docker command&quot;, your Docker is too old — update Docker Desktop to the newest version.</p>
 <p>If both commands show a version number, Docker is ready.</p>
-<h2>4. What the kit folder looks like</h2>
+<h2>4. What is inside your downloaded zip</h2>
+<p>This <strong>kit</strong> is a hands-on learning environment that lets you practice real DevOps tasks directly on your own computer.</p>
+<p>You download it so you can run databases, message queues, and deployment setups locally without paying for cloud servers or risking breaking live production systems.</p>
+<p>Inside your download, you will find lab folders containing ready-to-run setup recipes, step-by-step Markdown lessons, and proof template files to record your completed work.</p>
+<p>If you hit an issue while running a lab, a built-in doctor script checks your machine health, and an error decoder shows you how to resolve common failures.</p>
 <p>When you unzip the Phase 1 kit, you get a folder called <code>phase1</code>. Inside it you will see:</p>
 <ul><li>Lesson files, one per topic: <code>start-here.md</code>, <code>kafka-lab.md</code>, <code>postgresql-lab.md</code>, <code>redis-lab.md</code>, <code>object-store-lab.md</code>, <code>load-balancer-lab.md</code>, <code>end-to-end-lab.md</code>, and this file, <code>lesson-0.md</code>. There is also <code>error-decoder.md</code>: when a command fails, look up the error there.</li><li>One folder called <code>portfolio</code>. It holds a README template and blank proof forms. When a lab says &quot;save your proof&quot;, the proof goes in there.</li><li>One folder per lab: <code>kafka-lab</code>, <code>postgresql-lab</code>, <code>redis-lab</code>, <code>object-store-lab</code>, <code>load-balancer-lab</code>, and <code>end-to-end</code>.</li><li>Inside <code>postgresql-lab</code> there is one more folder, <code>patroni</code>, for the Patroni part of that lab.</li><li>Each lab folder has a file called <code>docker-compose.yml</code>. That file is the list of containers for that lab. You do not need to read it or change it. The lab steps tell you the commands to run in each folder.</li><li>Two helper scripts: <code>kit-doctor.sh</code> and <code>reset.sh</code>. The next section says what they do.</li></ul>
 <p>Do your work inside the <code>phase1</code> folder. When a lab says &quot;go into the lab folder&quot;, it means open your terminal, move into that folder, and run the commands there.</p>
-<h2>5. If something fails</h2>
-<p>Do not guess. Do these two things, in order.</p>
+<h2>5. If you get stuck</h2>
+<p>Do these three steps, in order.</p>
 <p><strong>Step 1 — Run the kit doctor script.</strong> In your terminal, move into the <code>phase1</code> folder with <code>cd phase1</code>, press Enter, then run:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>bash kit-doctor.sh</code></pre></div>
 <p>It checks Docker, the doors (ports) the labs need, free disk space, and free memory. For each check it prints OK, or a plain-English FIX line that tells you what to do.</p>
+<p>You should see:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>OK: Docker command found.
+OK: Docker Compose works.
+OK: Docker is running.
+OK: Port 5432 is free (needed by postgresql-lab).
+OK: Disk space is fine (about 12 GB free).
+OK: Memory is fine (about 8 GB free right now).</code></pre></div>
+<p>Your lines will name the checks and numbers on your machine — what matters is OK on every line, not the exact words.</p>
+<p>If it breaks: &quot;No such file or directory&quot; means you are not inside the <code>phase1</code> folder — run <code>cd phase1</code> first, then try again. A FIX line means that one check failed — do what the FIX line says, then run the script again.</p>
 <p><strong>Step 2 — Look up the error in the error decoder.</strong> Copy the error message from your terminal, find it in the decoder, and follow the fix it gives.</p>
-<p>If the doctor says all OK and the error decoder has no match, read the error message slowly, one line at a time. It usually names the thing that is wrong. Then try the step again.</p>
+<p><strong>Step 3 — Email us.</strong> If the doctor says all OK and the error decoder has no match, email support@promptstudioai.in with the exact error line and the step you were on. We reply within 24 hours.</p>
 <p>If Lesson 0 worked, you are ready for Lesson 1.</p><nav class="pager"><a class="prev" href="/devops/index.html"><span>← Home</span><span class="pname">DevOps Kit</span></a><a class="next" href="/devops/lessons/error-decoder.html"><span>Next lesson →</span><span class="pname">Error Decoder</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
 <div class="auth-modal" id="auth-modal" hidden>
   <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">

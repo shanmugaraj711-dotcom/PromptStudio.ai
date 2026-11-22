@@ -16,13 +16,19 @@
   <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
 </header>
 <main class="lesson-wrap">
-<div class="lock-screen" id="lock-screen" hidden><p class="lock-loading" hidden>Checking your sign-in…</p><span class="lock-icon">🔒</span><h2>This lesson is in Phase 2 — ₹799, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase2" type="button" hidden>Buy Phase 2 — ₹799</button><a class="lock-back" href="/devops/index.html">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><h1>Portfolio Projects — Proof, Not Just Notes</h1><span class="phasebadge">Phase 2 · The Rest of DevOps</span><h2>Why projects</h2>
-<p>Employers trust things they can open and run. Four small, finished projects beat a long list of courses. Each project below ends with a GitHub README (the front page of a repository) that you fill in. Write only true things in it. If something is not done yet, say so.</p>
+<div class="lock-screen" id="lock-screen" hidden><p class="lock-loading" hidden>Checking your sign-in…</p><span class="lock-icon">🔒</span><h2>This lesson is in Phase 2 — ₹799, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase2" type="button" hidden>Buy Phase 2 — ₹799</button><a class="lock-back" href="/devops/index.html">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><h1>Portfolio Projects — Proof, Not Just Notes</h1><span class="phasebadge">Phase 2 · The Rest of DevOps</span><h2>What this is and why it matters</h2>
+<p>Employers trust things they can open and run. Four small, finished <strong>projects</strong> beat a long list of courses.</p>
+<p>In real hiring, a course list proves nothing — a working project you can show is the proof that you did the work.</p>
+<p>Build them in order. Each one uses the skills from the last, and each ends with a short write-up you fill in with true things.</p>
+<div class="simbox"><b>&#9654; Try the simulation </b> — included with Phase 2. A real terminal on this page. No install, works on your phone.<br><a class="btn" href="/devops/sims/p2-portfolio.html">Open the Portfolio Projects Simulation — Proof, Not Just Notes</a><br>Simulation — practice version. Run the real lab with Docker to do it for real.</div><h2>Why projects</h2>
+<p>Each project below ends with a GitHub README (the front page of a repository) that you fill in. If something is not done yet, say so.</p>
 <hr>
 <h2>Project 1 — A website in a container</h2>
 <h3>Build it</h3>
 <ol><li>Make a folder called <code>my-site</code> inside <code>~/devops-practice</code> and put one <code>index.html</code> page in it that says what the site is. Then move into that folder before you build:</li></ol>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cd ~/devops-practice/my-site</code></pre></div>
+<p>You should see: nothing — <code>cd</code> prints nothing when it works. That is normal.</p>
+<p>If it breaks: &quot;No such file or directory&quot; means the folder does not exist yet — make it first with <code>mkdir -p ~/devops-practice/my-site</code>, then move into it.</p>
 <p>Example content for <code>index.html</code> (make it with the method in zero-cost-lab.md, &quot;How to make a file&quot;):</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code class="language-html">&lt;h1&gt;My DevOps practice site&lt;/h1&gt;
 &lt;p&gt;This site runs in a Docker container I built myself.&lt;/p&gt;</code></pre></div>
@@ -32,7 +38,8 @@ COPY index.html /usr/share/nginx/html/index.html</code></pre></div>
 <ol><li>From inside the <code>my-site</code> folder, build and run it:</li></ol>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker build -t my-site:1.0 .
 docker run -d -p 8080:80 --name my-site my-site:1.0</code></pre></div>
-<p>If port 8080 is already in use, stop the container using it or run with <code>-p 8081:80</code> instead and open <code>http://localhost:8081</code>. Clean up when done: <code>docker stop my-site</code>, then <code>docker rm my-site</code>.</p>
+<p>You should see: the build lines scroll past, then a long container ID printed. That means your site is running.</p>
+<p>If it breaks: if port 8080 is already in use, stop the container using it or run with <code>-p 8081:80</code> instead and open <code>http://localhost:8081</code>. Clean up when done: <code>docker stop my-site</code>, then <code>docker rm my-site</code>.</p>
 <ol><li>Open <code>http://localhost:8080</code> and check it works.</li><li>Push the folder to GitHub (first time: follow zero-cost-lab.md Step 7; after that, <code>git add .</code>, <code>git commit</code>, <code>git push</code>).</li></ol>
 <h3>README template — fill in the blanks</h3>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code># [Site name]
@@ -48,8 +55,7 @@ Problems I fixed: [one problem and its fix]</code></pre></div>
 <h2>Project 2 — A pipeline that tests and builds</h2>
 <h3>Build it</h3>
 <ol><li>Use Project 1&#x27;s repository.</li><li>Make the folder for the workflow file, then add <code>.github/workflows/build.yml</code> (see zero-cost-lab.md, &quot;How to make a file&quot;, for how to create files):</li></ol>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir -p .github/workflows</code></pre></div>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code class="language-yaml">name: build
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir -p .github/workflows</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code class="language-yaml">name: build
 on: [push]
 jobs:
   build:
@@ -61,9 +67,10 @@ jobs:
           test -f index.html
           grep -q &quot;My DevOps practice site&quot; index.html
       - name: Build the image
-        run: docker build -t my-site:1.0 .</code></pre></div>
+        run: docker build -t my-site:1.0 .</code></pre></div></div>
 <p>The test step runs BEFORE the build: it fails if <code>index.html</code> is missing or does not hold the site&#x27;s heading, so a broken site never gets built. A pipeline that only builds is not a pipeline that tests — the test step is the point.</p>
-<ol><li>Push, open the Actions tab on GitHub, and watch the pipeline run. Break it once on purpose (for example, delete the heading from <code>index.html</code> so the test step fails, or a typo in the Dockerfile so the build fails), read the log, fix it, and push again.</li></ol>
+<ol><li>Push, open the Actions tab on GitHub, and watch the pipeline run. You should see: the run turns green. Break it once on purpose (for example, delete the heading from <code>index.html</code> so the test step fails, or a typo in the Dockerfile so the build fails), read the log, fix it, and push again.</li></ol>
+<p>If it breaks: if the run is red, open the failed step&#x27;s log and read the first error line — that is the one thing to fix first.</p>
 <h3>README template — fill in the blanks</h3>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code># [Site name] — CI/CD pipeline
 What it is: [one line]
@@ -95,7 +102,11 @@ resource &quot;docker_container&quot; &quot;web&quot; {
     external = 8080
   }
 }</code></pre></div>
-<p>Run <code>terraform init</code>, then <code>terraform apply</code>, and check <code>http://localhost:8080</code>. <code>init</code> downloads the Docker provider the file asks for. Once you have a working run, pin the provider version: add a <code>version</code> line inside the docker provider block with the version you tested, and keep the <code>.terraform.lock.hcl</code> file <code>init</code> creates — do not delete it casually. No version is pinned here because none was tested end-to-end yet.</p>
+<p>Run <code>terraform init</code>, then <code>terraform apply</code>, and check <code>http://localhost:8080</code>. <code>init</code> downloads the Docker provider the file asks for.</p>
+<p>You should see:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>Apply complete! Resources: 1 added, 0 changed, 0 destroyed.</code></pre></div>
+<p>If it breaks: &quot;provider not found&quot; means <code>init</code> never ran — run <code>terraform init</code> first, then <code>apply</code> again. If <code>apply</code> asks for confirmation, type <code>yes</code> and press Enter.</p>
+<p>Once you have a working run, pin the provider version: add a <code>version</code> line inside the docker provider block with the version you tested, and keep the <code>.terraform.lock.hcl</code> file <code>init</code> creates — do not delete it casually. No version is pinned here because none was tested end-to-end yet.</p>
 <p>To check nothing changed, run <code>terraform plan</code> after the first apply — it should report no changes. If the plan shows changes, read it before you apply; something drifted or changed.</p>
 <p>Clean up when you are done: first check you are in the right folder and read the plan with <code>terraform plan -destroy</code>. Then <code>terraform destroy</code> removes what Terraform created. Run it only on your own practice setup, never on anything shared or real.</p>
 <ol><li>Add monitoring with Docker Compose (a tool that starts several containers together from one file). You will run three small programs on your own machine: Prometheus (collects numbers), Grafana (turns numbers into charts), and node-exporter (reports numbers from inside its own container). This demo shows container monitoring — it does not measure your whole host machine. On a Linux host you can add host mounts later; on Docker Desktop or WSL2, the numbers describe the Linux container environment, not your Windows or Mac host. No cloud account, no bill.</li></ol>
@@ -132,7 +143,8 @@ scrape_configs:
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cd ~/devops-practice/monitoring
 docker compose up -d
 docker compose ps</code></pre></div>
-<p>All three should show as running. If <code>docker compose</code> fails, older Docker uses <code>docker-compose</code> (with a hyphen) — try that instead.</p>
+<p>You should see: all three services with STATUS &quot;Up&quot; — <code>prometheus</code>, <code>node-exporter</code>, and <code>grafana</code>.</p>
+<p>If it breaks: if a service shows &quot;Exited&quot;, read its log with <code>docker compose logs &lt;service&gt;</code> — the error line names the problem. If <code>docker compose</code> fails, older Docker uses <code>docker-compose</code> (with a hyphen) — try that instead.</p>
 <p>Check Prometheus first: open <code>http://localhost:9090</code>, click Status, then Targets. Both jobs should show UP, with the target address and last-scrape time beside them. If a target shows DOWN, work in this order: <code>docker compose ps</code> (is the container running?), <code>docker compose logs &lt;service&gt;</code> (what did it print?), then the error line under the target in Prometheus.</p>
 <p>Now open Grafana: <code>http://localhost:3000</code>. Log in with username <code>admin</code> and password <code>admin</code>, and change that default password at first login — this stack is local learning only, not secured for sharing. If it asks you to set a new password, set one you will remember.</p>
 <p>Add Prometheus as the data source: go to Connections, then Data sources, then Add data source, choose Prometheus, and set the URL to <code>http://prometheus:9090</code> — Grafana reaches Prometheus by its service name, not by localhost. Then Save &amp; test. It should say the data source is working.</p>
@@ -159,7 +171,8 @@ Cost: local only, no cloud bill.</code></pre></div>
 <h2>Project 4 — A data-tier pipeline, end to end (Phase 1)</h2>
 <h3>Build it</h3>
 <p>This project is the Phase 1 end-to-end lab, done as a portfolio piece. Do the Phase 1 single-topic labs first (Kafka, PostgreSQL, Redis, object store, load balancer), then run the end-to-end lab in the Phase 1 folder:</p>
-<ol><li>Start it with one command: <code>docker compose up -d --build</code>.</li><li>Watch three fake orders flow from files to Kafka to PostgreSQL, with the counter in Redis and the files in Moto.</li><li>Add a fourth order yourself and watch it flow through.</li><li>Kill the main database, promote the standby, point a fresh worker at it, and send a fifth order through the new main database.</li><li>Push the lab folder to GitHub (the compose file, the two Python programs, the sample order files, and the README below). Do not push any real data — the sample orders are fake, and that is the point.</li></ol>
+<ol><li>Start it with one command: <code>docker compose up -d --build</code>. You should see: all eleven services start with STATUS &quot;Up&quot; (the end-to-end lab, Step 1, shows the full list to check).</li><li>Watch three fake orders flow from files to Kafka to PostgreSQL, with the counter in Redis and the files in Moto.</li><li>Add a fourth order yourself and watch it flow through.</li><li>Kill the main database, promote the standby, point a fresh worker at it, and send a fifth order through the new main database.</li><li>Push the lab folder to GitHub (the compose file, the two Python programs, the sample order files, and the README below). Do not push any real data — the sample orders are fake, and that is the point.</li></ol>
+<p>If it breaks: follow the end-to-end lab step by step — every step there says what you should see and what to do if it breaks.</p>
 <h3>README template — fill in the blanks</h3>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code># Order pipeline demo (Kafka + PostgreSQL + Redis + Moto + NGINX)
 What it is: [one line]

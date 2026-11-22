@@ -16,7 +16,11 @@
   <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
 </header>
 <main class="lesson-wrap">
-<div class="lock-screen" id="lock-screen" hidden><p class="lock-loading" hidden>Checking your sign-in…</p><span class="lock-icon">🔒</span><h2>This lesson is in Phase 2 — ₹799, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase2" type="button" hidden>Buy Phase 2 — ₹799</button><a class="lock-back" href="/devops/index.html">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><h1>Break-and-Fix Labs — Learn Like On-Call Work</h1><span class="phasebadge">Phase 2 · The Rest of DevOps</span><h2>How to use these labs</h2>
+<div class="lock-screen" id="lock-screen" hidden><p class="lock-loading" hidden>Checking your sign-in…</p><span class="lock-icon">🔒</span><h2>This lesson is in Phase 2 — ₹799, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase2" type="button" hidden>Buy Phase 2 — ₹799</button><a class="lock-back" href="/devops/index.html">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><h1>Break-and-Fix Labs — Learn Like On-Call Work</h1><span class="phasebadge">Phase 2 · The Rest of DevOps</span><h2>What this is and why it matters</h2>
+<p>These labs teach you <strong>fixing</strong>: each one breaks something on purpose, so you practise finding the cause.</p>
+<p>In real work, fixing is the job itself — a broken system stays broken until someone reads the symptom and finds the cause.</p>
+<p>Each lab follows the same order: break it, read the symptom, find the cause, fix it. Do not read the fix first.</p>
+<div class="simbox"><b>&#9654; Try the simulation </b> — included with Phase 2. A real terminal on this page. No install, works on your phone.<br><a class="btn" href="/devops/sims/p2-break-fix.html">Open the Break-and-Fix Simulation — Break It, Then Fix It</a><br>Simulation — practice version. Run the real lab with Docker to do it for real.</div><h2>How to use these labs</h2>
 <p>Each lab breaks something on purpose. Do not read the fix first. Read the symptom, try to find the cause with the commands you know, then check the fix. In real on-call work (being the person who fixes things when they break), this order — symptom, logs, cause, fix — is the whole job.</p>
 <hr>
 <h2>Lab 1 — The container that will not start</h2>
@@ -25,15 +29,19 @@
 <p>(<code>nginxg</code> is a typing mistake on purpose. There is no such image.)</p>
 <h3>Symptom</h3>
 <p>Docker prints an error and no container runs.</p>
+<p>You should see an error like:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>Unable to find image &#x27;nginxg:latest&#x27; locally
+docker: Error response from daemon: pull access denied for nginxg, repository does not exist or may require &#x27;docker login&#x27;.</code></pre></div>
 <h3>Find it</h3>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker ps -a</code></pre></div>
-<p>No <code>broken-web</code> container is running. The error message says the image could not be found — Docker could not download something that does not exist.</p>
+<p>You should see: no <code>broken-web</code> container in the list. The error message says the image could not be found — Docker could not download something that does not exist.</p>
 <h3>Fix it</h3>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker run -d --name working-web nginx
 docker ps</code></pre></div>
+<p>You should see: <code>working-web</code> in the list with STATUS &quot;Up&quot;.</p>
 <p>The container runs. Lesson: when a container will not start, read Docker&#x27;s error and check the image name and tag first (<code>docker image ls</code>, or try <code>docker pull IMAGE:TAG</code>). Use <code>docker logs</code> only when a container actually exists and printed output — for an image that was never pulled, there is no container to read logs from.</p>
 <h3>Second version (try this yourself)</h3>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker run -d --name second-web -p 8080:80 nginx</code></pre></div>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker run -d --name second-web -p 8080:80 nginx</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Bind for 0.0.0.0:8080 failed: port is already allocated</code></pre></div></div>
 <p>If your first web container is still using port 8080, this one fails with &quot;port is already allocated&quot;. Fix: stop the first one (<code>docker stop working-web</code>) or use a different port (<code>-p 8081:80</code>).</p>
 <hr>
 <h2>Lab 2 — The container that starts, then dies</h2>
@@ -41,14 +49,18 @@ docker ps</code></pre></div>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker run --name dying-app ubuntu badcommand</code></pre></div>
 <h3>Symptom</h3>
 <p>The container appears, then stops at once.</p>
+<p>You should see an error like:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>exec: &quot;badcommand&quot;: executable file not found in $PATH</code></pre></div>
 <h3>Find it</h3>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker ps -a
 docker logs dying-app</code></pre></div>
-<p><code>docker ps -a</code> shows it exited. <code>docker logs</code> shows the error: the command does not exist, so the container had nothing to do and exited. A container lives only as long as its main program runs.</p>
+<p>You should see: <code>dying-app</code> in the list with STATUS &quot;Exited&quot;, and the log shows the error above: the command does not exist, so the container had nothing to do and exited. A container lives only as long as its main program runs.</p>
 <h3>Fix it</h3>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker rm dying-app
 docker run -d --name living-app ubuntu sleep 1000
 docker ps</code></pre></div>
+<p>You should see: <code>living-app</code> in the list with STATUS &quot;Up&quot;.</p>
+<p>If it breaks: if <code>living-app</code> exits at once too, check the command spelling — <code>sleep 1000</code> must be typed exactly.</p>
 <p><code>sleep 1000</code> is a program that simply waits, so the container stays alive. This is a process-lifetime demonstration only, not a real fix — never hide a broken app behind a waiting command. The real-app version: run a program that is meant to stay in the foreground, for example <code>docker run -d --name living-web nginx</code> — nginx itself is the foreground program, so the container stays alive doing real work. A container stops when its main program exits. Clean up when done: <code>docker stop living-app</code> and <code>docker rm living-app</code>.</p>
 <hr>
 <h2>Lab 3 — The pipeline that fails</h2>
@@ -74,7 +86,10 @@ jobs:
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code class="language-bash">#!/bin/bash
 test -f index.html
 grep -q &quot;My DevOps practice site&quot; index.html</code></pre></div>
-<p>Make it runnable (<code>chmod +x run-tests.sh</code>), push again, and watch the pipeline go green. Then break it on purpose once — delete the heading from <code>index.html</code>, watch the test step fail, restore it, and watch it pass. Never replace a missing test with a command that only prints &quot;tests passed&quot;: a green pipeline that checked nothing is worse than a red one.</p>
+<p>Make it runnable (<code>chmod +x run-tests.sh</code>), push again, and watch the pipeline go green.</p>
+<p>You should see: the pipeline run turns green on the Actions tab.</p>
+<p>If it breaks: if it is still red, open the failed run, read the failed step&#x27;s log, and find the first error line — that is the one thing to fix first.</p>
+<p>Then break it on purpose once — delete the heading from <code>index.html</code>, watch the test step fail, restore it, and watch it pass. Never replace a missing test with a command that only prints &quot;tests passed&quot;: a green pipeline that checked nothing is worse than a red one.</p>
 <h3>Lesson</h3>
 <p>Most pipeline failures are not mysterious. Read the failed step&#x27;s log, find the first error line, and fix that one thing first.</p>
 <hr>
@@ -86,40 +101,45 @@ cd ~/devops-practice/git-conflict
 git init
 git branch -M main
 git config user.name &quot;Learner&quot;
-git config user.email &quot;learner@example.com&quot;</code></pre></div>
+git config user.email &quot;learner@example.com&quot;</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Initialized empty Git repository in /home/learner/devops-practice/git-conflict/.git/</code></pre></div></div>
+<p>(Your home folder name will be different — that is fine.) The <code>config</code> lines print nothing when they work.</p>
+<p>If it breaks: &quot;No such file or directory&quot; means the folder was not made — run the <code>mkdir</code> line again first.</p>
 <p>Now make a first version and save it:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cat &gt; notes.txt &lt;&lt; &#x27;EOF&#x27;
 Line one
 EOF
 git add notes.txt
-git commit -m &quot;first version&quot;</code></pre></div>
+git commit -m &quot;first version&quot;</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>[main (root-commit) abc1234] first version</code></pre></div></div>
+<p>(Your commit ID will be different — that is fine.)</p>
 <p>Make a branch (a separate line of work to try changes in) and change the same line there:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git checkout -b feature
 cat &gt; notes.txt &lt;&lt; &#x27;EOF&#x27;
 Line one, edited on feature
 EOF
 git add notes.txt
-git commit -m &quot;feature edit&quot;</code></pre></div>
+git commit -m &quot;feature edit&quot;</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Switched to a new branch &#x27;feature&#x27;
+[feature abc1234] feature edit</code></pre></div></div>
+<p>(Your commit ID will be different — that is fine.)</p>
 <p>Go back to the main line and change the same line differently:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git checkout main
 cat &gt; notes.txt &lt;&lt; &#x27;EOF&#x27;
 Line one, edited on main
 EOF
 git add notes.txt
-git commit -m &quot;main edit&quot;</code></pre></div>
+git commit -m &quot;main edit&quot;</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Switched to branch &#x27;main&#x27;
+[main abc1234] main edit</code></pre></div></div>
+<p>(Your commit ID will be different — that is fine.)</p>
 <h3>Break it</h3>
 <p>Try to merge the branch in:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git merge feature</code></pre></div>
 <h3>Symptom</h3>
 <p>Git stops and says there is a CONFLICT in <code>notes.txt</code>. Nothing is merged yet. This is normal — Git is asking you to choose, not telling you something broke badly.</p>
 <h3>Find it</h3>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cat notes.txt</code></pre></div>
-<p>You will see markers like this:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cat notes.txt</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
 Line one, edited on main
 =======
 Line one, edited on feature
-&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature</code></pre></div>
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature</code></pre></div></div>
 <p>The top half (between <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code> and <code>=======</code>) is your current branch&#x27;s version. The bottom half (between <code>=======</code> and <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code>) is the incoming branch&#x27;s version.</p>
 <h3>Fix it</h3>
 <p>Edit <code>notes.txt</code> so it holds the one version you want, and delete all three marker lines. For example, keep:</p>
@@ -127,28 +147,32 @@ Line one, edited on feature
 <p>Then finish the merge:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git add notes.txt
 git commit</code></pre></div>
+<p>You should see: your editor opens with the merge message. Save and close it, and the merge is done.</p>
+<p>If it breaks: &quot;nothing to commit&quot; means the markers are still in the file, or you forgot <code>git add</code> — open <code>notes.txt</code>, remove all three marker lines, then run <code>git add notes.txt</code> and <code>git commit</code> again.</p>
 <p>The merge is done. Lesson: a conflict is Git showing you both versions side by side. Read the markers, pick the right lines, remove the markers, and commit. Never commit a file with marker lines still in it.</p>
 <hr>
 <h2>Lab 5 — The app runs, but the browser shows nothing</h2>
 <h3>Break it</h3>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker run -d --name quiet-web nginx</code></pre></div>
+<p>You should see: a long container ID printed, then your prompt back.</p>
 <p>No port mapping this time — that is the mistake, on purpose.</p>
 <h3>Symptom</h3>
 <p><code>docker ps</code> shows <code>quiet-web</code> running. But opening <code>http://localhost:8080</code> in your browser says the site cannot be reached. The app is fine. The door to it is missing.</p>
 <h3>Find it</h3>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker ps
 docker logs quiet-web</code></pre></div>
-<p><code>docker ps</code> shows no port mapping under PORTS for this container. <code>docker logs</code> shows nginx started normally. So the container works — your machine simply has no door into it. A container&#x27;s own port 80 does not reach your browser by itself; the <code>-p</code> mapping is what connects the two. Logs prove the app started; they do not prove a port is published — the PORTS column in <code>docker ps</code> is the evidence for that.</p>
+<p>You should see: <code>quiet-web</code> running, but the PORTS column is empty. <code>docker logs</code> shows nginx started normally. So the container works — your machine simply has no door into it. A container&#x27;s own port 80 does not reach your browser by itself; the <code>-p</code> mapping is what connects the two. Logs prove the app started; they do not prove a port is published — the PORTS column in <code>docker ps</code> is the evidence for that.</p>
 <h3>Fix it</h3>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker stop quiet-web
 docker rm quiet-web
 docker run -d -p 8080:80 --name quiet-web nginx</code></pre></div>
+<p>You should see: the welcome page at <code>http://localhost:8080</code>.</p>
 <p>Open <code>http://localhost:8080</code> again — the welcome page appears.</p>
 <h3>Second version (try this yourself)</h3>
 <p>Stop the first container, then run one with a different host port:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker stop quiet-web
 docker run -d -p 8081:80 --name second-quiet nginx</code></pre></div>
-<p>Opening <code>http://localhost:8080</code> now shows nothing — nothing answers there any more. Open <code>http://localhost:8081</code> and it works. Lesson: the first number in <code>-p</code> is your machine&#x27;s door; the second is the container&#x27;s. Check which door you actually opened.</p>
+<p>You should see: <code>http://localhost:8080</code> shows nothing — nothing answers there any more. Open <code>http://localhost:8081</code> and it works. Lesson: the first number in <code>-p</code> is your machine&#x27;s door; the second is the container&#x27;s. Check which door you actually opened.</p>
 <hr>
 <h2>Lab 6 — The build fails: file not found</h2>
 <h3>The setup</h3>
@@ -162,13 +186,15 @@ cat &gt; Dockerfile &lt;&lt; &#x27;EOF&#x27;
 FROM nginx
 COPY app.html /usr/share/nginx/html/app.html
 EOF</code></pre></div>
+<p>You should see: nothing — these commands print nothing when they work. That is normal.</p>
 <h3>Break it</h3>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker build -t fail-demo:1.0 .</code></pre></div>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker build -t fail-demo:1.0 .</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>COPY failed: file not found in build context</code></pre></div></div>
 <h3>Symptom</h3>
 <p>The build stops at the COPY step with an error like &quot;file not found&quot;. The folder holds <code>index.html</code>, but the Dockerfile asks for <code>app.html</code>, which is not there.</p>
 <h3>Find it</h3>
 <p>Read the failed step in the build output: it names the missing file. Then check what is actually in the folder:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>ls</code></pre></div>
+<p>You should see: <code>index.html</code> listed, but no <code>app.html</code>.</p>
 <p>The build can only see files in the folder you build from. The dot in <code>docker build -t fail-demo:1.0 .</code> means &quot;this folder&quot; — that folder is called the build context, and files outside it are invisible to the build. If a file that IS in the folder is still missing from the build, check <code>.dockerignore</code> — it can exclude files from the context.</p>
 <h3>Fix it</h3>
 <p>Either create the missing file, or fix the Dockerfile to copy the file that exists. The honest fix here is the second one:</p>
@@ -177,6 +203,8 @@ FROM nginx
 COPY index.html /usr/share/nginx/html/index.html
 EOF
 docker build -t fail-demo:1.0 .</code></pre></div>
+<p>You should see: the build finish with no error, and the last line names <code>fail-demo:1.0</code>.</p>
+<p>If it breaks: if it still says &quot;file not found&quot;, check you are in the <code>build-fail</code> folder — run <code>pwd</code> and <code>ls</code> first.</p>
 <p>The build passes. Lesson: when a build says a file is not found, check two things — does the file exist, and is it inside the folder you are building from?</p>
 <hr>
 <h2>After all six labs</h2>

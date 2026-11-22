@@ -20,7 +20,7 @@
   };
   var PHASE1_LESSONS = ["p1-start", "p1-kafka", "p1-postgresql", "p1-redis", "p1-object-store", "p1-load-balancer", "p1-end-to-end"];
   var PHASE2_LESSONS = ["p2-start", "p2-zero-cost", "p2-kubernetes", "p2-break-fix", "p2-cheat-sheets", "p2-interview", "p2-portfolio", "p2-resume", "p2-best-sites"];
-  var FREE_SIMS = { kafka: true };
+  var FREE_SIMS = { kafka: true, 'lesson-0': true, 'error-decoder': true };
   var FREE_LESSONS = { "lesson-0": true, "error-decoder": true };
   var PHASE_NAMES = { phase1: "Phase 1", phase2: "Phase 2" };
   var PHASE_PRICES = { phase1: "₹399", phase2: "₹799" };

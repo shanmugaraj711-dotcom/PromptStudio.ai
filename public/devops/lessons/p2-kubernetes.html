@@ -16,12 +16,18 @@
   <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
 </header>
 <main class="lesson-wrap">
-<div class="lock-screen" id="lock-screen" hidden><p class="lock-loading" hidden>Checking your sign-in…</p><span class="lock-icon">🔒</span><h2>This lesson is in Phase 2 — ₹799, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase2" type="button" hidden>Buy Phase 2 — ₹799</button><a class="lock-back" href="/devops/index.html">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><h1>Kubernetes Lab — Your App on a Small Local Cluster</h1><span class="phasebadge">Phase 2 · The Rest of DevOps</span><h2>What this lab is</h2>
+<div class="lock-screen" id="lock-screen" hidden><p class="lock-loading" hidden>Checking your sign-in…</p><span class="lock-icon">🔒</span><h2>This lesson is in Phase 2 — ₹799, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase2" type="button" hidden>Buy Phase 2 — ₹799</button><a class="lock-back" href="/devops/index.html">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><h1>Kubernetes Lab — Your App on a Small Local Cluster</h1><span class="phasebadge">Phase 2 · The Rest of DevOps</span><h2>What this is and why it matters</h2>
+<p><strong>Kubernetes</strong> runs your app for you. You say how many copies you want, and it keeps that many running.</p>
+<p>In real work, a crashed app that stays down until someone restarts it by hand is the failure that wakes people up.</p>
+<p>This lab runs a small cluster on your own machine. A Service is the stable front door to your app.</p>
+<div class="simbox"><b>&#9654; Try the simulation </b> — included with Phase 2. A real terminal on this page. No install, works on your phone.<br><a class="btn" href="/devops/sims/p2-kubernetes.html">Open the Kubernetes Simulation — Your App on a Small Cluster</a><br>Simulation — practice version. Run the real lab with Docker to do it for real.</div><h2>What this lab is</h2>
 <p>You will run your Project 1 website on a small Kubernetes cluster that lives on your own machine. No cloud account, no bill. You will also break it on purpose and fix it, the same way you did in the break-and-fix labs.</p>
 <h2>What you need first</h2>
 <ul><li>Docker running (from zero-cost-lab.md).</li><li>Your Project 1 image built: <code>my-site:1.0</code> (from portfolio-projects.md). If you deleted it, move into the Project 1 folder and build it again first:</li></ul>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cd ~/devops-practice/my-site
 docker build -t my-site:1.0 .</code></pre></div>
+<p>You should see: the build lines scroll past, then a short image ID line at the end.</p>
+<p>If it breaks: &quot;no such file or directory&quot; means you are in the wrong folder — run <code>cd ~/devops-practice/my-site</code> first, then build again.</p>
 <h2>Why kind</h2>
 <p>This kit uses kind (short for &quot;Kubernetes in Docker&quot;). It runs a whole cluster as containers on your machine, so it needs only Docker, which you already have. The other common choice is minikube, but this kit uses kind only, so every command below matches.</p>
 <h2>Step 1 — Install kubectl and kind (Linux AMD64)</h2>
@@ -29,21 +35,36 @@ docker build -t my-site:1.0 .</code></pre></div>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl -LO &quot;https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl&quot;
 chmod +x kubectl
 sudo mv kubectl /usr/local/bin/kubectl</code></pre></div>
+<p>You should see: a download progress line, then your prompt back. The <code>mv</code> step prints nothing when it works.</p>
+<p>If it breaks: &quot;Permission denied&quot; on the <code>mv</code> step means you forgot <code>sudo</code> — run the <code>mv</code> line again with <code>sudo</code> in front. If the download fails, check your internet connection and try again.</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.23.0/kind-linux-amd64
 chmod +x ./kind
 sudo mv ./kind /usr/local/bin/kind</code></pre></div>
+<p>You should see: a download progress line, then your prompt back. Again, the <code>mv</code> step prints nothing when it works.</p>
+<p>If it breaks: &quot;404 Not Found&quot; means that kind version link is old — take the newest link from kind&#x27;s install page.</p>
 <p>Check both installed:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kind version
 kubectl version --client</code></pre></div>
+<p>You should see a version number for each:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kind v0.23.0 go1.21.5 linux/amd64
+Client Version: v1.29.0</code></pre></div>
+<p>(Your version numbers will be different — that is fine.)</p>
+<p>If it breaks: &quot;command not found&quot; means the <code>mv</code> step did not work — check the file is in <code>/usr/local/bin</code> with <code>ls /usr/local/bin/kubectl /usr/local/bin/kind</code>.</p>
 <p>Both should print a version number. Note: the kind version number changes over time — if that download link fails, take the newest link from kind&#x27;s install page. Mac and Windows install steps differ (Homebrew or choco) and are unverified in this kit.</p>
 <h2>Step 2 — Start the cluster</h2>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kind create cluster --name devops-practice</code></pre></div>
+<p>You should see: lines scroll past as the cluster starts, then &quot;Creating cluster ...&quot; and your prompt back.</p>
+<p>If it breaks: &quot;failed to create cluster&quot; usually means Docker is not running — start Docker and try again.</p>
 <p>The first run downloads the cluster&#x27;s node image, so it takes a few minutes. Then check it:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl get nodes</code></pre></div>
-<p>You should see one node with STATUS Ready. If you see nothing, make sure Docker is running and try again.</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl get nodes</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>NAME                              STATUS   ROLES           AGE   VERSION
+devops-practice-control-plane     Ready    control-plane   2m    v1.29.2</code></pre></div></div>
+<p>(Your version number will be different — that is fine.)</p>
+<p>If it breaks: if you see nothing, make sure Docker is running and try again. If the node shows &quot;NotReady&quot;, wait a minute and run <code>kubectl get nodes</code> again.</p>
 <h2>Step 3 — Load your image into the cluster</h2>
 <p>A kind cluster cannot see images sitting in your local Docker by itself. This is the step most beginners forget. Copy your image in:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kind load docker-image my-site:1.0 --name devops-practice</code></pre></div>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kind load docker-image my-site:1.0 --name devops-practice</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Image: &quot;my-site:1.0&quot; with ID &quot;sha256:abc123...&quot; not yet present on node &quot;devops-practice-control-plane&quot;, loading...</code></pre></div></div>
+<p>(Your image ID will be different — that is fine.)</p>
+<p>If it breaks: &quot;image not found&quot; means the image was never built — go back to &quot;What you need first&quot; and build <code>my-site:1.0</code>.</p>
 <p>Without this step, the cluster would try to download your image from the internet and fail, because your image only exists on your machine.</p>
 <h2>Step 4 — Run your app with a Deployment</h2>
 <p>A Deployment (a way to say &quot;keep copies of my app running&quot;) is described in a file. Make a file called <code>deployment.yaml</code>:</p>
@@ -70,10 +91,14 @@ spec:
 <p><code>imagePullPolicy: IfNotPresent</code> tells Kubernetes to use the image you loaded in Step 3 instead of trying to download it again. <code>replicas: 1</code> means one copy of your app.</p>
 <p>Apply it and look at your pods (a pod is the smallest thing Kubernetes runs, usually one container):</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl apply -f deployment.yaml
-kubectl get pods</code></pre></div>
-<p>You should see one pod named like <code>my-site-xxxx</code>, with READY 1/1 and STATUS Running. Pod names differ every time — copy the real name from the output for the commands below.</p>
+kubectl get pods</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>NAME                      READY   STATUS    RESTARTS   AGE
+my-site-7d9f8b6c4-abc12   1/1     Running   0          30s</code></pre></div></div>
+<p>(Your pod name will be different — that is fine.) Pod names differ every time — copy the real name from the output for the commands below.</p>
+<p>If it breaks: if the pod shows <code>ImagePullBackOff</code>, the image was not loaded into the cluster — go back to Step 3. If it shows <code>Pending</code>, wait a minute and run <code>kubectl get pods</code> again.</p>
 <p>Open your app in the browser:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl port-forward deployment/my-site 8080:80</code></pre></div>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl port-forward deployment/my-site 8080:80</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Forwarding from 127.0.0.1:8080 -&gt; 80
+Forwarding from [::1]:8080 -&gt; 80</code></pre></div></div>
+<p>If it breaks: &quot;address already in use&quot; means another port-forward is already running — stop it with Ctrl+C first, then try again.</p>
 <p>This connects port 8080 on your machine to your app. Open <code>http://localhost:8080</code> — you should see your Project 1 site. Keep this terminal open while you look; stopping it with Ctrl+C only stops the forwarding, not your app.</p>
 <p>Expose it with a Service: a Service gives your app a stable address inside the cluster, even when pods come and go. Make a file called <code>service.yaml</code>:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code class="language-yaml">apiVersion: v1
@@ -87,37 +112,54 @@ spec:
     - port: 80</code></pre></div>
 <p><code>selector</code> connects the Service to pods labelled <code>app: my-site</code> — the same label your Deployment gives its pods. Apply and check:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl apply -f service.yaml
-kubectl get services</code></pre></div>
-<p>You should see <code>my-site</code> with a CLUSTER-IP.</p>
+kubectl get services</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>NAME      TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
+my-site   ClusterIP   10.96.123.45   &lt;none&gt;        80/TCP    10s</code></pre></div></div>
+<p>(Your CLUSTER-IP will be different — that is fine.)</p>
+<p>If it breaks: if <code>my-site</code> is missing, check the file name and run <code>kubectl apply -f service.yaml</code> again.</p>
 <p>Stop the first port-forward with Ctrl+C first — both use port 8080, so they cannot run at the same time. Stopping it ends only the forwarding, not your app.</p>
 <p>Open it through the Service instead of the Deployment:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl port-forward service/my-site 8080:80</code></pre></div>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl port-forward service/my-site 8080:80</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Forwarding from 127.0.0.1:8080 -&gt; 80
+Forwarding from [::1]:8080 -&gt; 80</code></pre></div></div>
+<p>If it breaks: &quot;address already in use&quot; means the first port-forward is still running — stop it with Ctrl+C first.</p>
 <p>Open <code>http://localhost:8080</code> again — same site, now reached through the Service. This is the address other things inside the cluster would use. Your browser reaches it here only through the port-forward above — that does not expose the app publicly.</p>
 <p>Read about your pod:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl describe pod &lt;pod-name&gt;
 kubectl logs &lt;pod-name&gt;</code></pre></div>
+<p>You should see: details and recent events for your pod (<code>describe</code>), and what your app printed (<code>logs</code>).</p>
+<p>If it breaks: &quot;No resources found&quot; means the pod name is wrong — pod names change every time, so copy the real name from <code>kubectl get pods</code> (replace <code>&lt;pod-name&gt;</code> with it, without the brackets).</p>
 <p><code>describe</code> shows details and recent events. <code>logs</code> shows what your app printed. When something breaks, these two commands are where you look first.</p>
 <h2>Step 5 — Break it, then fix it</h2>
 <p>Break it: change the image in <code>deployment.yaml</code> to a tag that does not exist, for example <code>my-site:badtag</code>, and apply it again:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl apply -f deployment.yaml
-kubectl get pods</code></pre></div>
-<p>Your pod will not reach Running. Its STATUS will show something like ImagePullBackOff or ErrImagePull, and its restarts may climb.</p>
+kubectl get pods</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>NAME                      READY   STATUS             RESTARTS   AGE
+my-site-7d9f8b6c4-abc12   0/1     ImagePullBackOff   0          30s</code></pre></div></div>
+<p>If it breaks: if the pod still shows Running, the bad tag was not applied — check <code>deployment.yaml</code> really says <code>my-site:badtag</code>, then apply again.</p>
 <p>Find it:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl describe pod &lt;pod-name&gt;</code></pre></div>
+<p>You should see: an event at the bottom saying the image could not be pulled or was not found.</p>
+<p>If it breaks: if there are no Events yet, wait 30 seconds and describe the pod again.</p>
 <p>Read the Events at the bottom. They will say the image could not be pulled or was not found. The lesson: the Deployment file is wrong, not the pod. A pod only does what its Deployment says.</p>
 <p>Fix it: change the image back to <code>my-site:1.0</code> in <code>deployment.yaml</code>, apply it again, and check:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl apply -f deployment.yaml
 kubectl rollout status deployment/my-site
-kubectl get pods</code></pre></div>
+kubectl get pods</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>deployment &quot;my-site&quot; successfully rolled out
+NAME                      READY   STATUS    RESTARTS   AGE
+my-site-7d9f8b6c4-def34   1/1     Running   0          20s</code></pre></div></div>
+<p>(Your pod name will be different — that is fine.)</p>
+<p>If it breaks: if the rollout hangs, describe the pod and read the Events — the error line names the problem.</p>
 <p>Wait for the rollout to finish: the expected result is a pod with READY 1/1 and STATUS Running. <code>kubectl apply</code> alone does not mean the app is healthy yet — if the rollout fails, read the pod Events and status again.</p>
 <p>A new pod starts and reaches Running. Deleting the broken pod alone would NOT have fixed it — the Deployment would simply have made the same broken pod again. Fix the Deployment, and the pod follows.</p>
 <p>Try self-healing once: on the healthy pod, run <code>kubectl delete pod &lt;pod-name&gt;</code>, then <code>kubectl get pods</code> again. The Deployment makes a replacement by itself, to keep your chosen number of copies running. That is not proof the app itself is healthy — replacing a pod and knowing it works are different things. Later, learn readiness and liveness probes, which are how Kubernetes checks real health.</p>
 <h2>Clean up</h2>
 <p>Remove your app but keep the cluster:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl delete -f deployment.yaml
-kubectl delete -f service.yaml</code></pre></div>
+kubectl delete -f service.yaml</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>deployment.apps &quot;my-site&quot; deleted
+service &quot;my-site&quot; deleted</code></pre></div></div>
+<p>If it breaks: &quot;not found&quot; means it was already deleted — that is fine, move on.</p>
 <p>Remove the whole cluster when you are done with this lab:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kind delete cluster --name devops-practice</code></pre></div>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kind delete cluster --name devops-practice</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Deleting cluster &quot;devops-practice&quot; ...
+Deleted nodes: [&quot;devops-practice-control-plane&quot;]</code></pre></div></div>
+<p>If it breaks: &quot;no cluster with name&quot; means it was already deleted — nothing to do.</p>
 <p>Your Docker images stay on your machine, so you can start again any time with <code>kind create cluster --name devops-practice</code>.</p>
 <h2>Note on what is unverified here</h2>
 <p>This lab was not run end-to-end while writing this kit, and kind version links change over time — if a download link fails, take the newest link from kind&#x27;s install page. Mac and Windows steps are unverified here. If a step fails, read the error message first, as in every lab in this kit.</p>
