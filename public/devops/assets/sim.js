@@ -118,6 +118,8 @@
       fs: {},           // dir -> [names]
       fileContents: {}, // path -> text
       curlIdx: 0, curlSeen: {}, curlCount: 0, curlAfterRestart: false,
+      nginxLoaded: null, // nginx config the running load balancer has
+      // loaded (set at compose up, refreshed by reload/restart)
       flags: {},        // string -> count
       filesWritten: {},
       producerSessions: 0,
@@ -262,6 +264,22 @@
       var at = 'a.' + topic;
       if (!b.topics[at]) b.topics[at] = [];
       b.topics[at].push(msg);
+    }
+
+    // Mirror catch-up (Kafka): when the mirror container starts again,
+    // its loop syncs at once and copies the orders that piled up while
+    // it was broken. Only when the config points at the right port —
+    // a still-broken config copies nothing.
+    function kafkaMirrorCatchUp() {
+      var props = w.fileContents['/home/learner/mm2.properties'] || '';
+      if (props.indexOf('kafka-b:9093') !== -1) return;
+      var a = w.kafka['kafka-a'], b = w.kafka['kafka-b'];
+      if (!a || !b) return;
+      (a.topics['orders'] || []).forEach(function (msg) {
+        var at = 'a.orders';
+        if (!b.topics[at]) b.topics[at] = [];
+        if (b.topics[at].indexOf(msg) === -1) b.topics[at].push(msg);
+      });
     }
 
     // MirrorMaker 2 log: what the mirror printed last. When the config
@@ -704,6 +722,7 @@
         '  docker compose logs <name>  read a container\'s logs',
         '  docker compose stop <name>  stop one container',
         '  docker compose start <name> start it again',
+        '  docker compose restart <name>  restart it (it catches up)',
         '  docker exec <name> <tool>   run a tool inside a container',
         '  docker inspect <name>       read a container\'s settings',
         '  docker run -d -p 8080:80 --name web nginx   run one container',
@@ -937,6 +956,13 @@
       return okOut([head, row]);
     }
 
+    // the running load balancer only sees the config it loaded at
+    // start (or at the last reload) — editing the file alone changes
+    // nothing until nginx is told to re-read it.
+    function reloadNginx() {
+      w.nginxLoaded = w.fileContents['/etc/nginx/nginx.conf'] || w.fileContents['/home/learner/nginx.conf'] || '';
+    }
+
     // nginx inside the load balancer container: -t checks the config
     // syntax (it does NOT check whether the backends are alive), -s
     // reload makes the running server read the config again.
@@ -952,7 +978,7 @@
         return okOut(['nginx: the configuration file /etc/nginx/nginx.conf syntax is ok',
           'nginx: configuration file /etc/nginx/nginx.conf test is successful']);
       }
-      if (args[0] === '-s' && args[1] === 'reload') return okOut([]);
+      if (args[0] === '-s' && args[1] === 'reload') { reloadNginx(); return okOut([]); }
       return errOut(['nginx: this practice terminal only answers "nginx -t" and "nginx -s reload".']);
     }
 
@@ -1046,6 +1072,8 @@
         names.forEach(function (n) { w.containers[n].status = 'up'; });
         var upOut = (w.spec.up_out && w.spec.up_out[proj]) || names.map(function (n) { return '✔ Container ' + n + '  Started'; });
         flag(w, 'up:' + proj);
+        // the load balancer loads its config as it starts
+        reloadNginx();
         if (proj === 'root' && w.spec.initial_files) {
           // the ingest service processes the files that were already there.
           // The worker creates the orders table itself, like the real one.
@@ -1131,7 +1159,36 @@
         // arrived while it was down; a mirror that starts again syncs
         if (cont2 === 'worker') { w.worker.status = 'up'; workerCatchUp(); }
         if (cont2 === 'mirror') mirrorCatchUp();
+        if (cont2 === 'mm2') { kafkaMirrorCatchUp(); flag(w, 'mm2_restarted'); }
+        if (cont2 === 'lb') reloadNginx();
         return okOut(['✔ Container ' + cont2 + '  Started']);
+      }
+      if (sub === 'restart') {
+        // docker compose restart: with a service, that one; with no
+        // service, every running container. A restarted container
+        // catches up like a started one — the mirror copies what
+        // arrived while it was broken, the worker saves what piled
+        // up, the load balancer re-reads its config.
+        var svc3 = args[1];
+        var targets = [];
+        if (svc3) {
+          var cont3 = serviceToContainer(svc3);
+          if (!cont3) return errOut(['no such service: ' + svc3]);
+          targets = [cont3];
+        } else {
+          targets = containersOf(project()).filter(function (cn) { return w.containers[cn].status === 'up'; });
+        }
+        var restarted = [];
+        targets.forEach(function (cn) {
+          w.containers[cn].status = 'up';
+          flag(w, 'restarted:' + cn);
+          if (cn === 'mm2') { kafkaMirrorCatchUp(); flag(w, 'mm2_restarted'); }
+          if (cn === 'worker') { w.worker.status = 'up'; workerCatchUp(); }
+          if (cn === 'mirror') mirrorCatchUp();
+          if (cn === 'lb') reloadNginx();
+          restarted.push('✔ Container ' + cn + '  Restarted');
+        });
+        return okOut(restarted);
       }
       if (sub === 'run') return runCmd(args.slice(1));
       return errOut(['unknown command "' + (sub || '') + '" for "docker compose"', 'Run \'docker compose --help\' for usage.']);
@@ -1798,14 +1855,7 @@
       // by that name sits in the folder. The mirror catches up on the
       // orders that arrived while it was broken.
       if (baseName(clean) === 'connect-mirror-maker.sh') {
-        var a = w.kafka['kafka-a'], b = w.kafka['kafka-b'];
-        if (a && b) {
-          (a.topics['orders'] || []).forEach(function (msg) {
-            var at = 'a.orders';
-            if (!b.topics[at]) b.topics[at] = [];
-            if (b.topics[at].indexOf(msg) === -1) b.topics[at].push(msg);
-          });
-        }
+        kafkaMirrorCatchUp();
         flag(w, 'mm2_restarted');
         return okOut(['Starting MirrorMaker 2...', 'MirrorMaker 2 started. Copying topic orders from cluster a to cluster b.']);
       }
@@ -2535,9 +2585,12 @@
         var lb = w.containers['lb'];
         if (!lb || lb.status !== 'up') return errOut(['curl: (7) Failed to connect to localhost port 8080: Connection refused']);
         // the load balancer reads its own config: if every backend in
-        // nginx.conf points at a port where nothing listens, the site
-        // answers 502 (Load Balancer Advanced challenge)
-        var lbConf = w.fileContents['/etc/nginx/nginx.conf'] || w.fileContents['/home/learner/nginx.conf'] || '';
+        // the LOADED config points at a port where nothing listens, the
+        // site answers 502 (Load Balancer Advanced challenge). Editing
+        // the file alone changes nothing — only a reload loads it.
+        var lbConf = (w.nginxLoaded !== null && w.nginxLoaded !== undefined)
+          ? w.nginxLoaded
+          : (w.fileContents['/etc/nginx/nginx.conf'] || w.fileContents['/home/learner/nginx.conf'] || '');
         var brokenLb = false;
         if (lbConf.indexOf('upstream backends') !== -1) {
           var serverPorts = (lbConf.match(/server\s+\S+:(\d+)/g) || []).map(function (s) { return s.split(':')[1]; });
@@ -2685,7 +2738,7 @@
       advanceTime: function (ms) { w.timeOffset += ms; },
       getWorld: function () { return w; },
       completions: function (prefix) {
-        var words = ['docker', 'compose', 'up', 'down', 'ps', 'logs', 'exec', 'stop', 'start', 'run', 'curl', 'ls', 'cd', 'pwd', 'echo', 'cat', 'chmod', 'help', 'history', 'clear', 'whoami', 'exit', 'python', 'python3', 'ip', 'uname', 'ipconfig',
+        var words = ['docker', 'compose', 'up', 'down', 'ps', 'logs', 'exec', 'stop', 'start', 'restart', 'run', 'curl', 'ls', 'cd', 'pwd', 'echo', 'cat', 'chmod', 'help', 'history', 'clear', 'whoami', 'exit', 'python', 'python3', 'ip', 'uname', 'ipconfig',
           'kafka-topics.sh', 'kafka-console-producer.sh', 'kafka-console-consumer.sh', 'kafka-consumer-groups.sh', 'psql', 'pg_ctl', 'redis-cli', 'aws', 's3', 'mb', 'cp',
           'sed', 'tail', 'netstat', 'nano', 'inspect',
           'git', 'kubectl', 'kind', 'terraform', 'mkdir', 'rm', 'mv', 'touch', 'df', 'free', 'top', 'bash', 'sh', '--version', 'version', 'images',

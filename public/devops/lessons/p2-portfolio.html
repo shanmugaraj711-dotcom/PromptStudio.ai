@@ -11,7 +11,7 @@
   <div class="lh-row">
     <button class="sidebar-toggle" id="btn-sidebar" type="button" aria-expanded="false" aria-controls="lesson-sidebar">&#9776; Lessons</button>
     <a class="wordmark" href="/devops/index.html">DevOps Kit</a>
-    <span class="lh-meta">Phase 2 · Lesson 15 of 18</span>
+    <span class="lh-meta">Lesson 15 of 18</span>
     <span class="auth-slot" id="auth-slot"></span>
   </div>
   <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
@@ -21,16 +21,16 @@
 <p>Employers trust things they can open and run. Four small, finished <strong>projects</strong> beat a long list of courses.</p>
 <p>In real hiring, a course list proves nothing — a working project you can show is the proof that you did the work.</p>
 <p>Build them in order. Each one uses the skills from the last, and each ends with a short write-up you fill in with true things.</p>
-<div class="ladder"><div class="ladder-title">Your level in Career &amp; Proof</div><div class="ladder-steps"><span class="step-unit"><span class="step">Step 1 &middot; Beginner</span><span class="ladder-arrow">&rarr;</span></span><span class="step-unit"><span class="step done">&#10003; Step 2 &middot; Intermediate <span class="here">&#8592; You are here</span></span><span class="ladder-arrow">&rarr;</span></span><span class="step-unit"><span class="step">Step 3 &middot; Advanced</span></span></div><div class="ladder-note">After this lesson you can: <b>Show three completed small projects as proof of hands-on work.</b></div><div class="ladder-note">Next: <b>Step 3 &middot; Advanced</b> — Turn finished projects into honest, simple resume bullets. See <a href="/devops/lessons/p2-resume.html">Resume Bullets</a>.</div><div class="ladder-note">Advanced challenge: <b>Resume rejected for vague words — rewrite each bullet as action + tool + result, pass the check.</b> — try it in <a href="/devops/lessons/p2-resume.html">Resume Bullets</a>.</div></div><div class="simbox"><b>&#9654; Try the simulation </b> — included with Phase 2. A real terminal on this page. No install, works on your phone.<br><a class="btn" href="/devops/sims/p2-portfolio.html">Open the Portfolio Projects Simulation — Proof, Not Just Notes</a><br>Simulation — practice version. Run the real lab with Docker to do it for real.</div><h2>Why projects</h2>
+<div class="ladder"><div class="ladder-title">Your level in Career &amp; Proof</div><div class="ladder-steps"><span class="step-unit"><span class="step">Step 1 &middot; Beginner</span><span class="ladder-arrow">&rarr;</span></span><span class="step-unit"><span class="step done">&#10003; Step 2 &middot; Intermediate <span class="here">&#8592; You are here</span></span><span class="ladder-arrow">&rarr;</span></span><span class="step-unit"><span class="step">Step 3 &middot; Advanced</span></span></div><div class="ladder-note">After this lesson you can: <b>Show three completed small projects as proof of hands-on work.</b></div><div class="ladder-note">Next: <b>Step 3 &middot; Advanced</b> — Turn finished projects into honest, simple resume bullets. See <a href="/devops/lessons/p2-resume.html">Resume Bullets</a>.</div><div class="ladder-note">Advanced challenge: <b>Resume rejected for vague words — rewrite each bullet as action + tool + result, pass the check.</b> — try it in <a href="/devops/lessons/p2-resume.html">Resume Bullets</a>.</div></div><h2>Why projects</h2>
 <p>Each project below ends with a GitHub README (the front page of a repository) that you fill in. If something is not done yet, say so.</p>
 <hr>
 <h2>Project 1 — A website in a container</h2>
 <h3>Build it</h3>
 <ol><li>Make a folder called <code>my-site</code> inside <code>~/devops-practice</code> and put one <code>index.html</code> page in it that says what the site is. Then move into that folder before you build:</li></ol>
-<div class="tryit"><a class="btn amber" href="/devops/sims/p2-portfolio.html">Try it Yourself &raquo;</a><span>Open the practice terminal and run it yourself — nothing installs.</span></div><div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cd ~/devops-practice/my-site</code></pre></div>
+<div class="tryit"><a class="btn amber" href="/devops/sims/p2-portfolio.html">Try it Yourself &raquo;</a><span>Open the practice terminal and run it yourself — nothing installs. Included with Phase 2. Simulation — practice version. Run the real lab with Docker to do it for real.</span></div><div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cd ~/devops-practice/my-site</code></pre></div>
 <p>You should see: nothing — <code>cd</code> prints nothing when it works. That is normal.</p>
 <p>If it breaks: &quot;No such file or directory&quot; means the folder does not exist yet — make it first with <code>mkdir -p ~/devops-practice/my-site</code>, then move into it.</p>
-<p>Example content for <code>index.html</code> (make it with the method in zero-cost-lab.md, &quot;How to make a file&quot;):</p>
+<p>Example content for <code>index.html</code> (make it with the method in <a href="/devops/lessons/p2-zero-cost.html">zero-cost-lab.md</a>, &quot;How to make a file&quot;):</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code class="language-html">&lt;h1&gt;My DevOps practice site&lt;/h1&gt;
 &lt;p&gt;This site runs in a Docker container I built myself.&lt;/p&gt;</code></pre></div>
 <ol><li>Add a <code>Dockerfile</code> — the recipe file that tells Docker how to build your container:</li></ol>
@@ -41,7 +41,7 @@ COPY index.html /usr/share/nginx/html/index.html</code></pre></div>
 docker run -d -p 8080:80 --name my-site my-site:1.0</code></pre></div>
 <p>You should see: the build lines scroll past, then a long container ID printed. That means your site is running.</p>
 <p>If it breaks: if port 8080 is already in use, stop the container using it or run with <code>-p 8081:80</code> instead and open <code>http://localhost:8081</code>. Clean up when done: <code>docker stop my-site</code>, then <code>docker rm my-site</code>.</p>
-<ol><li>Open <code>http://localhost:8080</code> and check it works.</li><li>Push the folder to GitHub (first time: follow zero-cost-lab.md Step 7; after that, <code>git add .</code>, <code>git commit</code>, <code>git push</code>).</li></ol>
+<ol><li>Open <code>http://localhost:8080</code> and check it works.</li><li>Push the folder to GitHub (first time: follow <a href="/devops/lessons/p2-zero-cost.html">zero-cost-lab.md</a> Step 7; after that, <code>git add .</code>, <code>git commit</code>, <code>git push</code>).</li></ol>
 <h3>README template — fill in the blanks</h3>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code># [Site name]
 What it is: [one line]
@@ -55,7 +55,7 @@ Problems I fixed: [one problem and its fix]</code></pre></div>
 <hr>
 <h2>Project 2 — A pipeline that tests and builds</h2>
 <h3>Build it</h3>
-<ol><li>Use Project 1&#x27;s repository.</li><li>Make the folder for the workflow file, then add <code>.github/workflows/build.yml</code> (see zero-cost-lab.md, &quot;How to make a file&quot;, for how to create files):</li></ol>
+<ol><li>Use Project 1&#x27;s repository.</li><li>Make the folder for the workflow file, then add <code>.github/workflows/build.yml</code> (see <a href="/devops/lessons/p2-zero-cost.html">zero-cost-lab.md</a>, &quot;How to make a file&quot;, for how to create files):</li></ol>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir -p .github/workflows</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code class="language-yaml">name: build
 on: [push]
 jobs:
@@ -187,7 +187,7 @@ Failover I proved: killed the main database, promoted the standby
 Cost: local only, no cloud bill.</code></pre></div>
 <hr>
 <h2>When all four are done</h2>
-<p>You have: a running container app, a working pipeline, an infrastructure-as-code setup with a monitoring chart, and a data pipeline with a proven failover — all on GitHub, all runnable, all explained in your own words. That is the proof this kit is built to give you.</p><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> In the terminal, type: <code>curl http://localhost:9090/api/v1/targets</code> — what values appear for <code>status</code> and <code>targets</code> to show monitoring works?</p><details class="exercise-answer"><summary>Show answer</summary><p>You should see <code>&quot;status&quot;: &quot;success&quot;</code> and <code>&quot;targets&quot;: &quot;up&quot;</code>.</p></details></div><nav class="pager"><a class="prev" href="/devops/lessons/p2-interview.html"><span>← Previous lesson</span><span class="pname">Interview Pack</span></a><a class="next" href="/devops/lessons/p2-resume.html"><span>Next lesson →</span><span class="pname">Resume Bullets</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></div></main>
+<p>You have: a running container app, a working pipeline, an infrastructure-as-code setup with a monitoring chart, and a data pipeline with a proven failover — all on GitHub, all runnable, all explained in your own words. That is the proof this kit is built to give you.</p><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> In the terminal, type: <code>curl http://localhost:9090/api/v1/targets</code> — what values appear for <code>status</code> and <code>targets</code> to show monitoring works?</p><p><a href="/devops/sims/p2-portfolio.html">Open the practice terminal to test this &rarr;</a></p><details class="exercise-answer"><summary>Show answer</summary><p>You should see <code>&quot;status&quot;: &quot;success&quot;</code> and <code>&quot;targets&quot;: &quot;up&quot;</code>.</p></details></div><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button><nav class="pager"><a class="prev" href="/devops/lessons/p2-interview.html"><span>← Previous lesson</span><span class="pname">Interview Pack</span></a><a class="next" href="/devops/lessons/p2-resume.html"><span>Next lesson →</span><span class="pname">Resume Bullets</span></a></nav></div></div></main>
 <div class="auth-modal" id="auth-modal" hidden>
   <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
     <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
