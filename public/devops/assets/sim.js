@@ -24,7 +24,9 @@
   // ---------- small helpers ----------
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
   function trimEnd(s) { return s.replace(/[ \t]+$/, ''); }
-  function padRight(s, w) { s = String(s); while (s.length < w) s += ' '; return s; }
+  // a value longer than its column still gets one space after it, so
+  // columns never run together (CrashLoopBackOff is longer than STATUS)
+  function padRight(s, w) { s = String(s); while (s.length < w) s += ' '; return s.length > w ? s + ' ' : s; }
   function padLeft(s, w) { s = String(s); while (s.length < w) s = ' ' + s; return s; }
   function padCenter(s, w) {
     s = String(s); var n = w - s.length;
@@ -128,7 +130,9 @@
       k8sSuffix: 'abc12', // pod name suffix for deployments created by apply
       kind: { clusters: [], images: [] },
       tf: { initialized: false, planned: false, applied: false },
-      dockerRunSeq: 0
+      dockerRunSeq: 0,
+      ports: {},      // host port -> container name (docker run -p)
+      execFiles: {}   // path -> true once chmod +x was run on it
     };
     // containers + projects
     var cn, pr;
@@ -137,7 +141,10 @@
     }
     // redis stores
     for (cn in (spec.redis || {})) {
-      w.redis[cn] = { keys: {}, replica_of: spec.redis[cn].replica_of || null };
+      w.redis[cn] = { keys: {}, replica_of: spec.redis[cn].replica_of || null,
+                      maxmemory: spec.redis[cn].maxmemory || null,
+                      maxmemory_policy: spec.redis[cn].maxmemory_policy || 'noeviction',
+                      peak: 0 };
     }
     // kafka clusters
     (spec.kafka_clusters || []).forEach(function (cl) {
@@ -159,6 +166,9 @@
         table: { cols: [], rows: [] }
       };
     }
+    // PostgreSQL Advanced challenge: a stale lock file stops the server
+    // from starting until it is removed by hand
+    if (spec.pg_stale_lock) { w.pg.lockStale = true; w.pg.running = false; }
     // initial order files (end-to-end): they sit in /incoming at up time
     (spec.initial_files || []).forEach(function (f) {
       w.fileContents[f.path] = f.content;
@@ -245,9 +255,33 @@
     function mm2Mirror(topic, msg) {
       var b = w.kafka['kafka-b'];
       if (!b) return;
+      // the mirror stops copying when its config points at a wrong port
+      // (Kafka Advanced challenge: the learner breaks it on purpose)
+      var props = w.fileContents['/home/learner/mm2.properties'] || '';
+      if (props.indexOf('kafka-b:9093') !== -1) return;
       var at = 'a.' + topic;
       if (!b.topics[at]) b.topics[at] = [];
       b.topics[at].push(msg);
+    }
+
+    // MirrorMaker 2 log: what the mirror printed last. When the config
+    // points at a wrong port, the log shows the connection failure.
+    function mm2LogLines() {
+      var props = w.fileContents['/home/learner/mm2.properties'] || '';
+      if (props.indexOf('kafka-b:9093') !== -1) {
+        return [
+          '[2026-11-22 10:00:01] INFO MirrorMaker 2 started. Copying topic orders from cluster a to cluster b.',
+          '[2026-11-22 10:00:02] WARN Connection to node -1 (kafka-b/9093) could not be established. Broker may not be available.',
+          '[2026-11-22 10:00:03] ERROR Failed to connect to cluster b: connection refused (kafka-b:9093)',
+          '[2026-11-22 10:00:04] WARN MirrorMaker 2 will retry in 30 seconds.'
+        ];
+      }
+      var n = (w.kafka['kafka-b'] && w.kafka['kafka-b'].topics['a.orders'] || []).length;
+      return [
+        '[2026-11-22 10:00:01] INFO MirrorMaker 2 started. Copying topic orders from cluster a to cluster b.',
+        '[2026-11-22 10:00:02] INFO Copying topic orders: ' + n + ' messages copied.',
+        '[2026-11-22 10:00:03] INFO MirrorMaker 2 running.'
+      ];
     }
 
     // Ingest (end-to-end): a new order file in /incoming is processed:
@@ -310,6 +344,10 @@
       // copy files whose mirror time has passed from moto-a to moto-b
       var a = w.s3['moto-a'], b = w.s3['moto-b'];
       if (!a || !b) return;
+      // a stopped mirror copies nothing (Object Store Advanced challenge:
+      // the learner stops it on purpose, then starts it again)
+      var mir = w.containers['mirror'];
+      if (mir && mir.status !== 'up') return;
       var t = now(w);
       for (var bk in a.buckets) {
         if (!b.buckets[bk]) b.buckets[bk] = {};
@@ -320,6 +358,46 @@
           }
         }
       }
+    }
+
+    // Mirror catch-up: when the mirror container starts again, its loop
+    // runs a sync at once and copies everything that piled up.
+    function mirrorCatchUp() {
+      var a = w.s3['moto-a'], b = w.s3['moto-b'];
+      if (!a || !b) return;
+      for (var bk in a.buckets) {
+        if (!b.buckets[bk]) b.buckets[bk] = {};
+        for (var f in a.buckets[bk]) {
+          if (!b.buckets[bk][f]) b.buckets[bk][f] = clone(a.buckets[bk][f]);
+        }
+      }
+    }
+
+    // Worker (end-to-end): when it starts again, it reads the orders that
+    // arrived in Kafka while it was down and saves the ones not yet in the
+    // database — the same catch-up the real worker does on restart.
+    function workerCatchUp() {
+      var cl = w.kafka['kafka'];
+      if (!cl || !cl.topics['orders']) return;
+      var tb = w.pg.tables['orders'];
+      if (!tb) return;
+      var db = w.worker.dbHost;
+      var cont = db && w.containers[db];
+      if (!cont || cont.status !== 'up') return;
+      cl.topics['orders'].forEach(function (content) {
+        var order = null;
+        try { order = JSON.parse(content); } catch (e) { return; }
+        var already = tb.rows.some(function (r) { return String(r[0]) === String(order.id); });
+        if (already) return;
+        tb.rows.push(tb.cols.map(function (c) { return order[c] === undefined ? '' : order[c]; }));
+        w.worker.saved.push('Saved order ' + order.id + ': ' + order.item + ' (' + order.amount + ')');
+        var rs = w.redis['redis'];
+        if (rs) {
+          var cur = rs.keys['orders:count'];
+          var n = cur ? parseInt(cur.v, 10) : 0;
+          rs.keys['orders:count'] = { v: String(n + 1) };
+        }
+      });
     }
 
     function errOut(lines) { return { lines: lines, kind: 'err' }; }
@@ -499,7 +577,7 @@
     }
 
     function runSingle(toks) {
-      // pipes: cmd | grep pattern
+      // pipes: cmd | grep pattern / cmd | wc -l
       var pipe = splitOn(toks, '|');
       if (pipe.length > 1) {
         var first = runSingleNoPipe(pipe[0]);
@@ -509,6 +587,13 @@
           if (g[0] === 'grep' && g[1]) {
             var pat = g[1];
             lines = lines.filter(function (l) { return l.indexOf(pat) !== -1; });
+          } else if (g[0] === 'wc') {
+            var words = 0, bytes = 0;
+            lines.forEach(function (l) { words += l.split(/\s+/).filter(Boolean).length; bytes += l.length + 1; });
+            if (g[1] === '-l') lines = [String(lines.length)];
+            else if (g[1] === '-w') lines = [String(words)];
+            else if (g[1] === '-c') lines = [String(bytes)];
+            else lines = [String(lines.length) + '  ' + String(words) + '  ' + String(bytes)];
           } else {
             return errOut(['bash: ' + (g[0] || '') + ': command not found']);
           }
@@ -543,6 +628,13 @@
         case 'cd': return cdCmd(toks.slice(1));
         case 'cat': return catCmd(toks.slice(1));
         case 'chmod': return chmodCmd(toks.slice(1));
+        case 'sed': return sedCmd(toks.slice(1));
+        case 'tail': return tailCmd(toks.slice(1));
+        case 'netstat': return netstatCmd(toks.slice(1));
+        case 'nano': return nanoCmd(toks.slice(1));
+        case 'pg_ctl': return pgCtlCmd(toks.slice(1));
+        case 'psql': return barePsqlCmd(toks.slice(1));
+        case 'kafka-consumer-groups.sh': return consumerGroupsCmd(toks.slice(1));
         case 'docker': return dockerCmd(toks.slice(1));
         case 'curl': return curlCmd(toks.slice(1));
         case 'python':
@@ -573,6 +665,17 @@
     // the same style as the rest of the engine: real syntax, one answer.
     function pythonCmd(args) {
       if (args[0] === '--version' || args[0] === '-V') return okOut(['Python 3.12.3']);
+      if (args[0] && /\.py$/.test(args[0])) {
+        // a check script the lesson ships (e.g. check_resume.py): the
+        // answer is canned, like the kit-doctor script
+        var base = args[0].split('/').pop();
+        var canned = (w.spec.scripts || {})[base] || (w.spec.scripts || {})[resolvePath(args[0])];
+        if (canned) return okOut(canned.slice());
+        if (w.fileContents[resolvePath(args[0])] !== undefined) {
+          return okOut(['This practice terminal does not run real Python scripts. The answer is in the step.']);
+        }
+        return errOut(["python3: can't open file '" + args[0] + "': [Errno 2] No such file or directory"]);
+      }
       return okOut(['Python 3.12.3', 'Interactive mode and scripts are not available in this practice terminal. Try: python --version']);
     }
 
@@ -602,22 +705,31 @@
         '  docker compose stop <name>  stop one container',
         '  docker compose start <name> start it again',
         '  docker exec <name> <tool>   run a tool inside a container',
+        '  docker inspect <name>       read a container\'s settings',
+        '  docker run -d -p 8080:80 --name web nginx   run one container',
+        '  docker logs <name>          read one container\'s logs',
+        '  docker stop / start / rm <name>    stop, start or remove it',
+        '  netstat -tuln               which ports are listening',
         '  kafka-topics / producer / consumer   (inside a kafka container)',
+        '  kafka-consumer-groups.sh --describe --group <name>   mirror lag',
         '  psql -U learner -d orders -c "SQL"   (inside a postgres container)',
-        '  redis-cli -h redis-a PING / SET / GET / INCR / TTL / INFO',
+        '  pg_ctl start -D /var/lib/postgresql/data   start the database',
+        '  redis-cli -h redis-a PING / SET / GET / INCR / TTL / INFO / CONFIG',
         '  aws --endpoint-url http://moto-a:5000 s3 ls / mb / cp',
         '  curl http://localhost:8080/  try the load balancer',
+        '  curl -I http://localhost:8080/   headers only',
         '  docker --version / docker version   check the Docker version',
-        '  docker run -d --name web nginx     run one container',
-        '  docker stop / start / rm <name>    stop, start or remove it',
         '  git init / status / add / commit / log / branch / checkout / merge',
         '  kubectl get pods / apply -f file.yaml / logs <pod> / port-forward',
+        '  kubectl edit deployment <name>   fix a deploy in the editor',
         '  kind create cluster --name demo    start a local cluster',
         '  terraform init / plan / apply / destroy',
         '  mkdir / rm / cp / mv / touch / df -h / free -h / ps aux / top',
         '  bash kit-doctor.sh / ./kit-doctor.sh   run a script',
+        '  sed -i \'s/OLD/NEW/\' file   change one line in a file',
+        '  tail -n 20 file / nano file   read the end / edit a file',
         '  cat > file << \'EOF\'         write a file (type EOF to finish)',
-        '  python --version / ip addr / uname   quick checks this box answers',
+        '  python --version / python3 check_resume.py / ip addr / uname   quick checks this box answers',
         '',
         '  ls  cd  pwd  echo  cat  chmod  history  clear  help  bash',
         '',
@@ -637,7 +749,15 @@
     }
 
     function lsCmd(args) {
-      var path = resolvePath(args[0] || '.');
+      var long = args.indexOf('-l') >= 0;
+      var target = null;
+      args.forEach(function (a) { if (a[0] !== '-') target = a; });
+      // PostgreSQL Advanced challenge: the stale lock file is the clue
+      if (long && target && resolvePath(target) === '/var/lib/postgresql/data/postmaster.pid') {
+        if (w.pg.lockStale) return okOut(['-rw------- 1 postgres postgres 123 Nov 22 10:00 postmaster.pid']);
+        return errOut(["ls: cannot access '" + target + "': No such file or directory"]);
+      }
+      var path = resolvePath(long ? (target || '.') : (args[0] || '.'));
       var names = w.fs[path];
       if (!names) return errOut(['ls: cannot access \'' + (args[0] || '.') + '\': No such file or directory']);
       var shown = names.slice();
@@ -670,6 +790,9 @@
         return okOut([]);
       }
       var path = resolvePath(args[0]);
+      // the mirror's log is written by the mirror itself: its last lines
+      // depend on whether the config points at a wrong port
+      if (path === '/home/learner/mirrormaker.log') return okOut(mm2LogLines());
       var content = w.fileContents[path];
       if (content === undefined) return errOut(['cat: ' + (args[0] || '') + ': No such file or directory']);
       return okOut(textLines(content));
@@ -681,8 +804,155 @@
         // e.g. "chmod -R a+r" with no target — the classic mistake
         return errOut(['chmod: missing operand after \'a+r\'', 'Try \'chmod --help\' for more information.']);
       }
+      // chmod +x makes a script runnable: remember it, so running the
+      // script before chmod fails with Permission denied, like the real one
+      var plusX = args.some(function (a) { return a === '+x' || a === 'a+x' || a === 'u+x'; });
+      if (plusX) {
+        args.forEach(function (a) {
+          if (a[0] !== '-') w.execFiles[resolvePath(a)] = true;
+        });
+      }
       flag(w, 'chmod');
       return okOut([]);
+    }
+
+    // sed -i 's/OLD/NEW/' file — the only sed this terminal needs: a
+    // one-line config fix, in place. OLD and NEW are literal text.
+    function sedCmd(args) {
+      if (args[0] !== '-i') return errOut(['sed: this practice terminal only answers "sed -i \'s/OLD/NEW/\' file".']);
+      var expr = args[1] || '';
+      var file = args[2];
+      if (!file) return errOut(['sed: missing file operand']);
+      var m = /^s\/(.*?)\/(.*?)\/([g]?)$/.exec(expr);
+      if (!m) return errOut(['sed: bad expression \'' + expr + '\'. Use s/OLD/NEW/ .']);
+      var path = resolvePath(file);
+      var content = w.fileContents[path];
+      if (content === undefined) return errOut(['sed: can\'t read ' + file + ': No such file or directory']);
+      if (m[3] === 'g') content = content.split(m[1]).join(m[2]);
+      else content = content.replace(m[1], m[2]);
+      w.fileContents[path] = content;
+      flag(w, 'sed:' + path);
+      return okOut([]);
+    }
+
+    function tailCmd(args) {
+      var n = 10, target = null;
+      args.forEach(function (a, i) {
+        if (a === '-n' && args[i + 1]) n = parseInt(args[i + 1], 10) || 10;
+        else if (a[0] !== '-') target = a;
+      });
+      if (!target) return errOut(['tail: missing file operand']);
+      var path = resolvePath(target);
+      var lines;
+      if (path === '/home/learner/mirrormaker.log') lines = mm2LogLines();
+      else {
+        var content = w.fileContents[path];
+        if (content === undefined) return errOut(['tail: cannot open \'' + target + '\' for reading: No such file or directory']);
+        lines = textLines(content);
+      }
+      return okOut(lines.slice(-n));
+    }
+
+    // netstat -tuln: which ports are listening, and who holds them.
+    // Only the ports this terminal's containers bound are listed.
+    function netstatCmd(args) {
+      var lines = ['Active Internet connections (only servers)',
+        'Proto Recv-Q Send-Q Local Address           Foreign Address         State'];
+      var ports = Object.keys(w.ports).sort();
+      ports.forEach(function (p) {
+        lines.push('tcp        0      0 0.0.0.0:' + p + '            0.0.0.0:*               LISTEN');
+      });
+      if (!ports.length) lines.push('(nothing listening yet — start a container first)');
+      return okOut(lines);
+    }
+
+    // nano: the practice editor. It opens the file, and the one fix the
+    // lesson asks for — the missing closing quote — is applied when the
+    // learner saves. The screen shows the file after the fix.
+    function nanoCmd(args) {
+      var target = args.filter(function (a) { return a[0] !== '-'; })[0];
+      if (!target) return errOut(['nano: missing file operand']);
+      var path = resolvePath(target);
+      var content = w.fileContents[path];
+      if (content === undefined) return errOut(['nano: ' + target + ': No such file or directory']);
+      var fixed = textLines(content).map(function (l) {
+        var quotes = (l.match(/"/g) || []).length;
+        return quotes % 2 === 1 ? l + '"' : l;
+      }).join('\n');
+      w.fileContents[path] = fixed;
+      flag(w, 'nano:' + path);
+      var shown = ['GNU nano 7.2  ' + target].concat(textLines(fixed));
+      shown.push('^G Help  ^O Write Out  ^X Exit');
+      return okOut(shown);
+    }
+
+    // pg_ctl start: the database on this machine (PostgreSQL Advanced
+    // challenge). A stale lock file stops it starting until it is removed.
+    function pgCtlCmd(args) {
+      if (args[0] !== 'start') return errOut(['pg_ctl: this practice terminal only answers "pg_ctl start -D <dir>".']);
+      if (w.pg.lockStale) {
+        return errOut([
+          'waiting for server to start.... stopped waiting',
+          'pg_ctl: could not start server',
+          'Examine the log output.'
+        ]);
+      }
+      w.pg.running = true;
+      flag(w, 'pg_started');
+      return okOut(['waiting for server to start.... done', 'server started']);
+    }
+
+    // bare psql on the host (PostgreSQL Advanced challenge): lists the
+    // databases once the server is running, refuses before that.
+    function barePsqlCmd(args) {
+      if (!w.pg.running) {
+        return errOut(['psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused',
+          'Is the server running locally and accepting connections on that socket?']);
+      }
+      var c = optVal(args, '-c');
+      if (!c) return okOut(['psql: interactive mode is not available in this practice terminal.', 'Use -c "SQL" instead.']);
+      // the shell strips the backslash, so \l arrives here as "l"
+      if (c === 'l' || c.indexOf('\\l') >= 0) {
+        return okOut([
+          '   Name    |  Owner   | Encoding',
+          '-----------+----------+----------',
+          ' postgres  | postgres | UTF8',
+          ' practice  | learner  | UTF8',
+          ' template0 | postgres | UTF8',
+          ' template1 | postgres | UTF8',
+          '(4 rows)'
+        ]);
+      }
+      return errOut(['psql: this practice terminal only answers "\\l" (list databases).']);
+    }
+
+    // kafka-consumer-groups.sh --describe: the mirror lag for the
+    // order-group — how many messages the mirror still has to copy.
+    function consumerGroupsCmd(args) {
+      var a = (w.kafka['kafka-a'] && w.kafka['kafka-a'].topics['orders'] || []).length;
+      var b = (w.kafka['kafka-b'] && w.kafka['kafka-b'].topics['a.orders'] || []).length;
+      var head = 'GROUP           TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG';
+      var row = 'order-group     orders          0          ' + b + '               ' + a + '               ' + (a - b);
+      return okOut([head, row]);
+    }
+
+    // nginx inside the load balancer container: -t checks the config
+    // syntax (it does NOT check whether the backends are alive), -s
+    // reload makes the running server read the config again.
+    function nginxCmd(args) {
+      if (args[0] === '-t') {
+        var conf = w.fileContents['/etc/nginx/nginx.conf'] || w.fileContents['/home/learner/nginx.conf'] || '';
+        var opens = (conf.match(/{/g) || []).length;
+        var closes = (conf.match(/}/g) || []).length;
+        if (opens !== closes || conf.indexOf('upstream backends') === -1) {
+          return errOut(['nginx: [emerg] unexpected end of file, expecting "}" in /etc/nginx/nginx.conf',
+            'nginx: configuration file /etc/nginx/nginx.conf test failed']);
+        }
+        return okOut(['nginx: the configuration file /etc/nginx/nginx.conf syntax is ok',
+          'nginx: configuration file /etc/nginx/nginx.conf test is successful']);
+      }
+      if (args[0] === '-s' && args[1] === 'reload') return okOut([]);
+      return errOut(['nginx: this practice terminal only answers "nginx -t" and "nginx -s reload".']);
     }
 
     function heredocInput(line) {
@@ -749,6 +1019,20 @@
       }
       if (args[0] === 'exec') return execCmd(args.slice(1));
       if (args[0] === 'logs') return logsCmd([args[1]]);
+      if (args[0] === 'inspect') {
+        var iname = args.slice(1).filter(function (a) { return a[0] !== '-'; })[0];
+        if (!iname) return errOut(['"docker inspect" requires a container name']);
+        var ic = w.containers[iname];
+        if (!ic) return errOut(['Error: No such object: ' + iname]);
+        var state = ic.status === 'up' ? 'running' : 'exited';
+        var lines = ['"Name": "/' + iname + '"', '"State": { "Status": "' + state + '" }'];
+        if (iname === 'worker' && w.worker.dbHost) {
+          lines.push('"Config": { "Image": "worker:latest", "Env": ["PG_HOST=' + w.worker.dbHost + '"] }');
+        } else {
+          lines.push('"Config": { "Image": "' + (ic.image || 'unknown') + '" }');
+        }
+        return okOut(lines);
+      }
       return errOut(['docker: \'' + (args[0] || '') + '\' is not a docker command', 'See \'docker --help\'.']);
     }
 
@@ -823,6 +1107,8 @@
         w.containers[cont].status = 'stopped';
         flag(w, 'stopped:' + cont);
         if (cont === 'postgres-primary') w.worker.waiting = true;
+        // a stopped worker saves nothing until it starts again
+        if (cont === 'worker') w.worker.status = 'down';
         // Patroni: stopping the leader hands the job to the other member
         if (cont === 'patroni-1' && w.pg.patroni && w.pg.patroni.leader === 'patroni-1') {
           w.pg.patroni.leader = 'patroni-2';
@@ -840,6 +1126,10 @@
         var hosts = w.spec.curl_hosts || [];
         var hi = hosts.indexOf(cont2);
         if (hi >= 0) w.curlIdx = hi;
+        // a worker that starts again catches up on the orders that
+        // arrived while it was down; a mirror that starts again syncs
+        if (cont2 === 'worker') { w.worker.status = 'up'; workerCatchUp(); }
+        if (cont2 === 'mirror') mirrorCatchUp();
         return okOut(['✔ Container ' + cont2 + '  Started']);
       }
       if (sub === 'run') return runCmd(args.slice(1));
@@ -882,6 +1172,14 @@
         if (w.worker.waiting) wl.push('Waiting for PostgreSQL...');
         return okOut(wl);
       }
+      var lc = w.containers[cont];
+      if (lc && lc.status === 'up' && lc.image && lc.image.indexOf('nginx') === 0) {
+        return okOut([
+          '2026/11/22 10:00:00 [notice] 1#1: using the "epoll" event method',
+          '2026/11/22 10:00:00 [notice] 1#1: nginx/1.25.4',
+          '2026/11/22 10:00:00 [notice] 1#1: built by gcc 12.2.0'
+        ]);
+      }
       return okOut(['(no logs yet — this service prints nothing)']);
     }
 
@@ -919,6 +1217,10 @@
       if (tool === 'redis-cli') return redisCmd(cont, inner.slice(1));
       if (tool === 'aws') return awsCmd(cont, inner.slice(1));
       if (tool === 'curl') return curlCmd(inner.slice(1));
+      if (tool === 'sed') return sedCmd(inner.slice(1));
+      if (tool === 'cat') return catCmd(inner.slice(1));
+      if (tool === 'tail') return tailCmd(inner.slice(1));
+      if (tool === 'nginx') return nginxCmd(inner.slice(1));
       if (tool === 'sh' || tool === 'bash') return okOut([]);
       return errOut(['bash: ' + tool + ': command not found']);
     }
@@ -993,17 +1295,43 @@
       var cmd = (rest[0] || '').toUpperCase();
       var key = rest[1];
       if (cmd === 'PING') { flag(w, 'ping'); return okOut(['PONG']); }
-      if (cmd === 'SET') {
-        if (store.replica_of) { flag(w, 'readonly_error'); return errOut(['(error) READONLY You can\'t write against a read only replica.']); }
-        store.keys[key] = { v: rest[2] };
+      // memory size of one entry: key + value + a small overhead per key
+      function redisEntryBytes(k, v) { return String(k).length + String(v).length + 48; }
+      function redisUsedBytes(store) {
+        var total = 0;
+        for (var k in store.keys) total += redisEntryBytes(k, store.keys[k].v);
+        return total;
+      }
+      function redisStoreKey(store, key, val) {
+        // the practice store has a tiny cap when the world sets one:
+        // a new key that does not fit is refused, unless the policy is
+        // allkeys-lru, which drops the oldest key to make room
+        var isNew = store.keys[key] === undefined;
+        if (store.maxmemory && isNew) {
+          var need = redisEntryBytes(key, val.v);
+          var used = redisUsedBytes(store);
+          if (used + need > store.maxmemory) {
+            if (store.maxmemory_policy === 'allkeys-lru') {
+              var oldest = Object.keys(store.keys)[0];
+              if (oldest) delete store.keys[oldest];
+            } else {
+              flag(w, 'oom_error');
+              return errOut(["(error) OOM command not allowed when used memory > 'maxmemory'."]);
+            }
+          }
+        }
+        store.keys[key] = val;
+        if (redisUsedBytes(store) > store.peak) store.peak = redisUsedBytes(store);
         mirrorRedis(host, key);
         return okOut(['OK']);
       }
+      if (cmd === 'SET') {
+        if (store.replica_of) { flag(w, 'readonly_error'); return errOut(['(error) READONLY You can\'t write against a read only replica.']); }
+        return redisStoreKey(store, key, { v: rest[2] });
+      }
       if (cmd === 'SETEX') {
         if (store.replica_of) { flag(w, 'readonly_error'); return errOut(['(error) READONLY You can\'t write against a read only replica.']); }
-        store.keys[key] = { v: rest[3], exp: now(w) + parseInt(rest[2], 10) * 1000 };
-        mirrorRedis(host, key);
-        return okOut(['OK']);
+        return redisStoreKey(store, key, { v: rest[3], exp: now(w) + parseInt(rest[2], 10) * 1000 });
       }
       if (cmd === 'GET') {
         var e = store.keys[key];
@@ -1024,7 +1352,12 @@
         var cur = store.keys[key];
         var n = cur ? parseInt(cur.v, 10) : 0;
         n++;
+        if (!cur && store.maxmemory && redisUsedBytes(store) + redisEntryBytes(key, String(n)) > store.maxmemory && store.maxmemory_policy !== 'allkeys-lru') {
+          flag(w, 'oom_error');
+          return errOut(["(error) OOM command not allowed when used memory > 'maxmemory'."]);
+        }
         store.keys[key] = { v: String(n) };
+        if (redisUsedBytes(store) > store.peak) store.peak = redisUsedBytes(store);
         mirrorRedis(host, key);
         return okOut(['(integer) ' + n]);
       }
@@ -1035,12 +1368,46 @@
         mirrorRedis(host, key);
         return okOut(['(integer) ' + had]);
       }
+      if (cmd === 'INFO' && (rest[1] || '').toLowerCase() === 'memory') {
+        flag(w, 'info:memory');
+        var used = redisUsedBytes(store);
+        return okOut(['# Memory',
+          'used_memory:' + used,
+          'used_memory_human:' + used + 'B',
+          'used_memory_peak:' + Math.max(store.peak, used),
+          'maxmemory:' + (store.maxmemory === null ? 0 : store.maxmemory),
+          'maxmemory_policy:' + store.maxmemory_policy]);
+      }
       if (cmd === 'INFO' && (rest[1] || '').toLowerCase() === 'replication') {
         flag(w, 'info:replication');
         if (store.replica_of) {
           return okOut(['# Replication', 'role:slave', 'master_host:' + store.replica_of, 'master_port:6379', 'master_link_status:up']);
         }
         return okOut(['# Replication', 'role:master', 'connected_slaves:1', 'master_replid:abc123def456', 'master_repl_offset:0']);
+      }
+      if (cmd === 'CONFIG' && (rest[1] || '').toUpperCase() === 'SET') {
+        var ckey = (rest[2] || '').toLowerCase(), cval = rest[3] || '';
+        if (ckey === 'maxmemory') {
+          var num = parseInt(cval, 10);
+          if (/mb$/i.test(cval)) num = parseInt(cval, 10) * 1000000;
+          else if (/kb$/i.test(cval)) num = parseInt(cval, 10) * 1000;
+          else if (/gb$/i.test(cval)) num = parseInt(cval, 10) * 1000000000;
+          store.maxmemory = num;
+          flag(w, 'config:maxmemory');
+          return okOut(['OK']);
+        }
+        if (ckey === 'maxmemory-policy') {
+          store.maxmemory_policy = cval;
+          flag(w, 'config:policy');
+          return okOut(['OK']);
+        }
+        return errOut(['(error) ERR Unsupported CONFIG parameter: ' + (rest[2] || '')]);
+      }
+      if (cmd === 'CONFIG' && (rest[1] || '').toUpperCase() === 'GET') {
+        var gkey = (rest[2] || '').toLowerCase();
+        if (gkey === 'maxmemory') return okOut(['1) "maxmemory"', '2) "' + (store.maxmemory === null ? 0 : store.maxmemory) + '"']);
+        if (gkey === 'maxmemory-policy') return okOut(['1) "maxmemory-policy"', '2) "' + store.maxmemory_policy + '"']);
+        return okOut(['(empty array)']);
       }
       if (!cmd) return okOut(['redis-cli: type a command, for example: redis-cli PING']);
       return errOut(['(error) ERR unknown command \'' + (rest[0] || '') + '\'']);
@@ -1163,7 +1530,25 @@
       w.dockerRunSeq++;
       if (!name) name = base + '-' + w.dockerRunSeq;
       if (w.containers[name]) return errOut(['docker: Error response from daemon: Conflict. The container name "/' + name + '" is already in use.']);
-      w.containers[name] = { project: '', status: 'up', role: null, image: image.indexOf(':') >= 0 ? image : image + ':latest' };
+      // -p host:container binds a host port; a second container on the
+      // same host port fails, like the real daemon (Docker Advanced)
+      var hostPorts = [];
+      for (var pi = 0; pi < args.length; pi++) {
+        var pv = null;
+        if (args[pi] === '-p' && args[pi + 1]) pv = args[pi + 1];
+        else if (args[pi].indexOf('-p') === 0 && args[pi].length > 2) pv = args[pi].slice(2);
+        else if (args[pi] === '--publish' && args[pi + 1]) pv = args[pi + 1];
+        if (pv) {
+          var hp = pv.split(':')[0];
+          if (w.ports[hp]) {
+            flag(w, 'port_conflict:' + hp);
+            return errOut(['docker: Error response from daemon: driver failed programming external connectivity on endpoint ' + name + ': Bind for 0.0.0.0:' + hp + ' failed: port is already allocated.']);
+          }
+          hostPorts.push(hp);
+        }
+      }
+      w.containers[name] = { project: '', status: 'up', role: null, image: image.indexOf(':') >= 0 ? image : image + ':latest', ports: hostPorts };
+      hostPorts.forEach(function (hp) { w.ports[hp] = name; });
       flag(w, 'docker_run:' + name);
       var id = ('a1b2c3d4e5f6'.repeat(6)).slice(0, 64 - String(w.dockerRunSeq).length) + w.dockerRunSeq;
       return okOut([id]);
@@ -1175,6 +1560,7 @@
       var c = w.containers[name];
       if (!c) return errOut(['Error: No such container: ' + name]);
       c.status = 'stopped';
+      (c.ports || []).forEach(function (hp) { delete w.ports[hp]; });
       flag(w, 'stopped:' + name);
       return okOut([name]);
     }
@@ -1185,6 +1571,7 @@
       var c = w.containers[name];
       if (!c) return errOut(['Error: No such container: ' + name]);
       c.status = 'up';
+      (c.ports || []).forEach(function (hp) { w.ports[hp] = name; });
       flag(w, 'started:' + name);
       return okOut([name]);
     }
@@ -1199,6 +1586,7 @@
         var c = w.containers[name];
         if (!c) return errOut(['Error: No such container: ' + name]);
         if (c.status === 'up' && !force) return errOut(['Error response from daemon: You cannot remove a running container ' + name + '. Stop the container before attempting removal or force remove']);
+        (c.ports || []).forEach(function (hp) { delete w.ports[hp]; });
         delete w.containers[name];
         flag(w, 'docker_rm:' + name);
         out.push(name);
@@ -1265,6 +1653,17 @@
       if (!targets.length) return errOut(['rm: missing operand', 'Try \'rm --help\' for more information.']);
       for (var i = 0; i < targets.length; i++) {
         var path = resolvePath(targets[i]);
+        // PostgreSQL Advanced challenge: removing the stale lock file
+        // lets the server start again
+        if (path === '/var/lib/postgresql/data/postmaster.pid') {
+          if (w.pg.lockStale) {
+            w.pg.lockStale = false;
+            flag(w, 'pg_lock_removed');
+            return okOut([]);
+          }
+          if (!force) return errOut(["rm: cannot remove '" + targets[i] + "': No such file or directory"]);
+          return okOut([]);
+        }
         var isDir = w.fs[path] !== undefined;
         var isFile = w.fileContents[path] !== undefined;
         if (!isDir && !isFile) {
@@ -1393,11 +1792,58 @@
       var path = resolvePath(clean);
       var specScripts = w.spec.scripts || {};
       var canned = specScripts[path] || specScripts[clean] || specScripts[file] || specScripts[baseName(clean)];
+      // restarting the mirror (Kafka Advanced): the Kafka tools are
+      // installed in the sim, so the script is known even though no file
+      // by that name sits in the folder. The mirror catches up on the
+      // orders that arrived while it was broken.
+      if (baseName(clean) === 'connect-mirror-maker.sh') {
+        var a = w.kafka['kafka-a'], b = w.kafka['kafka-b'];
+        if (a && b) {
+          (a.topics['orders'] || []).forEach(function (msg) {
+            var at = 'a.orders';
+            if (!b.topics[at]) b.topics[at] = [];
+            if (b.topics[at].indexOf(msg) === -1) b.topics[at].push(msg);
+          });
+        }
+        flag(w, 'mm2_restarted');
+        return okOut(['Starting MirrorMaker 2...', 'MirrorMaker 2 started. Copying topic orders from cluster a to cluster b.']);
+      }
       var exists = w.fileContents[path] !== undefined || canned !== undefined;
       if (!exists) return errOut(['bash: ' + file + ': No such file or directory']);
+      // bash -n checks the syntax without running anything: an unbalanced
+      // quote is the classic failure (Linux/Git Advanced challenge)
+      if (args.indexOf('-n') >= 0) {
+        var content = w.fileContents[path] || '';
+        var badLine = -1;
+        textLines(content).forEach(function (l, idx) {
+          if (badLine === -1 && ((l.match(/"/g) || []).length % 2 === 1)) badLine = idx + 1;
+        });
+        if (badLine >= 0) {
+          return errOut([
+            clean + ': line ' + badLine + ": unexpected EOF while looking for matching `\"'",
+            clean + ': line ' + (badLine + 1) + ': syntax error: unexpected end of file'
+          ]);
+        }
+        return okOut([]);
+      }
       flag(w, 'script:' + baseName(clean));
       if (canned) return okOut(canned.slice());
-      return okOut([]);
+      // running a script by path needs the executable bit, like the real
+      // shell (bash script.sh reads it instead, so it always works)
+      if (file.indexOf('./') === 0 && invoked !== 'bash' && invoked !== 'sh' && !w.execFiles[path]) {
+        return errOut(['bash: ' + file + ': Permission denied']);
+      }
+      // no canned output: run the script's own lines, one at a time
+      var out = [];
+      var scriptLines = textLines(w.fileContents[path] || '');
+      for (var li = 0; li < scriptLines.length; li++) {
+        var t = scriptLines[li].trim();
+        if (!t || t[0] === '#') continue;
+        var r = runSingle(tokenize(t));
+        out = out.concat(r.lines);
+        if (r.kind === 'err') break;
+      }
+      return okOut(out);
     }
 
     // ---------- git ----------
@@ -1493,6 +1939,20 @@
       }
       if (sub === 'commit') {
         var mi = args.indexOf('-m');
+        if (mi < 0) {
+          // combined flags: git commit -am "msg" (the -a stages all files)
+          for (var ci = 0; ci < args.length; ci++) {
+            if (/^-[a-zA-Z]*m[a-zA-Z]*$/.test(args[ci]) && args[ci].indexOf('m') >= 0) { mi = ci; break; }
+          }
+          if (mi >= 0 && args[mi].indexOf('a') >= 0) {
+            var allNames = (w.fs[cwd] || []).slice();
+            for (var p in w.fileContents) {
+              var dir = p.split('/').slice(0, -1).join('/') || '/';
+              if (dir === cwd) { var bb = p.split('/').pop(); if (allNames.indexOf(bb) === -1) allNames.push(bb); }
+            }
+            w.git.staged = allNames;
+          }
+        }
         var msg = mi >= 0 ? args[mi + 1] : null;
         if (!msg) return errOut(['Aborting commit due to empty commit message.']);
         if (w.git.conflict && !w.git.resolved) {
@@ -1594,6 +2054,7 @@
         'Basic Commands:',
         '  get           Display one or many resources',
         '  apply         Apply a configuration to a resource',
+        '  edit          Edit a resource (the practice editor fixes it)',
         '  delete        Delete resources',
         '  describe      Show details of a specific resource',
         '  logs          Print the logs for a container in a pod',
@@ -1673,9 +2134,12 @@
       if (!nameM) return errOut(['error: no name found in ' + file]);
       var name = nameM[1], image = imgM ? imgM[1] : 'nginx:1.25';
       var existed = !!w.k8s.deployments[name];
-      w.k8s.deployments[name] = { name: name, image: image, ready: '1/1', upToDate: 1, available: 1, age: '0s', replicas: 1 };
+      // a deploy that points at a database host that does not exist starts
+      // its pod, which crashes at once (Kubernetes Advanced challenge)
+      var wrongDb = content.indexOf('db-wrong-host') !== -1;
+      w.k8s.deployments[name] = { name: name, image: image, ready: wrongDb ? '0/1' : '1/1', upToDate: 1, available: wrongDb ? 0 : 1, age: '0s', replicas: 1, env: wrongDb ? { DB_HOST: 'db-wrong-host' } : {} };
       var podName = name + '-' + w.k8sSuffix;
-      w.k8s.pods[podName] = { name: podName, ready: '1/1', status: 'Running', restarts: 0, age: '0s', deployment: name, image: image };
+      w.k8s.pods[podName] = { name: podName, ready: wrongDb ? '0/1' : '1/1', status: wrongDb ? 'CrashLoopBackOff' : 'Running', restarts: wrongDb ? 3 : 0, age: '0s', deployment: name, image: image };
       flag(w, 'k8s_apply:' + name);
       return okOut(['deployment.apps/' + name + (existed ? ' configured' : ' created')]);
     }
@@ -1743,11 +2207,47 @@
       var name = null;
       for (var i = 0; i < args.length; i++) { if (args[i][0] !== '-') { name = args[i]; break; } }
       if (!name) return errOut(['error: pod name is required. Usage: kubectl logs <pod>']);
+      // kubectl logs deployment/<name>: the logs of that deployment's pod
+      if (name.indexOf('deployment/') === 0) {
+        var depName = name.split('/')[1];
+        var depPod = null;
+        for (var pn in w.k8s.pods) { if (w.k8s.pods[pn].deployment === depName) { depPod = w.k8s.pods[pn]; break; } }
+        if (!depPod) return errOut(['Error from server (NotFound): deployments.apps "' + depName + '" not found']);
+        flag(w, 'k8s_logs:' + depPod.name);
+        if (depPod.status === 'CrashLoopBackOff') {
+          return okOut(['Starting web server on port 80',
+            'Error: dial tcp: lookup db-wrong-host on 10.96.0.10:53: no such host']);
+        }
+        return okOut(['Starting web server on port 80', 'Listening on 0.0.0.0:80']);
+      }
       if (name.indexOf('/') >= 0) name = name.split('/')[1];
       if (!w.k8s.pods[name]) return errOut(['Error from server (NotFound): pods "' + name + '" not found']);
       flag(w, 'k8s_logs:' + name);
       if (args.indexOf('--previous') >= 0) return okOut(['(no previous log — this container has not restarted)']);
+      if (w.k8s.pods[name].status === 'CrashLoopBackOff') {
+        return okOut(['Starting web server on port 80',
+          'Error: dial tcp: lookup db-wrong-host on 10.96.0.10:53: no such host']);
+      }
       return okOut(['Starting web server on port 80', 'Listening on 0.0.0.0:80']);
+    }
+
+    // kubectl edit deployment <name>: the practice editor fixes the one
+    // wrong value — the database host — and the deployment rolls a new
+    // pod, which comes up Running.
+    function kubectlEdit(args) {
+      var kind = args[0], name = args[1];
+      if (kind !== 'deployment' && kind !== 'deploy') return errOut(['error: this practice terminal only edits deployments. Usage: kubectl edit deployment <name>']);
+      if (!name) return errOut(['error: deployment name is required. Usage: kubectl edit deployment <name>']);
+      var dep = w.k8s.deployments[name];
+      if (!dep) return errOut(['Error from server (NotFound): deployments.apps "' + name + '" not found']);
+      dep.env = dep.env || {};
+      dep.env.DB_HOST = 'postgres-service';
+      dep.ready = '1/1';
+      dep.available = 1;
+      var podName = name + '-' + w.k8sSuffix;
+      w.k8s.pods[podName] = { name: podName, ready: '1/1', status: 'Running', restarts: 0, age: '0s', deployment: name, image: dep.image };
+      flag(w, 'k8s_edit:' + name);
+      return okOut(['deployment.apps/' + name + ' edited']);
     }
 
     function kubectlPortForward(args) {
@@ -1785,6 +2285,7 @@
       }
       if (sub === 'get') return kubectlGet(args.slice(1));
       if (sub === 'apply') return kubectlApply(args.slice(1));
+      if (sub === 'edit') return kubectlEdit(args.slice(1));
       if (sub === 'delete') return kubectlDelete(args.slice(1));
       if (sub === 'describe') return kubectlDescribe(args.slice(1));
       if (sub === 'logs') return kubectlLogs(args.slice(1));
@@ -1936,6 +2437,7 @@
       var url = null;
       args.forEach(function (a) { if (a.indexOf('http') === 0) url = a; });
       if (!url) return errOut(['curl: no URL specified']);
+      var headOnly = args.indexOf('-I') >= 0 || args.indexOf('--head') >= 0;
       // World-spec canned responses: if the URL contains a map key, print it.
       var cmap = w.spec.curl_map || {};
       for (var ckey in cmap) {
@@ -1947,6 +2449,19 @@
       if (port === '8080') {
         var lb = w.containers['lb'];
         if (!lb || lb.status !== 'up') return errOut(['curl: (7) Failed to connect to localhost port 8080: Connection refused']);
+        // the load balancer reads its own config: if every backend in
+        // nginx.conf points at a port where nothing listens, the site
+        // answers 502 (Load Balancer Advanced challenge)
+        var lbConf = w.fileContents['/etc/nginx/nginx.conf'] || w.fileContents['/home/learner/nginx.conf'] || '';
+        var brokenLb = false;
+        if (lbConf.indexOf('upstream backends') !== -1) {
+          var serverPorts = (lbConf.match(/server\s+\S+:(\d+)/g) || []).map(function (s) { return s.split(':')[1]; });
+          brokenLb = serverPorts.length > 0 && serverPorts.every(function (p) { return p !== '80'; });
+        }
+        if (brokenLb) {
+          if (headOnly) return okOut(['HTTP/1.1 502 Bad Gateway', 'Server: nginx/1.25.4', 'Content-Type: text/html']);
+          return errOut(['curl: (22) The requested URL returned error: 502 Bad Gateway']);
+        }
         var ups = w.spec.curl_hosts.filter(function (h) { return w.containers[h] && w.containers[h].status === 'up'; });
         if (!ups.length) return errOut(['curl: (7) Failed to connect to localhost port 8080: Connection refused', 'All backends are down.']);
         var host = ups[w.curlIdx % ups.length];
@@ -1954,7 +2469,19 @@
         w.curlCount++;
         w.curlSeen[host] = true;
         if (w.curlAfterRestart) { flag(w, 'curl_after_restart'); }
+        if (headOnly) return okOut(['HTTP/1.1 200 OK', 'Server: nginx/1.25.4', 'Content-Type: text/html']);
         return okOut(['Hostname: ' + host]);
+      }
+      // a port bound by a container the learner started with docker run -p
+      if (w.ports[port]) {
+        var bound = w.containers[w.ports[port]];
+        if (bound && bound.status === 'up') {
+          if (bound.image && bound.image.indexOf('nginx') === 0) {
+            if (headOnly) return okOut(['HTTP/1.1 200 OK', 'Server: nginx/1.25.4', 'Content-Type: text/html']);
+            return okOut(['Welcome to nginx!', 'If you see this page, the nginx web server is successfully installed.']);
+          }
+          return okOut(['(connected — the container answers on port ' + port + ')']);
+        }
       }
       if (port === '8008' || port === '8009') {
         var p = w.pg.patroni;
@@ -2074,9 +2601,10 @@
       getWorld: function () { return w; },
       completions: function (prefix) {
         var words = ['docker', 'compose', 'up', 'down', 'ps', 'logs', 'exec', 'stop', 'start', 'run', 'curl', 'ls', 'cd', 'pwd', 'echo', 'cat', 'chmod', 'help', 'history', 'clear', 'whoami', 'exit', 'python', 'python3', 'ip', 'uname', 'ipconfig',
-          'kafka-topics.sh', 'kafka-console-producer.sh', 'kafka-console-consumer.sh', 'psql', 'redis-cli', 'aws', 's3', 'mb', 'cp',
+          'kafka-topics.sh', 'kafka-console-producer.sh', 'kafka-console-consumer.sh', 'kafka-consumer-groups.sh', 'psql', 'pg_ctl', 'redis-cli', 'aws', 's3', 'mb', 'cp',
+          'sed', 'tail', 'netstat', 'nano', 'inspect',
           'git', 'kubectl', 'kind', 'terraform', 'mkdir', 'rm', 'mv', 'touch', 'df', 'free', 'top', 'bash', 'sh', '--version', 'version', 'images',
-          'get', 'apply', 'delete', 'describe', 'port-forward', 'rollout', 'create', 'cluster', 'clusters', 'pods', 'deployments', 'services', 'nodes',
+          'get', 'apply', 'edit', 'delete', 'describe', 'port-forward', 'rollout', 'create', 'cluster', 'clusters', 'pods', 'deployments', 'services', 'nodes',
           'init', 'plan', 'destroy', 'status', 'add', 'commit', 'log', 'branch', 'checkout', 'merge', 'clone', 'push', 'pull', 'config', 'load', 'docker-image'];
         for (var n in w.containers) words.push(n);
         for (var pn in w.k8s.pods) words.push(pn);

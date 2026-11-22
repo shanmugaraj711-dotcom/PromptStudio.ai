@@ -172,6 +172,8 @@ details.curriculum .cbody-inner { overflow: hidden; min-height: 0; }
 .ladder .step { font-size: 12px; font-weight: 700; border-radius: 9999px; padding: 4px 10px; background: #eef2f7; color: #475467; }
 .ladder .step.done { background: #dcfce7; color: #027a48; }
 .ladder .step.next { background: #fef3c7; color: #92400e; }
+.ladder .step .here { font-weight: 800; color: #1d4ed8; }
+.ladder .ladder-arrow { color: var(--muted); font-weight: 800; align-self: center; }
 .ladder .ladder-note { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
 .ladder .ladder-note b { color: var(--ink); }
 .levels-grid { display: grid; gap: 12px; }
