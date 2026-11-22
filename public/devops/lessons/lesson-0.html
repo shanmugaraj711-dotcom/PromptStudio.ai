@@ -9,6 +9,7 @@
 <body data-page="lesson" data-lesson="lesson-0" data-phase="free">
 <header class="lesson-header">
   <div class="lh-row">
+    <button class="sidebar-toggle" id="btn-sidebar" type="button" aria-expanded="false" aria-controls="lesson-sidebar">&#9776; Lessons</button>
     <a class="wordmark" href="/devops/index.html">DevOps Kit</a>
     <span class="lh-meta">Free · Before you start</span>
     <span class="auth-slot" id="auth-slot"></span>
@@ -16,7 +17,7 @@
   <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
 </header>
 <main class="lesson-wrap">
-<div class="lesson-content" id="lesson-content"><h1>Lesson 0: Before the Terminal</h1><span class="phasebadge">Free</span><h2>What this is and why it matters</h2>
+<nav class="lesson-sidebar" id="lesson-sidebar" aria-label="All lessons"><div class="sb-head"><b>DevOps Kit</b><span>All 18 lessons</span></div><div class="sb-group"><span class="sb-group-title">Start here</span><a class="sb-link current" aria-current="page" href="/devops/lessons/lesson-0.html">Lesson 0</a></div><div class="sb-group"><span class="sb-group-title">Phase 1 · The Data Tier</span><a class="sb-link" href="/devops/lessons/p1-start.html">Start Here</a><a class="sb-link" href="/devops/lessons/p1-kafka.html">Kafka</a><a class="sb-link" href="/devops/lessons/p1-postgresql.html">PostgreSQL</a><a class="sb-link" href="/devops/lessons/p1-redis.html">Redis</a><a class="sb-link" href="/devops/lessons/p1-object-store.html">Object Store</a><a class="sb-link" href="/devops/lessons/p1-load-balancer.html">Load Balancer</a><a class="sb-link" href="/devops/lessons/p1-end-to-end.html">End-to-End</a></div><div class="sb-group"><span class="sb-group-title">Phase 2 · The Rest of DevOps</span><a class="sb-link" href="/devops/lessons/p2-start.html">Start Here</a><a class="sb-link" href="/devops/lessons/p2-zero-cost.html">Zero-Cost Lab</a><a class="sb-link" href="/devops/lessons/p2-kubernetes.html">Kubernetes</a><a class="sb-link" href="/devops/lessons/p2-break-fix.html">Break-and-Fix</a><a class="sb-link" href="/devops/lessons/p2-cheat-sheets.html">Cheat Sheets</a><a class="sb-link" href="/devops/lessons/p2-interview.html">Interview Pack</a><a class="sb-link" href="/devops/lessons/p2-portfolio.html">Portfolio</a><a class="sb-link" href="/devops/lessons/p2-resume.html">Resume Bullets</a><a class="sb-link" href="/devops/lessons/p2-best-sites.html">Best Sites</a></div><div class="sb-group"><span class="sb-group-title">Reference</span><a class="sb-link" href="/devops/lessons/error-decoder.html">Error Decoder</a></div></nav><div class="lesson-main"><div class="lesson-content" id="lesson-content"><h1>Lesson 0: Before the Terminal</h1><span class="phasebadge">Free</span><h2>What this is and why it matters</h2>
 <p>This lesson is the <strong>setup</strong> step: it gets your computer ready before any real lab begins.</p>
 <p>Without it, every later lab fails at the first step, because the tools it needs are not installed or not running.</p>
 <p>You will learn the basic words, install one free program, and run two quick checks that prove it works.</p>
@@ -47,7 +48,7 @@
 <h2>3. First checks</h2>
 <p>Open your terminal. Type each command exactly as shown, then press Enter.</p>
 <p>First, check Docker itself:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker --version</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Docker version 27.5.1, build 9f9e405</code></pre></div></div>
+<div class="tryit"><a class="btn amber" href="/devops/sims/lesson-0.html">Try it Yourself &raquo;</a><span>Open the practice terminal and run it yourself — nothing installs.</span></div><div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker --version</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Docker version 27.5.1, build 9f9e405</code></pre></div></div>
 <p>Your version number will be different — that is fine. What matters is a version number, not an error.</p>
 <p>If it breaks: &quot;command not found&quot; means Docker is not installed — go back to section 2 and install it. &quot;Cannot connect to the Docker daemon&quot; means Docker Desktop is not running yet — open Docker Desktop and wait until it says it is running.</p>
 <p>Next, check Compose, the tool that starts several containers together from one file:</p>
@@ -79,7 +80,7 @@ OK: Memory is fine (about 8 GB free right now).</code></pre></div>
 <p>If it breaks: &quot;No such file or directory&quot; means you are not inside the <code>phase1</code> folder — run <code>cd phase1</code> first, then try again. A FIX line means that one check failed — do what the FIX line says, then run the script again.</p>
 <p><strong>Step 2 — Look up the error in the error decoder.</strong> Copy the error message from your terminal, find it in the decoder, and follow the fix it gives.</p>
 <p><strong>Step 3 — Email us.</strong> If the doctor says all OK and the error decoder has no match, email support@promptstudioai.in with the exact error line and the step you were on. We reply within 24 hours.</p>
-<p>If Lesson 0 worked, you are ready for Phase 1.</p><nav class="pager"><a class="prev" href="/devops/index.html"><span>← Home</span><span class="pname">DevOps Kit</span></a><a class="next" href="/devops/lessons/error-decoder.html"><span>Next lesson →</span><span class="pname">Error Decoder</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></main>
+<p>If Lesson 0 worked, you are ready for Phase 1.</p><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> In the terminal, type: <code>docker --version</code> — what exact version line appears?</p><details class="exercise-answer"><summary>Show answer</summary><p>You should see <code>Docker version 26.1.3, build 26.1.3-0ubuntu1</code> (on your own computer, the version number may be different).</p></details></div><nav class="pager"><a class="prev" href="/devops/index.html"><span>← Home</span><span class="pname">DevOps Kit</span></a><a class="next" href="/devops/lessons/error-decoder.html"><span>Next lesson →</span><span class="pname">Error Decoder</span></a></nav><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button></div></div></main>
 <div class="auth-modal" id="auth-modal" hidden>
   <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
     <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
