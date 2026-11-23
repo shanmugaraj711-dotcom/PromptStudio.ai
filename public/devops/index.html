@@ -79,7 +79,7 @@
 <div class="simdeck" id="try-sim">
   <div class="wrap">
     <h2>Try a Simulation First</h2>
-    <p class="lead">Browser labs. No install, works on your phone. Three are free to try (Before the Terminal, Kafka, and Error Decoder) — the rest unlock with Phase 1 (₹399) or Phase 2 (₹799). Every simulation is a practice version: it shows the lab&rsquo;s real outputs, but nothing here runs a live service.</p>
+    <p class="lead">Browser labs. No install, works on your phone. Three are free to try (Before the Terminal, Kafka, and Error Decoder) — the rest unlock with Phase 1 (₹399), Phase 2 (₹799), or both together (₹999). Every simulation is a practice version: it shows the lab&rsquo;s real outputs, but nothing here runs a live service.</p>
     <div class="simdeck-scroll">
       <div class="simcard" data-sim="lesson-0" data-phase="free"><div class="simpills"><span class="steppill">6 STEPS</span><span class="tierpill free">Free</span></div><h3>Before the Terminal</h3><p>Check Docker is there, then run the machine check script.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><span>0/6</span></div><a class="btn amber" href="/sims/lesson-0.html">Launch Terminal &rarr;</a></div>
       <div class="simcard" data-sim="kafka" data-phase="phase1"><div class="simpills"><span class="steppill">16 STEPS</span><span class="tierpill free">Free</span></div><h3>Apache Kafka</h3><p>Create a topic, send three fake orders, watch the mirror copy them.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/16</span></div><a class="btn amber" href="/sims/kafka.html">Launch Terminal &rarr;</a></div>
@@ -133,8 +133,18 @@
         <div class="buyprice">₹799 <small>one-time</small></div>
         <ul>
           <li>Lessons 9&ndash;17, full guides</li>
-          <li>Phase 2 does not include Phase 1 — buy Phase 1 separately if you want both.</li>
+          <li>Phase 2 does not include Phase 1 — buy Phase 1 separately, or get both together for ₹999.</li>
           <li>Phase 2 kit download: 9 guide files + changelog &mdash; Linux, Git, Docker, Kubernetes, Terraform, CI/CD, monitoring, portfolio projects, interview pack</li>
+          <li>Your progress is saved, resume anytime</li>
+        </ul>
+      </div>
+      <div class="buycard">
+        <span class="buytag">Best value &mdash; Both phases &mdash; ₹999</span>
+        <div class="buyprice">₹999 <small>one-time</small></div>
+        <ul>
+          <li>Both phases together — save ₹199 vs ₹1,198</li>
+          <li>All 18 lessons, all 18 simulations unlocked</li>
+          <li>Both kit downloads: Phase 1 + Phase 2</li>
           <li>Your progress is saved, resume anytime</li>
         </ul>
       </div>
@@ -147,7 +157,7 @@
 <div class="wrap">
   <div class="section">
     <h2>Two phases</h2>
-    <p class="lead">Start with free Lesson 0, then Phase 1. If you want Linux, Git and Docker from zero first, do Phase 2 first.</p>
+    <p class="lead">Start with free Lesson 0, then Phase 1. If you want Linux, Git and Docker from zero first, do Phase 2 first. Or get both phases together for ₹999 — save ₹199.</p>
     <div class="cards">
       <div class="card">
         <h3>Phase 1 &mdash; The Data Tier</h3>
@@ -189,6 +199,24 @@
         <button class="btn amber pay-btn" data-phase="phase2" type="button">Buy Phase 2 — ₹799</button>
         <button class="btn owned-download" data-phase="phase2" type="button" hidden>✓ You own this — Download the kit (.zip)</button>
         <p class="owned-note" data-phase="phase2" hidden>✓ You own Phase 2. Your progress saves.</p>
+        <p class="paynote">Pay once with UPI, card or netbanking. Keep it forever.</p>
+      </div>
+      <div class="card featured bundle-wide">
+        <h3>Both phases &mdash; the full kit</h3>
+        <p class="tagline">Everything in Phase 1 and Phase 2, together. Save ₹199.</p>
+        <div class="price">₹999 <small>one-time</small></div>
+        <span class="microbadge">One-time &bull; No subscription &bull; Best value</span>
+        <ul>
+          <li>All 18 lessons, full guides</li>
+          <li>All 18 practice simulations unlocked</li>
+          <li>Both kit downloads — Phase 1 + Phase 2</li>
+          <li>Your progress is saved, resume anytime</li>
+          <li>Email support — we reply within 24 hours</li>
+        </ul>
+        <button class="btn amber pay-btn" data-phase="bundle" type="button">Buy both phases — ₹999</button>
+        <button class="btn owned-download" data-phase="phase1" type="button" hidden>✓ You own this — Download Phase 1 (.zip)</button>
+        <button class="btn owned-download" data-phase="phase2" type="button" hidden>✓ You own this — Download Phase 2 (.zip)</button>
+        <p class="owned-note" data-phase="bundle" hidden>✓ You own both phases. Your progress saves.</p>
         <p class="paynote">Pay once with UPI, card or netbanking. Keep it forever.</p>
       </div>
     </div>
@@ -252,7 +280,7 @@
 </div>
 <footer class="site"><b>PromptStudio</b> &middot; DevOps Kit &mdash; learn by doing, on your own machine.<br>Every lab uses fake data only &mdash; fake orders, fake names, fake receipts. Nothing real, nothing to leak.<br>Payment failed, or stuck more than 15 minutes? Mail us: <a href="mailto:support@promptstudioai.in">support@promptstudioai.in</a> — we reply within 24 hours.</footer>
 <div class="stickybar">
-  <div class="sb-prices">Phase 1: ₹399 &bull; Phase 2: ₹799<small>One-time &bull; UPI accepted</small></div>
+  <div class="sb-prices">Phase 1: ₹399 &bull; Phase 2: ₹799 &bull; Both: ₹999<small>One-time &bull; UPI accepted</small></div>
   <button class="btn pay-btn" id="sticky-buy" data-phase="phase1" type="button">Buy Phase 1 — ₹399</button>
   <a class="btn" id="sticky-continue" href="/lessons/p1-start.html" hidden>Continue learning &rarr;</a>
 </div>

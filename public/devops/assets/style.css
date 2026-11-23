@@ -111,7 +111,8 @@ th { background: #f2f2f7; }
 .simdeck-scroll { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding: 4px 16px 16px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .simdeck-scroll::-webkit-scrollbar { display: none; }
 .buygrid { display: grid; gap: 12px; margin-top: 16px; }
-@media (min-width: 640px) { .buygrid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 640px) { .buygrid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1100px) { .buygrid { grid-template-columns: repeat(4, 1fr); } }
 .buycard { background: #1f232b; border: 1px solid #343a45; border-radius: 14px; padding: 18px; }
 .buycard .buytag { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); background: var(--amber); border-radius: 9999px; padding: 5px 10px; }
 .buycard:first-child .buytag { background: #fff; }
@@ -138,6 +139,7 @@ th { background: #f2f2f7; }
 @media (min-width: 640px) { .cards { grid-template-columns: 1fr 1fr; } }
 .card { background: #fff; border: 1px solid #d0d5dd; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; box-shadow: var(--shadow-card); }
 .card.featured { border: 2px solid var(--ink); }
+.card.bundle-wide { grid-column: 1 / -1; }
 .card h3 { margin: 0 0 4px; font-size: 16px; }
 .card .tagline { color: var(--muted); font-size: 14px; margin: 0 0 8px; }
 .card .price { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--ink); margin: 4px 0; }

@@ -22,8 +22,8 @@
   var PHASE2_LESSONS = ["p2-start", "p2-zero-cost", "p2-kubernetes", "p2-break-fix", "p2-cheat-sheets", "p2-interview", "p2-portfolio", "p2-resume", "p2-best-sites"];
   var FREE_SIMS = { kafka: true, 'lesson-0': true, 'error-decoder': true };
   var FREE_LESSONS = { "lesson-0": true, "error-decoder": true };
-  var PHASE_NAMES = { phase1: "Phase 1", phase2: "Phase 2" };
-  var PHASE_PRICES = { phase1: "₹399", phase2: "₹799" };
+  var PHASE_NAMES = { phase1: "Phase 1", phase2: "Phase 2", bundle: "Both phases" };
+  var PHASE_PRICES = { phase1: "₹399", phase2: "₹799", bundle: "₹999" };
 
   var state = null; /* { entitlements, progress } from /api/devops-state */
   var stateLoaded = false;
@@ -43,7 +43,11 @@
   function pagePhase() { return (document.body && document.body.getAttribute('data-phase')) || ''; }
   function pageLesson() { return (document.body && document.body.getAttribute('data-lesson')) || ''; }
   function pageSim() { return (document.body && document.body.getAttribute('data-sim')) || ''; }
-  function owns(phase) { return !!(state && state.entitlements && state.entitlements[phase]); }
+  function owns(phase) {
+    /* The bundle is owned only when both phases are owned. */
+    if (phase === 'bundle') return owns('phase1') && owns('phase2');
+    return !!(state && state.entitlements && state.entitlements[phase]);
+  }
   function isLocked(phase) { return !owns(phase); }
 
   /* ---- toast ---- */
@@ -134,6 +138,13 @@
     document.querySelectorAll('.pay-btn').forEach(function (btn) {
       if (btn.closest('#lock-screen')) return;
       var ph = btn.getAttribute('data-phase');
+      if (ph === 'bundle') {
+        /* The bundle only makes sense when you own neither phase:
+           owning one already, that phase alone costs less than ₹999. */
+        btn.hidden = owns('phase1') || owns('phase2');
+        btn.disabled = isPending();
+        return;
+      }
       if (owns(ph)) { btn.hidden = true; }
       else { btn.hidden = false; btn.disabled = isPending(); }
     });
@@ -397,7 +408,7 @@
         amount: data.amount,
         currency: data.currency,
         name: 'PromptStudio — DevOps Kit',
-        description: phase === 'phase1' ? 'Phase 1: The Data Tier' : 'Phase 2: The Rest of DevOps',
+        description: phase === 'phase1' ? 'Phase 1: The Data Tier' : phase === 'bundle' ? 'Both phases: Phase 1 + Phase 2' : 'Phase 2: The Rest of DevOps',
         order_id: data.orderId,
         prefill: { name: user.displayName || '', email: user.email || '' },
         theme: { color: '#0b5fff' },
@@ -429,7 +440,7 @@
     }).catch(function (err) {
       btns.forEach(function (b) { b.disabled = false; });
       if (err && err.code === 'already_owned') {
-        toast('You already own this phase.');
+        toast(phase === 'bundle' ? 'You already own both phases.' : 'You already own this phase.');
         refreshState();
       } else {
         toast((err && err.message) || 'Could not start payment. Try again.');
@@ -442,10 +453,15 @@
      entitlement being readable, without ever asking for a reload. */
   function refreshStateWithRetry(phase) {
     var tries = 0;
+    function isDone() {
+      if (!phase) return true;
+      if (phase === 'bundle') return owns('phase1') && owns('phase2');
+      return owns(phase);
+    }
     function one() {
       tries += 1;
       return refreshState().then(function () {
-        if (phase && !owns(phase) && tries < 4) {
+        if (!isDone() && tries < 4) {
           return new Promise(function (r) { setTimeout(r, 1500); }).then(one);
         }
       }).catch(function (err) {
@@ -480,7 +496,7 @@
         stateLoaded = true;
         applyPage();
         return refreshStateWithRetry(donePhase).then(function () {
-          toast('Payment done — ' + PHASE_NAMES[donePhase] + ' is yours. Enjoy learning.');
+          toast(donePhase === 'bundle' ? 'Payment done — both phases are yours. Enjoy learning.' : 'Payment done — ' + PHASE_NAMES[donePhase] + ' is yours. Enjoy learning.');
         });
       }).catch(function (err) {
         /* The payment can land a moment before Razorpay reports the

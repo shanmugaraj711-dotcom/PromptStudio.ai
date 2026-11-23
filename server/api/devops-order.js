@@ -2,10 +2,12 @@ import { adminDb, json, requireUser } from "./_firebaseAdmin.js";
 import { isConfigured, razorpayRequest } from "./_razorpay.js";
 
 /* DevOps Kit order creation. Prices are fixed here, on the server —
-   the client never chooses an amount. One order per phase. */
+   the client never chooses an amount. One order per phase, or one
+   bundle order for both phases together (₹999, save ₹199). */
 const PHASES = {
   phase1: { priceInr: 399, name: "DevOps Kit — Phase 1: The Data Tier" },
   phase2: { priceInr: 799, name: "DevOps Kit — Phase 2: The Rest of DevOps" },
+  bundle: { priceInr: 999, name: "DevOps Kit — Both Phases (Phase 1 + Phase 2)" },
 };
 const PHASE_FIELD = { phase1: "devopsPhase1", phase2: "devopsPhase2" };
 
@@ -15,10 +17,20 @@ export default async function handler(req, res) {
   try {
     const decoded = await requireUser(req);
     const phase = req.body?.phase;
-    if (!PHASES[phase]) return json(res, 400, { message: "Choose Phase 1 or Phase 2." });
+    if (!PHASES[phase]) return json(res, 400, { message: "Choose Phase 1, Phase 2, or the bundle." });
     const db = adminDb();
     const userSnap = await db.collection("users").doc(decoded.uid).get();
-    if (userSnap.exists && userSnap.data()?.[PHASE_FIELD[phase]] === true) {
+    const userData = userSnap.exists ? userSnap.data() : {};
+    if (phase === "bundle") {
+      /* The bundle only makes sense when you own neither phase:
+         owning Phase 1 already, Phase 2 alone (₹799) is cheaper. */
+      if (userData?.devopsPhase1 === true && userData?.devopsPhase2 === true) {
+        return json(res, 409, { code: "already_owned", message: "You already own both phases." });
+      }
+      if (userData?.devopsPhase1 === true || userData?.devopsPhase2 === true) {
+        return json(res, 409, { code: "already_owned", message: "You already own one phase — buy the other phase on its own, it costs less than the bundle." });
+      }
+    } else if (userData?.[PHASE_FIELD[phase]] === true) {
       return json(res, 409, { code: "already_owned", message: "You already own this phase." });
     }
     const amountInr = PHASES[phase].priceInr;
