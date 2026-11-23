@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PostgreSQL Lab — Main Database, Standby, Failover — DevOps Kit</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body data-page="lesson" data-lesson="p1-postgresql" data-phase="phase1">
+<header class="lesson-header">
+  <div class="lh-row">
+    <button class="sidebar-toggle" id="btn-sidebar" type="button" aria-expanded="false" aria-controls="lesson-sidebar">&#9776; Lessons</button>
+    <a class="wordmark" href="/">DevOps Kit</a>
+    <span class="lh-meta">Lesson 4 of 18</span>
+    <span class="auth-slot" id="auth-slot"></span>
+  </div>
+  <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
+</header>
+<main class="lesson-wrap">
+<nav class="lesson-sidebar" id="lesson-sidebar" aria-label="All lessons"><div class="sb-head"><b>DevOps Kit</b><span>All 18 lessons</span></div><div class="sb-group"><span class="sb-group-title">Start here</span><a class="sb-link" href="/lessons/lesson-0.html">Lesson 0</a></div><div class="sb-group"><span class="sb-group-title">Phase 1 · The Data Tier</span><a class="sb-link" href="/lessons/p1-start.html">Start Here</a><a class="sb-link" href="/lessons/p1-kafka.html">Kafka</a><a class="sb-link current" aria-current="page" href="/lessons/p1-postgresql.html">PostgreSQL</a><a class="sb-link" href="/lessons/p1-redis.html">Redis</a><a class="sb-link" href="/lessons/p1-object-store.html">Object Store</a><a class="sb-link" href="/lessons/p1-load-balancer.html">Load Balancer</a><a class="sb-link" href="/lessons/p1-end-to-end.html">End-to-End</a></div><div class="sb-group"><span class="sb-group-title">Phase 2 · The Rest of DevOps</span><a class="sb-link" href="/lessons/p2-start.html">Start Here</a><a class="sb-link" href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a><a class="sb-link" href="/lessons/p2-kubernetes.html">Kubernetes</a><a class="sb-link" href="/lessons/p2-break-fix.html">Break-and-Fix</a><a class="sb-link" href="/lessons/p2-cheat-sheets.html">Cheat Sheets</a><a class="sb-link" href="/lessons/p2-interview.html">Interview Pack</a><a class="sb-link" href="/lessons/p2-portfolio.html">Portfolio</a><a class="sb-link" href="/lessons/p2-resume.html">Resume Bullets</a><a class="sb-link" href="/lessons/p2-best-sites.html">Best Sites</a></div><div class="sb-group"><span class="sb-group-title">Reference</span><a class="sb-link" href="/lessons/error-decoder.html">Error Decoder</a></div></nav><div class="lesson-main"><div class="lock-screen" id="lock-screen" hidden><p class="lock-loading" hidden>Checking your sign-in…</p><span class="lock-icon">🔒</span><h2>This lesson is in Phase 1 — ₹399, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase1" type="button" hidden>Buy Phase 1 — ₹399</button><a class="lock-back" href="/">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><h1>PostgreSQL Lab — Main Database, Standby, Failover</h1><span class="phasebadge">Phase 1 · The Data Tier</span><h2>What this is and why it matters</h2>
+<p><strong>PostgreSQL</strong> is the record book: a database that stores real records in tables and keeps them safe.</p>
+<p>In real systems, the failure that hurts most is the main database dying and taking every record with it.</p>
+<p>This lab runs a main copy and a standby that follows it live, and a watcher called Patroni promotes the standby by itself.</p>
+<div class="ladder"><div class="ladder-title">Your level in PostgreSQL</div><div class="ladder-steps"><span class="step-unit"><span class="step done">&#10003; Step 1 &middot; Beginner</span><span class="ladder-arrow">&rarr;</span></span><span class="step-unit"><span class="step done">&#10003; Step 2 &middot; Intermediate</span><span class="ladder-arrow">&rarr;</span></span><span class="step-unit"><span class="step done">&#10003; Step 3 &middot; Advanced <span class="here">&#8592; You are here</span></span></span></div><div class="ladder-note">After this lesson you can: <b>Recover a PostgreSQL database after killing it on purpose.</b></div><div class="ladder-note">You have finished this topic&rsquo;s ladder.</div><div class="ladder-note">Advanced challenge: <b>Database will not restart after a crash — remove the stuck lock file (postmaster.pid), start it, check it answers.</b> — try it in <a href="/lessons/p1-postgresql.html">PostgreSQL</a>.</div></div><h2>Test status</h2>
+<p>Syntax-checked only (20 November 2026). The compose file, the SQL file and the shell script were checked for correct syntax. This lab was not run end-to-end on this machine, because this machine has no Docker. Follow it on your own machine with Docker, and if a step fails, read the error first — that is the real skill.</p>
+<p>v2 (20 November 2026): added the <code>chmod</code> step in Part 1, Step 1. The database setup file must be readable by the database&#x27;s own user, or the main database fails to start. Still syntax-checked only, not run end to end.</p>
+<h2>What this lab is</h2>
+<p>You will run two PostgreSQL databases on your own machine: a main one (primary) and a standby copy (replica). You will write fake orders into the main one, watch them appear on the standby, then kill the main one and promote the standby so work can continue. The last part shows Patroni — a watcher that does the promotion for you.</p>
+<h2>What you need first</h2>
+<ul><li>Docker running (Phase 2, <a href="/lessons/p2-zero-cost.html">zero-cost-lab.md</a>).</li><li>The files in this folder: <code>docker-compose.yml</code>, <code>01-replicator.sql</code>, <code>replica-entrypoint.sh</code>. The <code>patroni/</code> folder is used only in the last part.</li></ul>
+<h2>Words you need here</h2>
+<ul><li><strong>Primary</strong> — the main database. It takes writes (new rows).</li><li><strong>Replica / standby</strong> — a copy that follows the primary. It takes reads only. It becomes the new primary on failover.</li><li><strong>WAL</strong> — the write-ahead log. A list of every change, written down first, before the real data changes. The replica reads this list to stay in sync. WAL streaming means the replica reads the list live, as changes happen.</li><li><strong>Replication slot</strong> — a bookmark the primary keeps, so it does not throw away WAL entries the replica still needs.</li><li><strong>Failover</strong> — the standby taking over as the new primary.</li><li><strong>Patroni</strong> — a program that watches the databases and does the failover by itself.</li></ul>
+<h2>Part 1 — Primary and replica</h2>
+<h3>Step 1 — Start both databases</h3>
+<p>From inside this folder, first make the database setup file readable. The database runs as its own user, and it cannot read a file that is private to you. This one command fixes that. <code>chmod</code> is short for &quot;change mode&quot; — it changes who can read a file. <code>-R</code> means every file in this folder, and <code>a+r</code> means everyone can read.</p>
+<div class="tryit"><a class="btn amber" href="/sims/postgresql.html">Try it Yourself &raquo;</a><span>Open the practice terminal and run it yourself — nothing installs. Included with Phase 1. Simulation — practice version. Run the real lab with Docker to do it for real.</span></div><div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>chmod -R a+r .</code></pre></div>
+<p>You should see: nothing — <code>chmod</code> prints nothing when it works. That is normal.</p>
+<p>If it breaks: &quot;No such file or directory&quot; means you are in the wrong folder — run <code>ls</code> and check you are inside the <code>postgresql-lab</code> folder, then try again.</p>
+<p>Then start both databases:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose up -d</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>[+] Running 2/2
+ ✔ Container pg-primary  Started
+ ✔ Container pg-replica  Started</code></pre></div></div>
+<p>Check:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose ps</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>NAME          STATUS
+pg-primary    Up
+pg-replica    Up</code></pre></div></div>
+<p>(The real table has more columns. What matters is both names, each with STATUS &quot;Up&quot;.)</p>
+<p>The replica copies all data from the primary the first time it starts, so it takes about a minute. Check its log:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose logs replica</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>No data here yet. Copying from the primary...
+Copy done.</code></pre></div></div>
+<p>If it breaks: if the replica log shows &quot;waiting for the primary&quot; for more than two minutes, check the primary is up with <code>docker compose ps</code>. If the primary is up and the replica still waits, read the replica log from the top — the error line is usually about the password or the connection.</p>
+<h3>Step 2 — Write three fake rows on the primary</h3>
+<p>Connect to the primary and make a small table:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec pg-primary psql -U learner -d practice -c &quot;CREATE TABLE orders (id INT, item TEXT, amount INT); INSERT INTO orders VALUES (101, &#x27;notebook&#x27;, 250), (102, &#x27;pen&#x27;, 40), (103, &#x27;mug&#x27;, 350);&quot;</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>CREATE TABLE
+INSERT 0 3</code></pre></div></div>
+<p>&quot;INSERT 0 3&quot; means 3 rows went in. The data is fake — made up for this lab.</p>
+<p>If it breaks: &quot;relation already exists&quot; means you already made the table — skip the CREATE part and just run the INSERT, or drop the table first with <code>DROP TABLE orders;</code> and start this step again.</p>
+<h3>Step 3 — Read the same rows from the replica</h3>
+<p>Now ask the replica. It should already have the same rows, because it follows the primary live:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec pg-replica psql -U learner -d practice -c &quot;SELECT * FROM orders ORDER BY id;&quot;</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code> id  |   item   | amount
+-----+----------+--------
+ 101 | notebook |    250
+ 102 | pen      |     40
+ 103 | mug      |    350
+(3 rows)</code></pre></div></div>
+<p>If it breaks: if the replica shows 0 rows, wait 10 seconds and try again — the copy takes a moment. If it still shows 0 rows, check the replica is really a replica: run <code>docker exec pg-replica psql -U learner -d practice -c &quot;SELECT pg_is_in_recovery();&quot;</code> You should see <code>t</code> (true). If it shows <code>f</code>, the replica is not following the primary — stop and start it again with <code>docker compose restart replica</code>.</p>
+<h3>Step 4 — Try to write on the replica (it must refuse)</h3>
+<p>A standby takes reads only. Try an insert on the replica:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec pg-replica psql -U learner -d practice -c &quot;INSERT INTO orders VALUES (104, &#x27;pen stand&#x27;, 120);&quot;</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>ERROR:  cannot execute INSERT in a read-only transaction</code></pre></div></div>
+<p>That error is the proof. The replica refuses writes. This is correct and expected — do not try to fix it.</p>
+<p>If it breaks: if you see <code>INSERT 0 1</code> instead of the error, you ran it on the primary by mistake — check the container name in the command (<code>pg-replica</code>, not <code>pg-primary</code>) and try again.</p>
+<h3>Step 5 — Kill the primary and promote the replica</h3>
+<p>Stop the primary:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose stop primary</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>✔ Container pg-primary  Stopped</code></pre></div></div>
+<p>If it breaks: &quot;No such container&quot; means the name is wrong — run <code>docker compose ps</code> and use the name it shows.</p>
+<p>Check the replica still answers reads:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec pg-replica psql -U learner -d practice -c &quot;SELECT * FROM orders ORDER BY id;&quot;</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code> id  |   item   | amount
+-----+----------+--------
+ 101 | notebook |    250
+ 102 | pen      |     40
+ 103 | mug      |    350
+(3 rows)</code></pre></div></div>
+<p>The data survived — the replica has its own copy.</p>
+<p>Now promote the replica to be the new primary:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec pg-replica psql -U learner -d practice -c &quot;SELECT pg_promote();&quot;</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code> pg_promote
+------------
+ t</code></pre></div></div>
+<p><code>t</code> means true — the promotion worked. Check it is no longer in recovery:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec pg-replica psql -U learner -d practice -c &quot;SELECT pg_is_in_recovery();&quot;</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code> pg_is_in_recovery
+-------------------
+ f
+(1 row)</code></pre></div></div>
+<p>Prove it takes writes now:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec pg-replica psql -U learner -d practice -c &quot;INSERT INTO orders VALUES (104, &#x27;pen stand&#x27;, 120); SELECT * FROM orders ORDER BY id;&quot;</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>INSERT 0 1
+ id  |   item    | amount
+-----+-----------+--------
+ 101 | notebook  |    250
+ 102 | pen       |     40
+ 103 | mug       |    350
+ 104 | pen stand |    120
+(4 rows)</code></pre></div></div>
+<p>Failover done — by hand.</p>
+<p>If it breaks: if <code>pg_promote()</code> shows <code>f</code>, the replica was already promoted (maybe you ran this step twice) — check with <code>SELECT pg_is_in_recovery();</code>. If it shows <code>f</code>, you are done.</p>
+<h3>Step 6 — The honest part: the old primary cannot just rejoin</h3>
+<p>The old primary still has the old data. It does not know about row 104. It cannot rejoin as a replica by itself. In real work, you rebuild it from the new primary, the same way the replica was first built — copy the data with <code>pg_basebackup</code>, then start it as a standby. The commands are the same as the ones in <code>replica-entrypoint.sh</code>. For this lab, the simple way back is:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose down -v
+docker compose up -d</code></pre></div>
+<p>You should see: the containers stop, the data is wiped, then both databases start fresh with STATUS &quot;Up&quot;.</p>
+<p>If it breaks: if <code>up -d</code> fails with &quot;port is already allocated&quot;, the old containers did not stop yet — wait a few seconds and run <code>docker compose up -d</code> again.</p>
+<p>That wipes both databases and starts fresh. The data was fake, so losing it is fine.</p>
+<h2>Part 2 — Patroni does the failover for you (advanced)</h2>
+<h3>What Patroni is</h3>
+<p>In Part 1 you promoted the replica by hand. Patroni is a watcher program that does that job by itself: it watches the main database, and if it dies, Patroni promotes the standby within seconds. It keeps its notes in etcd — a small notebook service that all the Patroni nodes share.</p>
+<h3>Step 1 — Start the Patroni cluster</h3>
+<p>From inside the <code>patroni/</code> folder:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose up -d --build</code></pre></div>
+<p>You should see: the build lines scroll past, then both Patroni nodes start. The first start builds the Patroni image, so it takes a few minutes. Check the cluster:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8008/cluster</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>{ &quot;members&quot;: [
+  {&quot;name&quot;: &quot;patroni-1&quot;, &quot;role&quot;: &quot;leader&quot;},
+  {&quot;name&quot;: &quot;patroni-2&quot;, &quot;role&quot;: &quot;replica&quot;} ] }</code></pre></div></div>
+<p>(The real answer is longer. The two lines above are the part that matters.) (If <code>curl</code> is not installed on your machine, open <code>http://localhost:8008/cluster</code> in your browser instead — same text.)</p>
+<p>If it breaks: if the page does not load, wait a minute — the first node builds the database from scratch. Check the logs with <code>docker compose logs patroni-1</code>.</p>
+<h3>Step 2 — Write a row, watch it copy</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec patroni-1 psql -U learner -d postgres -c &quot;CREATE TABLE orders (id INT, item TEXT); INSERT INTO orders VALUES (201, &#x27;stapler&#x27;);&quot;</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>CREATE TABLE
+INSERT 0 1</code></pre></div></div>
+<p>Now read it from the second node:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec patroni-2 psql -U learner -d postgres -c &quot;SELECT * FROM orders;&quot;</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code> id  |  item
+-----+---------
+ 201 | stapler
+(1 row)</code></pre></div></div>
+<p>(The database name here is <code>postgres</code>, the default — Patroni&#x27;s first-time setup (its &#x27;bootstrap&#x27;) does not create a database called <code>practice</code>.)</p>
+<p>If it breaks: if the second node shows 0 rows, wait 10 seconds and try again — the copy takes a moment. If it still shows 0 rows, check the cluster with <code>curl http://localhost:8008/cluster</code> and confirm one member is the leader.</p>
+<h3>Step 3 — Kill the leader and watch Patroni promote the other one</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose stop patroni-1</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>✔ Container patroni-1  Stopped</code></pre></div></div>
+<p>Wait 30 seconds, then check the cluster again:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8009/cluster</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>{ &quot;members&quot;: [
+  {&quot;name&quot;: &quot;patroni-2&quot;, &quot;role&quot;: &quot;leader&quot;},
+  {&quot;name&quot;: &quot;patroni-1&quot;, &quot;role&quot;: &quot;replica&quot;} ] }</code></pre></div></div>
+<p>(The real answer is longer. The two lines above are the part that matters.)</p>
+<p>Patroni promoted it by itself — no command from you. Prove it takes writes:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec patroni-2 psql -U learner -d postgres -c &quot;INSERT INTO orders VALUES (202, &#x27;ruler&#x27;); SELECT * FROM orders;&quot;</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>INSERT 0 1
+ id  |  item
+-----+---------
+ 201 | stapler
+ 202 | ruler
+(2 rows)</code></pre></div></div>
+<p>If it breaks: if <code>patroni-2</code> still shows <code>&quot;role&quot;: &quot;replica&quot;</code> after a minute, Patroni has not finished the promotion yet — wait another minute and check again. If it never changes, read the logs with <code>docker compose logs patroni-2</code>.</p>
+<h3>Step 4 — Bring the old leader back</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose start patroni-1</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>✔ Container patroni-1  Started</code></pre></div></div>
+<p>Wait a minute, then check the cluster:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8008/cluster</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>{ &quot;members&quot;: [
+  {&quot;name&quot;: &quot;patroni-1&quot;, &quot;role&quot;: &quot;replica&quot;},
+  {&quot;name&quot;: &quot;patroni-2&quot;, &quot;role&quot;: &quot;leader&quot;} ] }</code></pre></div></div>
+<p>It rejoined by itself and copied the new data from the leader. That is what Patroni is for.</p>
+<p>If it breaks: if <code>patroni-1</code> does not come back, read its log with <code>docker compose logs patroni-1</code> — the error line names the problem.</p>
+<h3>Clean up</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose down -v</code></pre></div>
+<p>You should see: the Patroni containers stop and the data is wiped.</p>
+<p>If it breaks: &quot;No such container&quot; means the services are already stopped — nothing to do.</p>
+<p>That stops everything and wipes the data. The data was fake.</p>
+<h2>What you can now say, truthfully</h2>
+<p>&quot;I ran a PostgreSQL primary and a standby with WAL streaming, proved the standby had the same data, promoted it by hand when the primary died, and ran a Patroni cluster that did the same failover by itself.&quot;</p>
+<h2>What this lab does NOT cover</h2>
+<ul><li>Real clusters run three or more database nodes, not two.</li><li><code>pg_rewind</code> (used in the Patroni setup) lets an old primary rejoin faster. The plain lab in Part 1 does not use it — that is why the old primary must be rebuilt there.</li><li>Backups are a different job from replication. Replication protects you when a machine dies. Backups protect you when data is deleted by mistake. You need both in real work.</li></ul>
+<h2>Failure drill — Kill the leader, watch Patroni promote</h2>
+<p>This drill proves Patroni promotes the standby by itself when the leader dies, and no rows are lost.</p>
+<p>Do Part 2 first, up to Step 2, so row 201 is already saved.</p>
+<p>Step 1 — Go into the Patroni folder and stop the leader:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cd patroni
+docker compose stop patroni-1</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>✔ Container patroni-1  Stopped</code></pre></div></div>
+<p>Step 2 — Wait 30 seconds, then check the cluster on the second node&#x27;s port:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8009/cluster</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>{ &quot;members&quot;: [
+  {&quot;name&quot;: &quot;patroni-2&quot;, &quot;role&quot;: &quot;leader&quot;},
+  {&quot;name&quot;: &quot;patroni-1&quot;, &quot;role&quot;: &quot;replica&quot;} ] }</code></pre></div></div>
+<p>(The real answer is longer. The two lines above are the part that matters.)</p>
+<p>Step 3 — Prove the new leader takes writes:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec patroni-2 psql -U learner -d postgres -c &quot;INSERT INTO orders VALUES (202, &#x27;ruler&#x27;); SELECT * FROM orders;&quot;</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>INSERT 0 1
+ id  |  item
+-----+---------
+ 201 | stapler
+ 202 | ruler
+(2 rows)</code></pre></div></div>
+<p>Both rows are there. Row 201 survived, and row 202 is new.</p>
+<p>Step 4 — Bring the old leader back:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose start patroni-1</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>✔ Container patroni-1  Started</code></pre></div></div>
+<p>Wait a minute, then check the cluster:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8008/cluster</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>{ &quot;members&quot;: [
+  {&quot;name&quot;: &quot;patroni-1&quot;, &quot;role&quot;: &quot;replica&quot;},
+  {&quot;name&quot;: &quot;patroni-2&quot;, &quot;role&quot;: &quot;leader&quot;} ] }</code></pre></div></div>
+<p>Checklist — tick each one when you have seen it:</p>
+<ul><li>☐ The leader changed: <code>patroni-2</code> became the leader.</li><li>☐ No rows lost: row 201 is still there after the failover.</li><li>☐ New row saved: row 202 was written to the new leader.</li></ul>
+<p>Reset — run this from the <code>phase1</code> folder to wipe the drill and start fresh:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>bash reset.sh postgresql-lab/patroni</code></pre></div>
+<p>You should see: the script stops the cluster and wipes the data, then prints that it is done.</p>
+<p>If it breaks: &quot;Permission denied&quot; means the script is not marked runnable — run <code>chmod +x reset.sh</code> and try again.</p>
+<p>Or, from inside the <code>patroni</code> folder, the plain way:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose down -v &amp;&amp; docker compose up -d</code></pre></div>
+<p>You should see: the containers stop, the data is wiped, then the cluster starts fresh.</p>
+<p>That stops everything and wipes the data. The data was fake.</p>
+<h2>Save your proof</h2>
+<p>The proof for this lab is the failover log: the cluster output showing the new leader, and the row count before and after. Save the cluster output with this command, run from inside the <code>patroni/</code> folder, after the drill:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir -p ../../portfolio/proof
+curl http://localhost:8009/cluster &gt; ../../portfolio/proof/failover-log.txt</code></pre></div>
+<p>Then open <code>portfolio/proof/failover-log-TEMPLATE.txt</code>, copy it to <code>failover-log.txt</code> if you want the full format, and add the row counts by hand. That file is your proof.</p>
+<p>You should see: nothing in the terminal when you run the save command — the cluster output went into the file, not the screen.</p>
+<p>If it breaks: if the file is empty, the cluster was not up on port 8009 when you ran it — check the cluster with <code>curl http://localhost:8009/cluster</code> first, then save again.</p><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> In the terminal, type: <code>curl http://localhost:8008/cluster</code> — which database copy has the <code>leader</code> (main database) role?</p><p><a href="/sims/postgresql.html">Open the practice terminal to test this &rarr;</a></p><details class="exercise-answer"><summary>Show answer</summary><p>You should see <code>{&quot;name&quot;: &quot;patroni-1&quot;, &quot;role&quot;: &quot;leader&quot;}</code>, showing that <code>patroni-1</code> is the main database and <code>patroni-2</code> is the replica.</p></details></div><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button><nav class="pager"><a class="prev" href="/lessons/p1-kafka.html"><span>← Previous lesson</span><span class="pname">Kafka</span></a><a class="next" href="/lessons/p1-redis.html"><span>Next lesson →</span><span class="pname">Redis</span></a></nav></div></div></main>
+<div class="auth-modal" id="auth-modal" hidden>
+  <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
+    <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
+    <h2>Sign in to DevOps Kit</h2>
+    <p class="auth-sub">Your progress saves, so you can stop and come back.</p>
+    <button class="btn auth-google" id="auth-google" type="button">Continue with Google</button>
+    <div class="auth-or"><span>or with email</span></div>
+    <div class="auth-tabs">
+      <button type="button" id="auth-tab-signin" class="active">Sign in</button>
+      <button type="button" id="auth-tab-signup">Create account</button>
+    </div>
+    <form id="auth-form">
+      <label>Email<input id="auth-email" type="email" autocomplete="email" required></label>
+      <label>Password<input id="auth-password" type="password" autocomplete="current-password" required minlength="6"></label>
+      <p class="auth-error" id="auth-error" hidden></p>
+      <button class="btn amber auth-submit" id="auth-submit" type="submit">Sign in</button>
+    </form>
+    <p class="auth-switch"><span id="auth-switch-note">No account yet? </span><button type="button" id="auth-switch-link" class="linklike">Create one</button></p>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="/assets/auth.js"></script>
+<script src="/assets/devops-app.js"></script>
+<script src="/assets/lesson.js"></script></body></html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 0: Before the Terminal — DevOps Kit</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body data-page="lesson" data-lesson="lesson-0" data-phase="free">
+<header class="lesson-header">
+  <div class="lh-row">
+    <button class="sidebar-toggle" id="btn-sidebar" type="button" aria-expanded="false" aria-controls="lesson-sidebar">&#9776; Lessons</button>
+    <a class="wordmark" href="/">DevOps Kit</a>
+    <span class="lh-meta">Free · Before you start</span>
+    <span class="auth-slot" id="auth-slot"></span>
+  </div>
+  <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
+</header>
+<main class="lesson-wrap">
+<nav class="lesson-sidebar" id="lesson-sidebar" aria-label="All lessons"><div class="sb-head"><b>DevOps Kit</b><span>All 18 lessons</span></div><div class="sb-group"><span class="sb-group-title">Start here</span><a class="sb-link current" aria-current="page" href="/lessons/lesson-0.html">Lesson 0</a></div><div class="sb-group"><span class="sb-group-title">Phase 1 · The Data Tier</span><a class="sb-link" href="/lessons/p1-start.html">Start Here</a><a class="sb-link" href="/lessons/p1-kafka.html">Kafka</a><a class="sb-link" href="/lessons/p1-postgresql.html">PostgreSQL</a><a class="sb-link" href="/lessons/p1-redis.html">Redis</a><a class="sb-link" href="/lessons/p1-object-store.html">Object Store</a><a class="sb-link" href="/lessons/p1-load-balancer.html">Load Balancer</a><a class="sb-link" href="/lessons/p1-end-to-end.html">End-to-End</a></div><div class="sb-group"><span class="sb-group-title">Phase 2 · The Rest of DevOps</span><a class="sb-link" href="/lessons/p2-start.html">Start Here</a><a class="sb-link" href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a><a class="sb-link" href="/lessons/p2-kubernetes.html">Kubernetes</a><a class="sb-link" href="/lessons/p2-break-fix.html">Break-and-Fix</a><a class="sb-link" href="/lessons/p2-cheat-sheets.html">Cheat Sheets</a><a class="sb-link" href="/lessons/p2-interview.html">Interview Pack</a><a class="sb-link" href="/lessons/p2-portfolio.html">Portfolio</a><a class="sb-link" href="/lessons/p2-resume.html">Resume Bullets</a><a class="sb-link" href="/lessons/p2-best-sites.html">Best Sites</a></div><div class="sb-group"><span class="sb-group-title">Reference</span><a class="sb-link" href="/lessons/error-decoder.html">Error Decoder</a></div></nav><div class="lesson-main"><div class="lesson-content" id="lesson-content"><h1>Lesson 0: Before the Terminal</h1><span class="phasebadge">Free</span><h2>What this is and why it matters</h2>
+<p>This lesson is the <strong>setup</strong> step: it gets your computer ready before any real lab begins.</p>
+<p>Without it, every later lab fails at the first step, because the tools it needs are not installed or not running.</p>
+<p>You will learn the basic words, install one free program, and run two quick checks that prove it works.</p>
+<p>This lesson is for a true beginner. If you have never used a terminal, never installed Docker, and do not know what Linux or Ubuntu is, start here. Do this lesson first. Then go to Phase 1.</p>
+<p>One idea per step. Do the steps in order. Do not skip ahead.</p>
+<div class="ladder"><div class="ladder-title">Your level in Docker &amp; Containers</div><div class="ladder-steps"><span class="step-unit"><span class="step done">&#10003; Step 1 &middot; Beginner <span class="here">&#8592; You are here</span></span><span class="ladder-arrow">&rarr;</span></span><span class="step-unit"><span class="step">Step 2 &middot; Intermediate</span><span class="ladder-arrow">&rarr;</span></span><span class="step-unit"><span class="step">Step 3 &middot; Advanced</span></span></div><div class="ladder-note">After this lesson you can: <b>Explain what Docker and a port are, install Docker, check the machine, and run a first container.</b></div><div class="ladder-note">Next: <b>Phase 1 &middot; Start here</b> — How data moves, copies itself, and survives a crash. See <a href="/lessons/p1-start.html">Start Here</a>.</div><div class="ladder-note">Advanced challenge: <b>Container starts then stops — find what holds port 80, run it on a free port.</b> — try it in <a href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a>.</div></div><h2>1. What these words mean</h2>
+<p><strong>Computer.</strong> The machine on your desk or in your lap. It runs programs, stores your files, and shows you the screen.</p>
+<p><strong>Operating system.</strong> The main program that runs your computer. It starts when you switch the machine on. It lets your other programs use the screen, the keyboard, and the files. Windows and macOS are operating systems.</p>
+<p><strong>Linux.</strong> An operating system, like Windows and macOS, but free and open. Many servers run Linux. You do not need to learn Linux to start this kit. You only need to know the word.</p>
+<p><strong>Ubuntu.</strong> One version of Linux. It is the most common version people start with. When a guide says &quot;Ubuntu&quot;, it means a computer running this version of Linux.</p>
+<p><strong>Terminal.</strong> A window where you type commands instead of clicking. It looks plain: a dark or white window with a line of text waiting for you to type. Every command in this kit runs in a terminal.</p>
+<p><strong>Command.</strong> One line of typed text that tells the computer to do one thing. For example, <code>docker --version</code> is a command. It asks Docker to tell you which version it is. You type it, press Enter, and the computer answers.</p>
+<p><strong>Docker.</strong> A free program that runs other programs for you, each one in its own sealed box. You install Docker once. Then every lab in this kit runs inside Docker.</p>
+<p><strong>Container.</strong> One sealed box that Docker runs. A container holds one program and everything that program needs. When you stop the container, the program stops. When you start it again, the program starts again.</p>
+<p><strong>Image.</strong> The recipe Docker uses to build a container. An image is a saved copy of a program, ready to run. Docker downloads the image once, then builds containers from it. For example, the image <code>postgres:16-alpine</code> is the recipe for a PostgreSQL database.</p>
+<p><strong>Port.</strong> A numbered door on your computer. Programs listen at doors. When a lab says &quot;PostgreSQL is on port 5432&quot;, it means the database answers at door number 5432 on your own machine. Two programs cannot use the same door at the same time.</p>
+<p><strong>File.</strong> One saved thing: a lesson, a picture, a list of orders. A file has a name, like <code>docker-compose.yml</code>.</p>
+<p><strong>Folder.</strong> A place that holds files, like a drawer holds papers. A folder has a name, like <code>kafka-lab</code>. Folders can hold other folders too.</p>
+<p><strong>cd.</strong> Short for &quot;change directory&quot;. The command that moves your terminal into a folder. For example, <code>cd phase1</code> moves your terminal into the <code>phase1</code> folder. You type it, press Enter, and you are inside that folder. To go back up one folder, type <code>cd ..</code> and press Enter.</p>
+<h2>2. Installing Docker</h2>
+<p>You need Docker before any lab will run. Install it once.</p>
+<h3>On Windows</h3>
+<ol><li>Open your web browser and go to the Docker website. Search for &quot;Docker Desktop&quot; and open the download page.</li><li>Download Docker Desktop for Windows.</li><li>Open the downloaded file and follow the installer. Accept the normal choices it offers.</li><li>The installer sets up WSL for you. WSL is a built-in part of Windows that lets Linux programs run on Windows. You do not need to set it up yourself. Docker does it.</li><li>Restart your computer if the installer asks you to.</li><li>Open Docker Desktop from the Start menu. Wait until it says it is running. The first start takes a few minutes.</li><li>Leave Docker Desktop running in the background while you do the labs.</li></ol>
+<p>To open a terminal on Windows, open Git Bash. It comes with Git for Windows: download Git for Windows, install it, then find Git Bash in the Start menu. Run every command in this kit in Git Bash, not in PowerShell. The kit&#x27;s commands (including <code>for</code> loops and <code>.sh</code> scripts) work in Git Bash. They do not work in PowerShell.</p>
+<h3>On Mac</h3>
+<ol><li>Open your web browser and go to the Docker website. Search for &quot;Docker Desktop&quot; and open the download page.</li><li>Download Docker Desktop for Mac. Pick the download that matches your Mac: Apple chip, or Intel chip. If you do not know which one you have, click the Apple menu, then &quot;About This Mac&quot;, and read the chip name.</li><li>Open the downloaded file and follow the installer. Accept the normal choices it offers.</li><li>Open Docker Desktop from your Applications folder. Wait until it says it is running. The first start takes a few minutes.</li><li>Leave Docker Desktop running in the background while you do the labs.</li></ol>
+<p>To open a terminal on a Mac, open the Terminal app. You can find it in Applications, inside the Utilities folder. Or press Command and Space together, type &quot;Terminal&quot;, and press Enter.</p>
+<h2>3. First checks</h2>
+<p>Open your terminal. Type each command exactly as shown, then press Enter.</p>
+<p>First, check Docker itself:</p>
+<div class="tryit"><a class="btn amber" href="/sims/lesson-0.html">Try it Yourself &raquo;</a><span>Open the practice terminal and run it yourself — nothing installs. Free. Simulation — practice version. Run the real lab with Docker to do it for real.</span></div><div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker --version</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Docker version 27.5.1, build 9f9e405</code></pre></div></div>
+<p>Your version number will be different — that is fine. What matters is a version number, not an error.</p>
+<p>If it breaks: &quot;command not found&quot; means Docker is not installed — go back to section 2 and install it. &quot;Cannot connect to the Docker daemon&quot; means Docker Desktop is not running yet — open Docker Desktop and wait until it says it is running.</p>
+<p>Next, check Compose, the tool that starts several containers together from one file:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose version</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Docker Compose version v2.32.4-desktop.1</code></pre></div></div>
+<p>Again, your version number will be different — that is fine.</p>
+<p>If it breaks: if you see an error, Docker Desktop may still be starting. Wait a minute and try again. If it says &quot;compose is not a docker command&quot;, your Docker is too old — update Docker Desktop to the newest version.</p>
+<p>If both commands show a version number, Docker is ready.</p>
+<h2>4. What is inside your downloaded zip</h2>
+<p>This <strong>kit</strong> is a hands-on learning environment that lets you practice real DevOps tasks directly on your own computer.</p>
+<p>You download it so you can run databases, message queues, and deployment setups locally without paying for cloud servers or risking breaking live production systems.</p>
+<p>Inside your download, you will find lab folders containing ready-to-run setup recipes, step-by-step Markdown lessons, and proof template files to record your completed work.</p>
+<p>If you hit an issue while running a lab, a built-in doctor script checks your machine health, and an error decoder shows you how to resolve common failures.</p>
+<p>When you unzip the Phase 1 kit, you get a folder called <code>phase1</code>. Inside it you will see:</p>
+<ul><li>Lesson files, one per topic: <a href="/lessons/p1-start.html"><code>start-here.md</code></a>, <a href="/lessons/p1-kafka.html"><code>kafka-lab.md</code></a>, <a href="/lessons/p1-postgresql.html"><code>postgresql-lab.md</code></a>, <a href="/lessons/p1-redis.html"><code>redis-lab.md</code></a>, <a href="/lessons/p1-object-store.html"><code>object-store-lab.md</code></a>, <a href="/lessons/p1-load-balancer.html"><code>load-balancer-lab.md</code></a>, <a href="/lessons/p1-end-to-end.html"><code>end-to-end-lab.md</code></a>, and this file, <a href="/lessons/lesson-0.html"><code>lesson-0.md</code></a>. There is also <a href="/lessons/error-decoder.html"><code>error-decoder.md</code></a>: when a command fails, look up the error there.</li><li>One folder called <code>portfolio</code>. It holds a README template and blank proof forms. When a lab says &quot;save your proof&quot;, the proof goes in there.</li><li>One folder per lab: <code>kafka-lab</code>, <code>postgresql-lab</code>, <code>redis-lab</code>, <code>object-store-lab</code>, <code>load-balancer-lab</code>, and <code>end-to-end</code>.</li><li>Inside <code>postgresql-lab</code> there is one more folder, <code>patroni</code>, for the Patroni part of that lab.</li><li>Each lab folder has a file called <code>docker-compose.yml</code>. That file is the list of containers for that lab. You do not need to read it or change it. The lab steps tell you the commands to run in each folder.</li><li>Two helper scripts: <code>kit-doctor.sh</code> and <code>reset.sh</code>. The next section says what they do.</li></ul>
+<p>Do your work inside the <code>phase1</code> folder. When a lab says &quot;go into the lab folder&quot;, it means open your terminal, move into that folder, and run the commands there.</p>
+<h2>5. If you get stuck</h2>
+<p>Do these three steps, in order.</p>
+<p><strong>Step 1 — Run the kit doctor script.</strong> In your terminal, move into the <code>phase1</code> folder with <code>cd phase1</code>, press Enter, then run:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>bash kit-doctor.sh</code></pre></div>
+<p>It checks Docker, the doors (ports) the labs need, free disk space, and free memory. For each check it prints OK, or a plain-English FIX line that tells you what to do.</p>
+<p>You should see:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>OK: Docker command found.
+OK: Docker Compose works.
+OK: Docker is running.
+OK: Port 5432 is free (needed by postgresql-lab).
+OK: Disk space is fine (about 12 GB free).
+OK: Memory is fine (about 8 GB free right now).</code></pre></div>
+<p>Your lines will name the checks and numbers on your machine — what matters is OK on every line, not the exact words.</p>
+<p>If it breaks: &quot;No such file or directory&quot; means you are not inside the <code>phase1</code> folder — run <code>cd phase1</code> first, then try again. A FIX line means that one check failed — do what the FIX line says, then run the script again.</p>
+<p><strong>Step 2 — Look up the error in the error decoder.</strong> Copy the error message from your terminal, find it in the decoder, and follow the fix it gives.</p>
+<p><strong>Step 3 — Email us.</strong> If the doctor says all OK and the error decoder has no match, email support@promptstudioai.in with the exact error line and the step you were on. We reply within 24 hours.</p>
+<p>If Lesson 0 worked, you are ready for Phase 1.</p><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> In the terminal, type: <code>docker --version</code> — what exact version line appears?</p><p><a href="/sims/lesson-0.html">Open the practice terminal to test this &rarr;</a></p><details class="exercise-answer"><summary>Show answer</summary><p>You should see <code>Docker version 26.1.3, build 26.1.3-0ubuntu1</code> (on your own computer, the version number may be different).</p></details></div><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button><nav class="pager"><a class="prev" href="/"><span>← Home</span><span class="pname">DevOps Kit</span></a><a class="next" href="/lessons/error-decoder.html"><span>Next lesson →</span><span class="pname">Error Decoder</span></a></nav></div></div></main>
+<div class="auth-modal" id="auth-modal" hidden>
+  <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
+    <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
+    <h2>Sign in to DevOps Kit</h2>
+    <p class="auth-sub">Your progress saves, so you can stop and come back.</p>
+    <button class="btn auth-google" id="auth-google" type="button">Continue with Google</button>
+    <div class="auth-or"><span>or with email</span></div>
+    <div class="auth-tabs">
+      <button type="button" id="auth-tab-signin" class="active">Sign in</button>
+      <button type="button" id="auth-tab-signup">Create account</button>
+    </div>
+    <form id="auth-form">
+      <label>Email<input id="auth-email" type="email" autocomplete="email" required></label>
+      <label>Password<input id="auth-password" type="password" autocomplete="current-password" required minlength="6"></label>
+      <p class="auth-error" id="auth-error" hidden></p>
+      <button class="btn amber auth-submit" id="auth-submit" type="submit">Sign in</button>
+    </form>
+    <p class="auth-switch"><span id="auth-switch-note">No account yet? </span><button type="button" id="auth-switch-link" class="linklike">Create one</button></p>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="/assets/auth.js"></script>
+<script src="/assets/devops-app.js"></script>
+<script src="/assets/lesson.js"></script></body></html>
