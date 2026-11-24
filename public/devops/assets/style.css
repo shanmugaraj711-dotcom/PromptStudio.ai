@@ -386,6 +386,16 @@ footer.site b { color: var(--ink); }
 .sim-topbar .auth-chip { color: #9ca3af; }
 .sim-topbar .auth-signout { color: var(--amber); }
 
+/* shared header nav: home icon + back link on every page */
+.nav-home { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; flex-shrink: 0; color: var(--ink); text-decoration: none; border-radius: 8px; }
+.nav-home svg { display: block; width: 22px; height: 22px; }
+.nav-home:hover { background: rgba(0, 0, 0, 0.06); }
+.nav-back { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 8px; flex-shrink: 0; color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 600; white-space: nowrap; border-radius: 8px; }
+.nav-back:hover { color: var(--ink); background: rgba(0, 0, 0, 0.06); }
+/* dark sim topbar: light home icon */
+.sim-topbar .nav-home { color: #9ca3af; }
+.sim-topbar .nav-home:hover { background: #272b34; color: #e5e7eb; }
+
 /* login modal */
 .auth-modal { position: fixed; inset: 0; z-index: 100; background: rgba(20, 22, 26, 0.55); display: flex; align-items: flex-start; justify-content: center; padding: 24px 16px; overflow-y: auto; }
 .auth-modal[hidden] { display: none; }
@@ -495,9 +505,16 @@ body.locked .sim-shell > #lock-screen { margin-top: auto; margin-bottom: auto; }
   .pager a.next { align-items: flex-end; text-align: right; }
   .pager a span:first-child { font-size: 12px; font-weight: 500; }
   /* Lesson header at phone width: tighter row so the crumb keeps room. */
-  .lesson-header .lh-row { padding: 0 10px; gap: 6px; }
-  #btn-sidebar { padding: 0 8px; }
+  .lesson-header .lh-row { padding: 0 10px; gap: 4px; }
+  #btn-sidebar { padding: 0 8px; min-width: 44px; justify-content: center; }
   .lesson-header .auth-btn { padding: 0 10px; }
+  /* Header nav at phone width: the sidebar toggle and the back link
+     go icon-only, so the row still fits at 320px with the home icon
+     added (toggle 44 + home 44 + wordmark ~80 + back 44 + sign out
+     ~60 + gaps/padding ~36 = ~308px). Labels stay on desktop. */
+  #btn-sidebar .sb-label { display: none; }
+  .nav-back { min-width: 44px; justify-content: center; padding: 0 6px; }
+  .nav-back .nb-label { display: none; }
   /* Welcome-back banner: sits flush at 360px today. */
   .continue-banner { margin: 16px 12px 0; }
 }
