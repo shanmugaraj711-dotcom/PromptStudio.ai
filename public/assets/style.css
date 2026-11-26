@@ -299,6 +299,18 @@ footer.site b { color: var(--ink); }
 .step-done-badge { display: none; margin-top: 10px; font-size: 13px; font-weight: 700; color: #15803d; }
 .stepcard.done-flash { border-color: var(--green); background: var(--mint); animation: step-pulse 260ms cubic-bezier(0.34, 1.56, 0.64, 1); }
 .stepcard.done-flash .step-done-badge { display: block; }
+
+/* keyboard-open: collapse the lesson card so the terminal gets room
+   while typing on a phone. The command pill (#step-text) stays
+   visible — the user must see what to type. */
+.sim-shell.kbd-open .sim-about { display: none; }
+.sim-shell.kbd-open .stepcard { padding: 8px 12px; margin-bottom: 6px; }
+.sim-shell.kbd-open .stepcard .step-head { display: none; }
+.sim-shell.kbd-open .stepcard .snote { display: none; }
+.sim-shell.kbd-open .stepcard .stepactions { display: none; }
+.sim-shell.kbd-open .stepcard .step-done-badge { display: none; }
+.sim-shell.kbd-open #step-text { margin-top: 0; }
+.sim-shell.kbd-open .stepcard .scmd { margin-top: 6px; }
 @keyframes step-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.015); } 100% { transform: scale(1); } }
 
 /* free play banner — dark gold badge card */
