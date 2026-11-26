@@ -1,3 +1,19 @@
+  var KNOWN_CMDS = ['help','clear','history','pwd','whoami','date','echo','ls','cd','cat','chmod','sed','tail','netstat','nano','psql','docker','curl','python3','ip','uname','git','kubectl','kind','terraform','mkdir','rm','cp','mv','touch','df','free','ps','top','bash'];
+  window.__didYouMean = function (word) {
+    word = String(word || '').toLowerCase();
+    var best = null, bestD = 3;
+    KNOWN_CMDS.forEach(function (c) {
+      var m = [], i, j;
+      for (i = 0; i <= c.length; i++) m[i] = [i];
+      for (j = 0; j <= word.length; j++) m[0][j] = j;
+      for (i = 1; i <= c.length; i++) for (j = 1; j <= word.length; j++)
+        m[i][j] = Math.min(m[i-1][j] + 1, m[i][j-1] + 1, m[i-1][j-1] + (c[i-1] === word[j-1] ? 0 : 1));
+      var d = m[c.length][word.length];
+      if (d < bestD) { bestD = d; best = c; }
+    });
+    return word.length > 1 ? best : null;
+  };
+
 // sim.js — a simulated shell for the DevOps Kit learning site.
 // No DOM dependency in the core: createShell(data) can run in a browser
 // or under Node for tests. The DOM binding at the bottom only runs when
@@ -595,6 +611,25 @@
     }
 
     function runSingle(toks) {
+      // output redirection: cmd > file  /  cmd >> file  (heredoc keeps its own path)
+      var rd = -1;
+      if (toks.indexOf('<<') < 0) {
+        for (var q = 0; q < toks.length; q++) { if (toks[q] === '>' || toks[q] === '>>') { rd = q; break; } }
+      }
+      if (rd > 0 && toks[rd + 1]) {
+        var append = toks[rd] === '>>';
+        var target = resolvePath(toks[rd + 1]);
+        if (!w.fs[parentDir(target)]) return errOut(['bash: ' + toks[rd + 1] + ': No such file or directory']);
+        var rr = runSingle(toks.slice(0, rd).concat(toks.slice(rd + 2)));
+        if (rr.kind === 'err') return rr;
+        var text = rr.lines.length ? rr.lines.join('\n') + '\n' : '';
+        var prev = append && w.fileContents[target] !== undefined ? w.fileContents[target] : '';
+        w.fileContents[target] = prev + text;
+        w.filesWritten[target] = true;
+        addToDir(target);
+        flag(w, 'redirect');
+        return okOut([]);
+      }
       // pipes: cmd | grep pattern / cmd | wc -l
       var pipe = splitOn(toks, '|');
       if (pipe.length > 1) {
@@ -674,8 +709,10 @@
         case 'top': return topCmd(toks.slice(1));
         case 'bash': return scriptCmd(toks.slice(1), 'bash');
         case 'sh': return scriptCmd(toks.slice(1), 'sh');
-        default:
-          return errOut(['bash: ' + cmd + ': command not found', 'Type help to see what this practice terminal understands.']);
+        default: {
+          var guess = window.__didYouMean(cmd);
+          return errOut(['bash: ' + cmd + ': command not found'].concat(guess ? ['Did you mean: ' + guess + ' ?'] : [], ['Type help to see what this practice terminal understands.']));
+          }
       }
     }
 
@@ -1901,6 +1938,41 @@
     }
 
     // ---------- git ----------
+    // ---- git working-tree helpers (real per-branch history + file snapshots) ----
+    function gitHeads() {
+      if (!w.git.heads) { w.git.heads = {}; w.git.heads[w.git.branch] = w.git.commits; }
+      return w.git.heads;
+    }
+    function gitHeadFiles() {
+      var h = w.git.commits[0];
+      if (h && h.files) return h.files;
+      return w.git.commits.length === 0 ? {} : null; // null = unknown baseline (preset world)
+    }
+    function gitCwdFiles() {
+      var out = [];
+      (w.fs[cwd] || []).forEach(function (n) {
+        var p = cwd.replace(/\/$/, '') + '/' + n;
+        if (w.fileContents[p] !== undefined && w.fs[p] === undefined) out.push(n);
+      });
+      return out;
+    }
+    function gitApplyTree(oldF, newF) {
+      if (!newF) return;
+      var p;
+      for (p in (oldF || {})) { if (!(p in newF)) { delete w.fileContents[p]; delete w.filesWritten[p]; removeFromDir(p); } }
+      for (p in newF) { w.fileContents[p] = newF[p]; addToDir(p); }
+    }
+    function gitSwitch(br, isNew) {
+      var heads = gitHeads();
+      var oldFiles = gitHeadFiles();
+      heads[w.git.branch] = w.git.commits;
+      if (isNew && w.git.branches.indexOf(br) === -1) w.git.branches.push(br);
+      if (!heads[br]) heads[br] = w.git.commits.slice();
+      w.git.commits = heads[br];
+      w.git.branch = br;
+      gitApplyTree(oldFiles, gitHeadFiles());
+    }
+
     function gitCmd(args) {
       var sub = args[0];
       if (!sub || sub === '--help' || sub === '-h') {
@@ -1961,13 +2033,34 @@
           lines.push('        both modified:   ' + w.git.conflictFile);
           return okOut(lines);
         }
+        var hf = gitHeadFiles();
+        var absOf = function (n) { return resolvePath(n); };
         if (w.git.staged.length) {
           lines.push('Changes to be committed:');
           lines.push('  (use "git restore --staged <file>..." to unstage)');
-          w.git.staged.forEach(function (f) { lines.push('        new file:   ' + f); });
-          return okOut(lines);
+          w.git.staged.forEach(function (f) { lines.push('        ' + (hf && (absOf(f) in hf) ? 'modified:   ' : 'new file:   ') + f); });
         }
-        lines.push('nothing to commit, working tree clean');
+        var modified = [], untracked = [];
+        if (hf) {
+          gitCwdFiles().forEach(function (n) {
+            var ap = absOf(n), staged = w.git.staged.indexOf(n) >= 0;
+            if (ap in hf) { if (w.fileContents[ap] !== hf[ap] && !staged) modified.push(n); }
+            else if (!staged) untracked.push(n);
+          });
+        }
+        if (modified.length) {
+          lines.push('Changes not staged for commit:');
+          lines.push('  (use "git add <file>..." to update what will be committed)');
+          modified.forEach(function (n) { lines.push('        modified:   ' + n); });
+        }
+        if (untracked.length) {
+          lines.push('Untracked files:');
+          lines.push('  (use "git add <file>..." to include in what will be committed)');
+          untracked.forEach(function (n) { lines.push('        ' + n); });
+        }
+        if (!w.git.staged.length && !modified.length) {
+          lines.push(untracked.length ? 'nothing added to commit but untracked files present (use "git add" to track)' : 'nothing to commit, working tree clean');
+        }
         return okOut(lines);
       }
       if (sub === 'add') {
@@ -2013,9 +2106,14 @@
           return errOut(['error: Committing is not possible because you have unmerged files.', "hint: Fix them up in the work tree, and then use 'git add/rm <file>' as appropriate to mark resolution and make a commit."]);
         }
         if (!w.git.staged.length && !w.git.conflict) return okOut(['On branch ' + w.git.branch, 'nothing to commit, working tree clean']);
-        var hash = gitHash(w.git.commits.length);
+        var hidx = (w.git.seq === undefined ? w.git.commits.length : w.git.seq); w.git.seq = hidx + 1;
+        var hash = gitHash(hidx);
         var count = w.git.staged.length || 1;
-        w.git.commits.unshift({ hash: hash, msg: msg });
+        var prevHead = w.git.commits[0], snap = {}, sp;
+        if (prevHead && prevHead.files) { for (sp in prevHead.files) snap[sp] = prevHead.files[sp]; }
+        else if (prevHead) { for (sp in w.fileContents) snap[sp] = w.fileContents[sp]; }
+        w.git.staged.forEach(function (n) { var ap = resolvePath(n); if (w.fileContents[ap] !== undefined) snap[ap] = w.fileContents[ap]; });
+        w.git.commits.unshift({ hash: hash, msg: msg, files: snap });
         w.git.staged = [];
         w.git.conflict = false;
         w.git.conflictFile = null;
@@ -2037,22 +2135,21 @@
           return okOut(['Deleted branch ' + del + '.']);
         }
         if (args[1]) {
-          if (w.git.branches.indexOf(args[1]) === -1) w.git.branches.push(args[1]);
+          if (w.git.branches.indexOf(args[1]) === -1) { w.git.branches.push(args[1]); gitHeads()[args[1]] = w.git.commits.slice(); }
           return okOut([]);
         }
         return okOut(w.git.branches.map(function (b) { return (b === w.git.branch ? '* ' : '  ') + b; }));
       }
       if (sub === 'checkout') {
         if (args[1] === '-b' && args[2]) {
-          if (w.git.branches.indexOf(args[2]) === -1) w.git.branches.push(args[2]);
-          w.git.branch = args[2];
+          gitSwitch(args[2], true);
           flag(w, 'git_checkout');
           return okOut(["Switched to a new branch '" + args[2] + "'"]);
         }
         var br = args[1];
         if (!br) return errOut(['usage: git checkout <branch>']);
         if (w.git.branches.indexOf(br) === -1) return errOut(["error: pathspec '" + br + "' did not match any file(s) known to git"]);
-        w.git.branch = br;
+        gitSwitch(br, false);
         flag(w, 'git_checkout');
         return okOut(["Switched to branch '" + br + "'"]);
       }
@@ -2071,14 +2168,31 @@
             'Automatic merge failed; fix conflicts and then commit the result.'
           ]);
         }
-        var mhash = gitHash(w.git.commits.length);
-        w.git.commits.unshift({ hash: mhash, msg: "Merge branch '" + mb + "'" });
+        var mheads = gitHeads(), theirs = mheads[mb] || [];
+        var curHashes = {}; w.git.commits.forEach(function (c) { curHashes[c.hash] = 1; });
+        var extra = theirs.filter(function (c) { return !curHashes[c.hash]; });
+        var ourF = gitHeadFiles(), theirF = theirs[0] && theirs[0].files;
+        if (ourF && theirF && !extra.length) return okOut(['Already up to date.']);
+        var midx = (w.git.seq === undefined ? w.git.commits.length + extra.length : w.git.seq); w.git.seq = midx + 1;
+        var mhash = gitHash(midx);
+        var mfiles = null, newNames = [];
+        if (ourF && theirF) {
+          mfiles = {}; var mp;
+          for (mp in ourF) mfiles[mp] = ourF[mp];
+          for (mp in theirF) { if (!(mp in ourF) || ourF[mp] !== theirF[mp]) newNames.push(baseName(mp)); mfiles[mp] = theirF[mp]; }
+        }
+        var mcommit = { hash: mhash, msg: "Merge branch '" + mb + "'" };
+        if (mfiles) { mcommit.files = mfiles; gitApplyTree(ourF, mfiles); }
+        w.git.commits.splice.apply(w.git.commits, [0, 0, mcommit].concat(extra));
         flag(w, 'git_merge');
-        return okOut([
-          "Merge made by the 'ort' strategy.",
-          ' ' + (w.gitConflict ? w.gitConflict.file : 'app.py') + ' | 1 +',
-          ' 1 file changed, 1 insertion(+)'
-        ]);
+        var mlines = ["Merge made by the 'ort' strategy."];
+        if (newNames.length) {
+          newNames.forEach(function (n) { mlines.push(' ' + n + ' | 1 +'); });
+          mlines.push(' ' + newNames.length + (newNames.length === 1 ? ' file changed, 1 insertion(+)' : ' files changed, ' + newNames.length + ' insertions(+)'));
+        } else {
+          mlines.push(' ' + (w.gitConflict ? w.gitConflict.file : 'app.py') + ' | 1 +', ' 1 file changed, 1 insertion(+)');
+        }
+        return okOut(mlines);
       }
       if (sub === 'push') {
         if (!w.git.commits.length) return okOut(['Everything up-to-date']);

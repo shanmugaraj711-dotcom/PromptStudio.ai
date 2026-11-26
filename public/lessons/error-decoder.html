@@ -4,22 +4,38 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Error Decoder — Find Your Error, Fix It — DevOps Kit</title>
+<meta name="description" content="The error decoder is your first aid page: find your error message here and it tells you the fix.">
+<meta name="theme-color" content="#14161b">
+<link rel="canonical" href="https://promptstudioai.in/lessons/error-decoder.html">
+<link rel="icon" href="/favicon.ico">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="DevOps Kit by PromptStudio">
+<meta property="og:title" content="Error Decoder — Find Your Error, Fix It — DevOps Kit">
+<meta property="og:description" content="The error decoder is your first aid page: find your error message here and it tells you the fix.">
+<meta property="og:url" content="https://promptstudioai.in/lessons/error-decoder.html">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="/assets/genz.css">
 </head>
 <body data-page="lesson" data-lesson="error-decoder" data-phase="free">
+<a class="skip-link" href="#main">Skip to content</a>
 <header class="lesson-header">
   <div class="lh-row">
     <button class="sidebar-toggle" id="btn-sidebar" type="button" aria-expanded="false" aria-controls="lesson-sidebar">&#9776; <span class="sb-label">Lessons</span></button>
     <a class="nav-home" href="/" aria-label="Home"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 3l9 8.5"/><path d="M5 10.5V21h14V10.5"/><path d="M9.5 21v-6h5v6"/></svg></a>
     <a class="wordmark" href="/">DevOps Kit</a>
-    <a class="nav-back" href="/#curriculum"><span aria-hidden="true">&larr;</span> <span class="nb-label">Lessons</span></a>
+    <a class="nav-back" href="/#curriculum" aria-label="All lessons"><span aria-hidden="true">&larr;</span> <span class="nb-label">Lessons</span></a>
     <span class="lh-meta">Free · Error decoder</span>
     <span class="auth-slot" id="auth-slot"></span>
   </div>
   <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
 </header>
 <main class="lesson-wrap">
-<nav class="lesson-sidebar" id="lesson-sidebar" aria-label="All lessons"><div class="sb-head"><b>DevOps Kit</b><span>All 18 lessons</span></div><div class="sb-group"><span class="sb-group-title">Start here</span><a class="sb-link" href="/lessons/lesson-0.html">Lesson 0</a></div><div class="sb-group"><span class="sb-group-title">Phase 1 · The Data Tier</span><a class="sb-link" href="/lessons/p1-start.html">Start Here</a><a class="sb-link" href="/lessons/p1-kafka.html">Kafka</a><a class="sb-link" href="/lessons/p1-postgresql.html">PostgreSQL</a><a class="sb-link" href="/lessons/p1-redis.html">Redis</a><a class="sb-link" href="/lessons/p1-object-store.html">Object Store</a><a class="sb-link" href="/lessons/p1-load-balancer.html">Load Balancer</a><a class="sb-link" href="/lessons/p1-end-to-end.html">End-to-End</a></div><div class="sb-group"><span class="sb-group-title">Phase 2 · The Rest of DevOps</span><a class="sb-link" href="/lessons/p2-start.html">Start Here</a><a class="sb-link" href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a><a class="sb-link" href="/lessons/p2-kubernetes.html">Kubernetes</a><a class="sb-link" href="/lessons/p2-break-fix.html">Break-and-Fix</a><a class="sb-link" href="/lessons/p2-cheat-sheets.html">Cheat Sheets</a><a class="sb-link" href="/lessons/p2-interview.html">Interview Pack</a><a class="sb-link" href="/lessons/p2-portfolio.html">Portfolio</a><a class="sb-link" href="/lessons/p2-resume.html">Resume Bullets</a><a class="sb-link" href="/lessons/p2-best-sites.html">Best Sites</a></div><div class="sb-group"><span class="sb-group-title">Reference</span><a class="sb-link current" aria-current="page" href="/lessons/error-decoder.html">Error Decoder</a></div></nav><div class="lesson-main"><div class="lesson-content" id="lesson-content"><h1>Error Decoder — Find Your Error, Fix It</h1><span class="phasebadge">Free</span><h2>What this is and why it matters</h2>
+<nav class="lesson-sidebar" id="lesson-sidebar" aria-label="All lessons"><div class="sb-head"><b>DevOps Kit</b><span>All 18 lessons</span></div><div class="sb-group"><span class="sb-group-title">Start here</span><a class="sb-link" href="/lessons/lesson-0.html">Lesson 0</a></div><div class="sb-group"><span class="sb-group-title">Phase 1 · The Data Tier</span><a class="sb-link" href="/lessons/p1-start.html">Start Here</a><a class="sb-link" href="/lessons/p1-kafka.html">Kafka</a><a class="sb-link" href="/lessons/p1-postgresql.html">PostgreSQL</a><a class="sb-link" href="/lessons/p1-redis.html">Redis</a><a class="sb-link" href="/lessons/p1-object-store.html">Object Store</a><a class="sb-link" href="/lessons/p1-load-balancer.html">Load Balancer</a><a class="sb-link" href="/lessons/p1-end-to-end.html">End-to-End</a></div><div class="sb-group"><span class="sb-group-title">Phase 2 · The Rest of DevOps</span><a class="sb-link" href="/lessons/p2-start.html">Start Here</a><a class="sb-link" href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a><a class="sb-link" href="/lessons/p2-kubernetes.html">Kubernetes</a><a class="sb-link" href="/lessons/p2-break-fix.html">Break-and-Fix</a><a class="sb-link" href="/lessons/p2-cheat-sheets.html">Cheat Sheets</a><a class="sb-link" href="/lessons/p2-interview.html">Interview Pack</a><a class="sb-link" href="/lessons/p2-portfolio.html">Portfolio</a><a class="sb-link" href="/lessons/p2-resume.html">Resume Bullets</a><a class="sb-link" href="/lessons/p2-best-sites.html">Best Sites</a></div><div class="sb-group"><span class="sb-group-title">Free skills</span><a class="sb-link" href="/lessons/linux-basics.html">Linux Command Line</a><a class="sb-link" href="/lessons/git-basics.html">Git Basics</a></div><div class="sb-group"><span class="sb-group-title">Reference</span><a class="sb-link current" aria-current="page" href="/lessons/error-decoder.html">Error Decoder</a></div></nav><div class="lesson-main"><div class="lesson-content" id="lesson-content"><span id="main" tabindex="-1"></span><h1>Error Decoder — Find Your Error, Fix It</h1><span class="phasebadge">Free</span><h2>What this is and why it matters</h2>
 <p>The <strong>error decoder</strong> is your first aid page: find your error message here and it tells you the fix.</p>
 <p>In real work, a broken lab usually stops on one error line. Guessing wastes hours — reading it tells you exactly what broke.</p>
 <p>Every entry has three parts: what the error means, the one fix to run, and how to check the fix worked.</p>
@@ -105,7 +121,7 @@
 <h3><code>timeout waiting for container &lt;name&gt; to become healthy</code></h3>
 <p>What it means: a container with a health check never turned healthy. Something inside it is failing. The fix: read its log — <code>docker compose logs &lt;name&gt;</code> — fix the error the log shows, then run <code>docker compose restart &lt;name&gt;</code>. Check it worked: <code>docker compose ps</code> shows the container with STATUS &quot;Up&quot; (and healthy, if a health check is set).</p>
 <h2>Nothing here matches your error</h2>
-<p>Do not guess. Copy the exact error line, then email it to support@promptstudioai.in with the step you were on. We reply within 24 hours.</p><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> When a lab stops on an error line, what three parts of an error guide help you solve it?</p><p><a href="/sims/error-decoder.html">Open the practice terminal to test this &rarr;</a></p><details class="exercise-answer"><summary>Show answer</summary><p>An error guide gives you what the error means, the one fix to run, and how to check that the fix worked.</p></details></div><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button><nav class="pager"><a class="prev" href="/lessons/lesson-0.html"><span>← Previous lesson</span><span class="pname">Lesson 0</span></a></nav></div></div></main>
+<p>Do not guess. Copy the exact error line, then email it to support@promptstudioai.in with the step you were on. We reply within 24 hours.</p><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> When a lab stops on an error line, what three parts of an error guide help you solve it?</p><p><a href="/sims/error-decoder.html">Open the practice terminal to test this &rarr;</a></p><details class="exercise-answer"><summary>Show answer</summary><p>An error guide gives you what the error means, the one fix to run, and how to check that the fix worked.</p></details></div><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button><nav class="pager"><a class="prev" href="/lessons/git-basics.html"><span>← Previous lesson</span><span class="pname">Git Basics</span></a></nav></div></div></main>
 <div class="auth-modal" id="auth-modal" hidden>
   <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
     <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
@@ -127,10 +143,10 @@
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script src="/assets/auth.js"></script>
-<script src="/assets/devops-app.js"></script>
-<script src="/assets/lesson.js"></script></body></html>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script defer src="/assets/i18n.js"></script>
+<script defer src="/assets/auth.js"></script>
+<script defer src="/assets/devops-app.js"></script>
+<script defer src="/assets/lesson.js"></script></body></html>

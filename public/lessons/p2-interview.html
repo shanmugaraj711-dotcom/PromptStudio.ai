@@ -4,22 +4,38 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Interview Pack — Real Questions, What They Really Test — DevOps Kit</title>
+<meta name="description" content="This pack is a study guide covering core DevOps interview questions and the practical principles behind them.">
+<meta name="theme-color" content="#14161b">
+<link rel="canonical" href="https://promptstudioai.in/lessons/p2-interview.html">
+<link rel="icon" href="/favicon.ico">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="DevOps Kit by PromptStudio">
+<meta property="og:title" content="Interview Pack — Real Questions, What They Really Test — DevOps Kit">
+<meta property="og:description" content="This pack is a study guide covering core DevOps interview questions and the practical principles behind them.">
+<meta property="og:url" content="https://promptstudioai.in/lessons/p2-interview.html">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="/assets/genz.css">
 </head>
 <body data-page="lesson" data-lesson="p2-interview" data-phase="phase2">
+<a class="skip-link" href="#main">Skip to content</a>
 <header class="lesson-header">
   <div class="lh-row">
     <button class="sidebar-toggle" id="btn-sidebar" type="button" aria-expanded="false" aria-controls="lesson-sidebar">&#9776; <span class="sb-label">Lessons</span></button>
     <a class="nav-home" href="/" aria-label="Home"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 3l9 8.5"/><path d="M5 10.5V21h14V10.5"/><path d="M9.5 21v-6h5v6"/></svg></a>
     <a class="wordmark" href="/">DevOps Kit</a>
-    <a class="nav-back" href="/#curriculum"><span aria-hidden="true">&larr;</span> <span class="nb-label">Lessons</span></a>
+    <a class="nav-back" href="/#curriculum" aria-label="All lessons"><span aria-hidden="true">&larr;</span> <span class="nb-label">Lessons</span></a>
     <span class="lh-meta">Lesson 14 of 18</span>
     <span class="auth-slot" id="auth-slot"></span>
   </div>
   <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
 </header>
 <main class="lesson-wrap">
-<nav class="lesson-sidebar" id="lesson-sidebar" aria-label="All lessons"><div class="sb-head"><b>DevOps Kit</b><span>All 18 lessons</span></div><div class="sb-group"><span class="sb-group-title">Start here</span><a class="sb-link" href="/lessons/lesson-0.html">Lesson 0</a></div><div class="sb-group"><span class="sb-group-title">Phase 1 · The Data Tier</span><a class="sb-link" href="/lessons/p1-start.html">Start Here</a><a class="sb-link" href="/lessons/p1-kafka.html">Kafka</a><a class="sb-link" href="/lessons/p1-postgresql.html">PostgreSQL</a><a class="sb-link" href="/lessons/p1-redis.html">Redis</a><a class="sb-link" href="/lessons/p1-object-store.html">Object Store</a><a class="sb-link" href="/lessons/p1-load-balancer.html">Load Balancer</a><a class="sb-link" href="/lessons/p1-end-to-end.html">End-to-End</a></div><div class="sb-group"><span class="sb-group-title">Phase 2 · The Rest of DevOps</span><a class="sb-link" href="/lessons/p2-start.html">Start Here</a><a class="sb-link" href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a><a class="sb-link" href="/lessons/p2-kubernetes.html">Kubernetes</a><a class="sb-link" href="/lessons/p2-break-fix.html">Break-and-Fix</a><a class="sb-link" href="/lessons/p2-cheat-sheets.html">Cheat Sheets</a><a class="sb-link current" aria-current="page" href="/lessons/p2-interview.html">Interview Pack</a><a class="sb-link" href="/lessons/p2-portfolio.html">Portfolio</a><a class="sb-link" href="/lessons/p2-resume.html">Resume Bullets</a><a class="sb-link" href="/lessons/p2-best-sites.html">Best Sites</a></div><div class="sb-group"><span class="sb-group-title">Reference</span><a class="sb-link" href="/lessons/error-decoder.html">Error Decoder</a></div></nav><div class="lesson-main"><div class="lock-screen" id="lock-screen" hidden><p class="lock-loading" hidden>Checking your sign-in…</p><span class="lock-icon">🔒</span><h2>This lesson is in Phase 2 — ₹799, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase2" type="button" hidden>Buy Phase 2 — ₹799</button><a class="lock-back" href="/">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><h1>Interview Pack — Real Questions, What They Really Test</h1><span class="phasebadge">Phase 2 · The Rest of DevOps</span><h2>What this is and why it matters</h2>
+<nav class="lesson-sidebar" id="lesson-sidebar" aria-label="All lessons"><div class="sb-head"><b>DevOps Kit</b><span>All 18 lessons</span></div><div class="sb-group"><span class="sb-group-title">Start here</span><a class="sb-link" href="/lessons/lesson-0.html">Lesson 0</a></div><div class="sb-group"><span class="sb-group-title">Phase 1 · The Data Tier</span><a class="sb-link" href="/lessons/p1-start.html">Start Here</a><a class="sb-link" href="/lessons/p1-kafka.html">Kafka</a><a class="sb-link" href="/lessons/p1-postgresql.html">PostgreSQL</a><a class="sb-link" href="/lessons/p1-redis.html">Redis</a><a class="sb-link" href="/lessons/p1-object-store.html">Object Store</a><a class="sb-link" href="/lessons/p1-load-balancer.html">Load Balancer</a><a class="sb-link" href="/lessons/p1-end-to-end.html">End-to-End</a></div><div class="sb-group"><span class="sb-group-title">Phase 2 · The Rest of DevOps</span><a class="sb-link" href="/lessons/p2-start.html">Start Here</a><a class="sb-link" href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a><a class="sb-link" href="/lessons/p2-kubernetes.html">Kubernetes</a><a class="sb-link" href="/lessons/p2-break-fix.html">Break-and-Fix</a><a class="sb-link" href="/lessons/p2-cheat-sheets.html">Cheat Sheets</a><a class="sb-link current" aria-current="page" href="/lessons/p2-interview.html">Interview Pack</a><a class="sb-link" href="/lessons/p2-portfolio.html">Portfolio</a><a class="sb-link" href="/lessons/p2-resume.html">Resume Bullets</a><a class="sb-link" href="/lessons/p2-best-sites.html">Best Sites</a></div><div class="sb-group"><span class="sb-group-title">Free skills</span><a class="sb-link" href="/lessons/linux-basics.html">Linux Command Line</a><a class="sb-link" href="/lessons/git-basics.html">Git Basics</a></div><div class="sb-group"><span class="sb-group-title">Reference</span><a class="sb-link" href="/lessons/error-decoder.html">Error Decoder</a></div></nav><div class="lesson-main"><div class="lock-screen" id="lock-screen" hidden><p class="lock-loading" hidden>Checking your sign-in…</p><span class="lock-icon">🔒</span><h2>This lesson is in Phase 2 — ₹799, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase2" type="button" hidden>Buy Phase 2 — ₹799</button><a class="lock-back" href="/">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><span id="main" tabindex="-1"></span><h1>Interview Pack — Real Questions, What They Really Test</h1><span class="phasebadge">Phase 2 · The Rest of DevOps</span><h2>What this is and why it matters</h2>
 <p>This pack is a <strong>study guide</strong> covering core DevOps interview questions and the practical principles behind them.</p>
 <p>Interviewers use these questions to test whether you understand how systems work and fail, not whether you memorised syntax.</p>
 <p>It groups questions by topic, says what the interviewer is really testing, and gives plain answers you can practise out loud.</p>
@@ -60,10 +76,10 @@
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script src="/assets/auth.js"></script>
-<script src="/assets/devops-app.js"></script>
-<script src="/assets/lesson.js"></script></body></html>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script defer src="/assets/i18n.js"></script>
+<script defer src="/assets/auth.js"></script>
+<script defer src="/assets/devops-app.js"></script>
+<script defer src="/assets/lesson.js"></script></body></html>

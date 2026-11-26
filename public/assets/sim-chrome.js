@@ -121,16 +121,68 @@
 
   /* --- 100dvh + visualViewport: when the phone keyboard slides up,
          shrink the shell to the visible height and keep the output
-         scrolled to the bottom, step card still visible above it. --- */
+         scrolled to the bottom. The keyboard also collapses the
+         lesson card (kbd-open) so the terminal input stays visible
+         instead of being squeezed behind the keyboard. --- */
+  var shell = term.closest ? term.closest('.sim-shell') : null;
+  var fullH = 0; /* tallest viewport seen = keyboard closed */
+  function setKbd(open) {
+    if (!shell) return;
+    if (open) shell.classList.add('kbd-open');
+    else shell.classList.remove('kbd-open');
+  }
+  function updateKbd() {
+    var h = (window.visualViewport && window.visualViewport.height) ||
+      window.innerHeight;
+    if (h > fullH) fullH = h;
+    /* keyboard open = visible height dropped well below full height.
+       BOTH conditions must hold. The ratio guard (visual height vs
+       the layout height) can never fire on desktop, where the two are
+       equal even after a window resize — so desktop users are
+       untouched even if they shrink the window and focus the input.
+       (On iOS innerHeight shrinks with the keyboard, so the ratio
+       guard blocks there; the shell still shrinks via fitViewport,
+       as before — this fix targets Android.) */
+    var dropped = (fullH - h) > 150;
+    var shrunk = h < window.innerHeight * 0.9;
+    setKbd(dropped && shrunk);
+  }
   function fitViewport() {
     var h = (window.visualViewport && window.visualViewport.height) ||
       window.innerHeight;
     document.documentElement.style.setProperty('--sim-h', h + 'px');
+    updateKbd();
     scrollBottom();
   }
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', fitViewport);
+  var vvTimer = null;
+  function onViewportResize() {
+    clearTimeout(vvTimer);
+    vvTimer = setTimeout(fitViewport, 100);
   }
-  window.addEventListener('orientationchange', fitViewport);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', onViewportResize);
+  }
+  window.addEventListener('orientationchange', function () {
+    fullH = 0;
+    fitViewport();
+  });
   fitViewport();
+
+  /* --- keyboard nudge: on focus, re-check the viewport once the
+         keyboard animation has settled, and bring the input into
+         view. Secondary to the card collapse. --- */
+  input.addEventListener('focus', function () {
+    updateKbd();
+    setTimeout(updateKbd, 350);
+    setTimeout(function () {
+      if (document.activeElement !== input) return;
+      if (input.scrollIntoView) input.scrollIntoView({ block: 'nearest' });
+      scrollBottom();
+    }, 300);
+  });
+  input.addEventListener('blur', function () {
+    /* viewport resize (keyboard closing) re-evaluates; re-check here
+       too in case no resize fires. */
+    setTimeout(updateKbd, 100);
+  });
 })();
