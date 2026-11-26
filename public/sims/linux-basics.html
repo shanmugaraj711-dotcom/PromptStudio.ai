@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linux Command Line — Your First 12 Commands — Free Simulation — DevOps Kit</title>
+<meta name="description" content="Every server in the world runs Linux. Here you practise the 12 commands you will use every single day: look around, make folders, create and copy files,…">
+<meta name="theme-color" content="#14161b">
+<link rel="canonical" href="https://promptstudioai.in/sims/linux-basics.html">
+<link rel="icon" href="/favicon.ico">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="DevOps Kit by PromptStudio">
+<meta property="og:title" content="Linux Command Line — Your First 12 Commands — Free Simulation — DevOps Kit">
+<meta property="og:description" content="Every server in the world runs Linux. Here you practise the 12 commands you will use every single day: look around, make folders, create and copy files,…">
+<meta property="og:url" content="https://promptstudioai.in/sims/linux-basics.html">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="/assets/genz.css">
+</head>
+<body data-page="sim" data-sim="linux-basics" data-phase="free">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="sim-shell" role="main"><div class="lock-screen" id="lock-screen" hidden><p class="lock-loading" hidden>Checking your sign-in…</p><span class="lock-icon">🔒</span><h2>This simulation is in Phase 2 — ₹799, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="free" type="button" hidden>Buy Phase 2 — ₹799</button><a class="lock-back" href="/">← Back to all lessons</a></div><div class="resume-note" id="sim-resume-note" hidden></div><div class="sim-topbar" role="navigation" aria-label="Simulation"><a class="nav-home" href="/" aria-label="Home"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 3l9 8.5"/><path d="M5 10.5V21h14V10.5"/><path d="M9.5 21v-6h5v6"/></svg></a><a class="exit" href="/lessons/linux-basics.html">&larr; Lesson</a><span class="sim-title" role="heading" aria-level="1">Linux Command Line — Your First 12 Commands</span><span class="sim-prog-track"><span class="sim-prog-fill" id="sim-prog-fill"></span></span><span class="auth-slot" id="auth-slot"></span></div><details class="sim-about"><summary>About this simulation</summary><div class="about-body"><p>This is the practice version of the lesson. Everything runs in your browser tab — no install, no server, works on your phone.</p><p><b>What it is:</b> Every server in the world runs Linux. Here you practise the 12 commands you will use every single day: look around, make folders, create and copy files, and clean up. Nothing can break — this is a safe practice terminal in your browser.</p><p><b>What it does NOT do:</b> it does not touch your computer or run any real service. It teaches the commands; to build the habit, repeat them on your own machine.</p><p><b>Your proof:</b> Save the final ls output. It proves you can move around and manage files on a Linux machine.</p><p><a href="/lessons/linux-basics.html">← Back to the lesson</a></p></div></details><div class="stepcard" id="step-card"><div class="step-head"><span class="stepcount" id="step-count"></span><button class="hint-toggle" id="btn-hint" type="button" aria-expanded="true">Hide hint</button></div><div id="step-text"></div><span class="step-done-badge" id="step-done-badge"></span><div class="stepactions"><button id="btn-skip" type="button">Skip this step</button><button id="btn-skip-all" type="button" class="ghost">Skip all steps — free play</button></div></div><div class="freebanner" id="free-banner" style="display:none"><b>◆ Free play</b><span>Sandbox is live. It knows the lab commands — type <code>help</code> to see them. Try things, break things, test edge cases. Type <code>clear</code> to clean the screen.</span></div><div class="terminal" id="term" role="region" aria-label="Practice terminal"><span id="main" tabindex="-1"></span><div class="term-chrome"><span class="status-dot"></span><span class="container-name">bash — </span><div class="quickkeys"><button id="btn-tab" type="button">Tab</button><button id="btn-up" type="button">↑</button><button id="btn-ctrlc" type="button">Ctrl+C</button><button id="btn-clear" type="button" class="ghost">Clear</button></div></div><div class="term-out" id="term-out" role="log" aria-live="polite" aria-relevant="additions"></div><div class="term-input-row"><span class="tprompt" id="term-prompt">learner@devops:~$</span><input id="term-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="type a command, press Enter"></div></div></div>
+<div class="auth-modal" id="auth-modal" hidden>
+  <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
+    <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
+    <h2>Sign in to DevOps Kit</h2>
+    <p class="auth-sub">Your progress saves, so you can stop and come back.</p>
+    <button class="btn auth-google" id="auth-google" type="button">Continue with Google</button>
+    <div class="auth-or"><span>or with email</span></div>
+    <div class="auth-tabs">
+      <button type="button" id="auth-tab-signin" class="active">Sign in</button>
+      <button type="button" id="auth-tab-signup">Create account</button>
+    </div>
+    <form id="auth-form">
+      <label>Email<input id="auth-email" type="email" autocomplete="email" required></label>
+      <label>Password<input id="auth-password" type="password" autocomplete="current-password" required minlength="6"></label>
+      <p class="auth-error" id="auth-error" hidden></p>
+      <button class="btn amber auth-submit" id="auth-submit" type="submit">Sign in</button>
+    </form>
+    <p class="auth-switch"><span id="auth-switch-note">No account yet? </span><button type="button" id="auth-switch-link" class="linklike">Create one</button></p>
+  </div>
+</div>
+
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script defer src="/assets/fun.js"></script>
+<script defer src="/assets/i18n.js"></script>
+<script defer src="/assets/auth.js"></script>
+<script defer src="/assets/devops-app.js"></script>
+<script>window.SIM_DATA = {"slug": "linux-basics", "title": "Linux Command Line — Your First 12 Commands", "intro": "Every server in the world runs Linux. Here you practise the 12 commands you will use every single day: look around, make folders, create and copy files, and clean up. Nothing can break — this is a safe practice terminal in your browser.", "proof": "Save the final ls output. It proves you can move around and manage files on a Linux machine.", "welcome": "Linux practice terminal. You are in your home folder. Type a command, or follow the step above.", "world": {"containers": {}, "fs": {"/home/learner": ["readme.txt"]}, "file_contents": {"/home/learner/readme.txt": "Welcome to Linux!\nThis file lives in your home folder.\n"}}, "steps": [{"cmd": "pwd", "note": "pwd = 'print working directory'. It tells you which folder you are standing in.", "out": ["/home/learner"]}, {"cmd": "ls", "note": "ls = 'list'. It shows what is inside the current folder.", "out": ["readme.txt"]}, {"cmd": "cat readme.txt", "note": "cat shows the text inside a file.", "out": ["Welcome to Linux!", "This file lives in your home folder."]}, {"cmd": "mkdir projects", "note": "mkdir = 'make directory'. A directory is just a folder.", "out": ["(no output — that is normal)"]}, {"cmd": "cd projects", "note": "cd = 'change directory'. You are now inside the projects folder.", "out": ["(no output — that is normal)"]}, {"cmd": "touch notes.txt", "note": "touch creates a new empty file.", "out": ["(no output — that is normal)"]}, {"cmd": "echo \"hello devops\" > notes.txt", "note": "echo prints text. The > arrow sends that text into a file instead of the screen.", "out": ["(no output — that is normal)"]}, {"cmd": "cat notes.txt", "note": "Read it back — your text is saved in the file.", "out": ["hello devops"]}, {"cmd": "cp notes.txt backup.txt", "note": "cp = 'copy'. Now you have two files with the same text.", "out": ["(no output — that is normal)"]}, {"cmd": "mv backup.txt old-notes.txt", "note": "mv = 'move'. It also renames a file.", "out": ["(no output — that is normal)"]}, {"cmd": "ls", "note": "You should see notes.txt and old-notes.txt.", "out": ["notes.txt  old-notes.txt"]}, {"cmd": "rm old-notes.txt", "note": "rm = 'remove'. There is no recycle bin in Linux — deleted means gone, so be careful.", "out": ["(no output — that is normal)"]}, {"cmd": "cd ..", "note": "'..' means 'one folder up'. You are back in your home folder.", "out": ["(no output — that is normal)"]}]};</script><script defer src="/assets/sim.js"></script><script defer src="/assets/sim-chrome.js"></script></body></html>

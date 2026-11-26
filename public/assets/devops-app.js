@@ -9,6 +9,7 @@
   var LESSON_TITLES = {
     "lesson-0": "Lesson 0 — Before the Terminal",
     "error-decoder": "Error Decoder",
+    "linux-basics": "Linux Command Line", "git-basics": "Git Basics",
     "p1-start": "Start Here — Phase 1", "p1-kafka": "Kafka Lab",
     "p1-postgresql": "PostgreSQL Lab", "p1-redis": "Redis Lab",
     "p1-object-store": "Object Store Lab", "p1-load-balancer": "Load Balancer Lab",
@@ -20,8 +21,8 @@
   };
   var PHASE1_LESSONS = ["p1-start", "p1-kafka", "p1-postgresql", "p1-redis", "p1-object-store", "p1-load-balancer", "p1-end-to-end"];
   var PHASE2_LESSONS = ["p2-start", "p2-zero-cost", "p2-kubernetes", "p2-break-fix", "p2-cheat-sheets", "p2-interview", "p2-portfolio", "p2-resume", "p2-best-sites"];
-  var FREE_SIMS = { kafka: true, 'lesson-0': true, 'error-decoder': true };
-  var FREE_LESSONS = { "lesson-0": true, "error-decoder": true };
+  var FREE_SIMS = { kafka: true, 'lesson-0': true, 'error-decoder': true, 'linux-basics': true, 'git-basics': true };
+  var FREE_LESSONS = { "lesson-0": true, "error-decoder": true, "linux-basics": true, "git-basics": true };
   var PHASE_NAMES = { phase1: "Phase 1", phase2: "Phase 2", bundle: "Both phases" };
   var PHASE_PRICES = { phase1: "₹399", phase2: "₹799", bundle: "₹999" };
 
@@ -206,7 +207,7 @@
     if (banner) {
       var last = state && state.progress ? state.progress.lastLesson : null;
       var lessons = state && state.progress ? state.progress.lessons : {};
-      var allLessons = ["lesson-0"].concat(PHASE1_LESSONS, PHASE2_LESSONS, ["error-decoder"]);
+      var allLessons = ["lesson-0"].concat(PHASE1_LESSONS, PHASE2_LESSONS, ["error-decoder", "linux-basics", "git-basics"]);
       var done = allLessons.filter(function (k) { return lessons[k] && lessons[k].completed; }).length;
       if (currentUser && last && LESSON_TITLES[last]) {
         banner.hidden = false;
@@ -386,6 +387,22 @@
   }
 
   /* ---- payment ---- */
+  var rzpPromise = null;
+  function loadRazorpay() {
+    if (typeof Razorpay !== 'undefined') return Promise.resolve();
+    if (!rzpPromise) rzpPromise = new Promise(function (ok, fail) {
+      var s = document.createElement('script');
+      s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      s.onload = ok;
+      s.onerror = function () { rzpPromise = null; fail(new Error('razorpay')); };
+      document.head.appendChild(s);
+    });
+    return rzpPromise;
+  }
+  /* warm the payment script when the buy button is hovered/focused */
+  document.addEventListener('pointerover', function (e) { if (e.target.closest && e.target.closest('.pay-btn')) loadRazorpay().catch(function () {}); }, { passive: true });
+  document.addEventListener('focusin', function (e) { if (e.target.closest && e.target.closest('.pay-btn')) loadRazorpay().catch(function () {}); });
+
   function pay(phase) {
     if (!window.DevOpsAuth) { toast('Sign-in did not load. Check your connection and refresh.'); return; }
     if (!currentUser) {
@@ -394,7 +411,10 @@
       return;
     }
     if (typeof Razorpay === 'undefined') {
-      toast('Payment window did not load. Check your connection and try again.');
+      toast('Opening secure payment…');
+      loadRazorpay().then(function () { pay(phase); }, function () {
+        toast('Payment window did not load. Check your connection and try again.');
+      });
       return;
     }
     var btns = document.querySelectorAll('.pay-btn[data-phase="' + phase + '"]');

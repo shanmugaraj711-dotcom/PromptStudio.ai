@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linux Command Line — Your First 12 Commands — DevOps Kit</title>
+<meta name="description" content="Linux is the operating system that runs almost every server, cloud machine and container in the world.">
+<meta name="theme-color" content="#14161b">
+<link rel="canonical" href="https://promptstudioai.in/lessons/linux-basics.html">
+<link rel="icon" href="/favicon.ico">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="DevOps Kit by PromptStudio">
+<meta property="og:title" content="Linux Command Line — Your First 12 Commands — DevOps Kit">
+<meta property="og:description" content="Linux is the operating system that runs almost every server, cloud machine and container in the world.">
+<meta property="og:url" content="https://promptstudioai.in/lessons/linux-basics.html">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="/assets/genz.css">
+</head>
+<body data-page="lesson" data-lesson="linux-basics" data-phase="free">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="lesson-header">
+  <div class="lh-row">
+    <button class="sidebar-toggle" id="btn-sidebar" type="button" aria-expanded="false" aria-controls="lesson-sidebar">&#9776; <span class="sb-label">Lessons</span></button>
+    <a class="nav-home" href="/" aria-label="Home"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 3l9 8.5"/><path d="M5 10.5V21h14V10.5"/><path d="M9.5 21v-6h5v6"/></svg></a>
+    <a class="wordmark" href="/">DevOps Kit</a>
+    <a class="nav-back" href="/#curriculum" aria-label="All lessons"><span aria-hidden="true">&larr;</span> <span class="nb-label">Lessons</span></a>
+    <span class="lh-meta">Free skill · Linux Command Line</span>
+    <span class="auth-slot" id="auth-slot"></span>
+  </div>
+  <div class="lesson-progress"><span id="lesson-progress-fill"></span></div>
+</header>
+<main class="lesson-wrap">
+<nav class="lesson-sidebar" id="lesson-sidebar" aria-label="All lessons"><div class="sb-head"><b>DevOps Kit</b><span>All 18 lessons</span></div><div class="sb-group"><span class="sb-group-title">Start here</span><a class="sb-link current" aria-current="page" href="/lessons/lesson-0.html">Lesson 0</a></div><div class="sb-group"><span class="sb-group-title">Phase 1 · The Data Tier</span><a class="sb-link" href="/lessons/p1-start.html">Start Here</a><a class="sb-link" href="/lessons/p1-kafka.html">Kafka</a><a class="sb-link" href="/lessons/p1-postgresql.html">PostgreSQL</a><a class="sb-link" href="/lessons/p1-redis.html">Redis</a><a class="sb-link" href="/lessons/p1-object-store.html">Object Store</a><a class="sb-link" href="/lessons/p1-load-balancer.html">Load Balancer</a><a class="sb-link" href="/lessons/p1-end-to-end.html">End-to-End</a></div><div class="sb-group"><span class="sb-group-title">Phase 2 · The Rest of DevOps</span><a class="sb-link" href="/lessons/p2-start.html">Start Here</a><a class="sb-link" href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a><a class="sb-link" href="/lessons/p2-kubernetes.html">Kubernetes</a><a class="sb-link" href="/lessons/p2-break-fix.html">Break-and-Fix</a><a class="sb-link" href="/lessons/p2-cheat-sheets.html">Cheat Sheets</a><a class="sb-link" href="/lessons/p2-interview.html">Interview Pack</a><a class="sb-link" href="/lessons/p2-portfolio.html">Portfolio</a><a class="sb-link" href="/lessons/p2-resume.html">Resume Bullets</a><a class="sb-link" href="/lessons/p2-best-sites.html">Best Sites</a></div><div class="sb-group"><span class="sb-group-title">Free skills</span><a class="sb-link" href="/lessons/linux-basics.html">Linux Command Line</a><a class="sb-link" href="/lessons/git-basics.html">Git Basics</a></div><div class="sb-group"><span class="sb-group-title">Reference</span><a class="sb-link" href="/lessons/error-decoder.html">Error Decoder</a></div></nav><div class="lesson-main"><div class="lesson-content" id="lesson-content"><span id="main" tabindex="-1"></span><h1>Linux Command Line — Your First 12 Commands</h1><span class="phasebadge">Free skill</span><h2>What this is and why it matters</h2>
+<p><strong>Linux</strong> is the operating system that runs almost every server, cloud machine and container in the world.</p>
+<p>DevOps work means working on those machines, and most of them have no mouse and no windows — only a <strong>terminal</strong> where you type commands.</p>
+<p>In this lesson you learn the 12 commands that cover about 80% of daily terminal work. You practise each one in a safe browser terminal. Nothing you type here can break anything.</p>
+<h2>1. Where am I, and what is here?</h2>
+<p><code>pwd</code> prints the folder you are standing in. <code>ls</code> lists what is inside it. Think of a folder like a drawer: <code>pwd</code> tells you which drawer is open, <code>ls</code> shows what is inside.</p>
+<p><code>cat file.txt</code> prints the text inside a file.</p>
+<h2>2. Make folders and move around</h2>
+<p><code>mkdir projects</code> makes a new folder. <code>cd projects</code> goes into it. <code>cd ..</code> goes back up one level. <code>cd</code> alone brings you home.</p>
+<h2>3. Create and fill files</h2>
+<p><code>touch notes.txt</code> creates an empty file. <code>echo "hello" &gt; notes.txt</code> writes text into a file (the <code>&gt;</code> arrow means &ldquo;send the output into this file&rdquo; and it <b>replaces</b> what was there). Use <code>&gt;&gt;</code> instead to <b>add</b> to the end.</p>
+<h2>4. Copy, rename, delete</h2>
+<p><code>cp a.txt b.txt</code> copies. <code>mv a.txt b.txt</code> moves or renames. <code>rm b.txt</code> deletes — and there is <b>no recycle bin</b>. Deleted means gone, so read the command twice before pressing Enter.</p>
+<h2>Common mistakes</h2>
+<ul><li>Typing a command in the wrong folder. Run <code>pwd</code> when unsure.</li><li>Using <code>&gt;</code> when you meant <code>&gt;&gt;</code>, which wipes the file.</li><li>Spaces in file names. Prefer <code>my-notes.txt</code> over <code>my notes.txt</code>.</li></ul>
+<div class="ladder"><div class="ladder-title">Your level in Linux, Git &amp; CI/CD</div><div class="ladder-steps"><span class="step-unit"><span class="step done">&#10003; Step 1 &middot; Beginner <span class="here">&#8592; You are here</span></span><span class="ladder-arrow">&rarr;</span></span><span class="step-unit"><span class="step">Step 2 &middot; Intermediate</span><span class="ladder-arrow">&rarr;</span></span><span class="step-unit"><span class="step">Step 3 &middot; Advanced</span></span></div><div class="ladder-note">After this lesson you can: <b>Move around a Linux machine, and create, read, copy, rename and delete files.</b></div><div class="ladder-note">Next: <b>Git</b> — save versions of your work. See <a href="/lessons/git-basics.html">Git — Save and Track Your Work</a>.</div></div>
+<h2>Practice in the browser</h2>
+<p>Open the practice terminal and follow the 13 steps. It is free, needs no install and works on your phone.</p>
+<p><a class="btn amber" href="/sims/linux-basics.html">Open the practice terminal &rarr;</a></p>
+<h2>Quick check — try it yourself</h2>
+<p><b>Question:</b> You are in the <code>projects</code> folder. Which command takes you back to your home folder?</p>
+<details class="exercise-answer"><summary>Show answer</summary><p><code>cd ..</code> goes up one level. If <code>projects</code> is directly inside your home folder, that lands in home. (Plain <code>cd</code> also goes straight home from anywhere.)</p></details></div><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button><nav class="pager"><a class="prev" href="/lessons/lesson-0.html"><span>← Previous lesson</span><span class="pname">Lesson 0</span></a><a class="next" href="/lessons/git-basics.html"><span>Next lesson →</span><span class="pname">Git — Save and Track Your Work</span></a></nav></div></div></main>
+<div class="auth-modal" id="auth-modal" hidden>
+  <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
+    <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
+    <h2>Sign in to DevOps Kit</h2>
+    <p class="auth-sub">Your progress saves, so you can stop and come back.</p>
+    <button class="btn auth-google" id="auth-google" type="button">Continue with Google</button>
+    <div class="auth-or"><span>or with email</span></div>
+    <div class="auth-tabs">
+      <button type="button" id="auth-tab-signin" class="active">Sign in</button>
+      <button type="button" id="auth-tab-signup">Create account</button>
+    </div>
+    <form id="auth-form">
+      <label>Email<input id="auth-email" type="email" autocomplete="email" required></label>
+      <label>Password<input id="auth-password" type="password" autocomplete="current-password" required minlength="6"></label>
+      <p class="auth-error" id="auth-error" hidden></p>
+      <button class="btn amber auth-submit" id="auth-submit" type="submit">Sign in</button>
+    </form>
+    <p class="auth-switch"><span id="auth-switch-note">No account yet? </span><button type="button" id="auth-switch-link" class="linklike">Create one</button></p>
+  </div>
+</div>
+
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script defer src="/assets/i18n.js"></script>
+<script defer src="/assets/auth.js"></script>
+<script defer src="/assets/devops-app.js"></script>
+<script defer src="/assets/lesson.js"></script></body></html>

@@ -4,16 +4,32 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DevOps Kit — Learn by Doing, On Your Own Machine | PromptStudio</title>
+<meta name="description" content="Learn DevOps by doing: practise Kafka, PostgreSQL failover, Redis, Docker and Kubernetes in a safe browser terminal, then run the same commands on your…">
+<meta name="theme-color" content="#14161b">
+<link rel="canonical" href="https://promptstudioai.in/">
+<link rel="icon" href="/favicon.ico">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="DevOps Kit by PromptStudio">
+<meta property="og:title" content="DevOps Kit — Learn by Doing, On Your Own Machine | PromptStudio">
+<meta property="og:description" content="Learn DevOps by doing: practise Kafka, PostgreSQL failover, Redis, Docker and Kubernetes in a safe browser terminal, then run the same commands on your…">
+<meta property="og:url" content="https://promptstudioai.in/">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="/assets/genz.css">
 </head>
 <body class="has-sticky" data-page="landing">
+<a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header">
   <a class="nav-home" href="/" aria-label="Home"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 3l9 8.5"/><path d="M5 10.5V21h14V10.5"/><path d="M9.5 21v-6h5v6"/></svg></a>
   <a class="wordmark" href="/">DevOps Kit <small>by PromptStudio</small></a>
   <span class="bill-pill">Zero Cloud Bill</span>
   <span class="auth-slot" id="auth-slot"></span>
 </header>
-<div class="hero">
+<main id="main" tabindex="-1"><div class="hero">
   <div class="hero-inner">
     <span class="eyebrow">Learn by doing &bull; On your laptop</span>
     <h1>Build real backend infrastructure. Zero cloud bill.</h1>
@@ -25,7 +41,7 @@
     </div>
     <div class="hero-chips">
       <span class="chip">18 lessons</span>
-      <span class="chip">18 terminal simulations</span>
+      <span class="chip">20 terminal simulations</span>
       <span class="chip">No cloud bill</span>
       <span class="chip">Fake data only</span>
     </div>
@@ -60,7 +76,7 @@
 
   <div class="section">
     <h2>Free before you buy</h2>
-    <p class="lead">Two free tools. No sign-in, no payment. Start here if you have never touched a terminal.</p>
+    <p class="lead">Free lessons and five free simulations. No payment needed. Start here if you have never touched a terminal.</p>
     <div class="cards">
       <div class="card">
         <h3>Lesson 0 — Before the Terminal</h3>
@@ -80,11 +96,13 @@
 <div class="simdeck" id="try-sim">
   <div class="wrap">
     <h2>Try a Simulation First</h2>
-    <p class="lead">Browser labs. No install, works on your phone. Three are free to try (Before the Terminal, Kafka, and Error Decoder) — the rest unlock with Phase 1 (₹399), Phase 2 (₹799), or both together (₹999). Every simulation is a practice version: it shows the lab&rsquo;s real outputs, but nothing here runs a live service.</p>
+    <p class="lead">Browser labs. No install, works on your phone. Five are free to try (Before the Terminal, Kafka, Error Decoder, Linux and Git) — the rest unlock with Phase 1 (₹399), Phase 2 (₹799), or both together (₹999). Every simulation is a practice version: it shows the lab&rsquo;s real outputs, but nothing here runs a live service.</p>
     <div class="simdeck-scroll">
       <div class="simcard" data-sim="lesson-0" data-phase="free"><div class="simpills"><span class="steppill">6 STEPS</span><span class="tierpill free">Free</span></div><h3>Before the Terminal</h3><p>Check Docker is there, then run the machine check script.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><span>0/6</span></div><a class="btn amber" href="/sims/lesson-0.html">Launch Terminal &rarr;</a></div>
       <div class="simcard" data-sim="kafka" data-phase="phase1"><div class="simpills"><span class="steppill">16 STEPS</span><span class="tierpill free">Free</span></div><h3>Apache Kafka</h3><p>Create a topic, send three fake orders, watch the mirror copy them.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/16</span></div><a class="btn amber" href="/sims/kafka.html">Launch Terminal &rarr;</a></div>
       <div class="simcard" data-sim="error-decoder" data-phase="free"><div class="simpills"><span class="steppill">9 STEPS</span><span class="tierpill free">Free</span></div><h3>Error Decoder</h3><p>Cause four common errors on purpose, then fix each one.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/9</span></div><a class="btn amber" href="/sims/error-decoder.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="linux-basics" data-phase="free"><div class="simpills"><span class="steppill">13 STEPS</span><span class="tierpill free">Free</span></div><h3>Linux Command Line</h3><p>Your first 13 commands: look around, make files, copy, rename, delete.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/13</span></div><a class="btn amber" href="/sims/linux-basics.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="git-basics" data-phase="free"><div class="simpills"><span class="steppill">16 STEPS</span><span class="tierpill free">Free</span></div><h3>Git &amp; Version Control</h3><p>Commit, branch and merge — the workflow every team uses.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/16</span></div><a class="btn amber" href="/sims/git-basics.html">Launch Terminal &rarr;</a></div>
       <div class="simcard" data-sim="postgresql" data-phase="phase1"><div class="simpills"><span class="steppill">25 STEPS</span><span class="tierpill">Phase 1 · ₹399</span></div><h3>PostgreSQL Failover</h3><p>Copy rows to a standby, then fail over by hand and with Patroni.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/25</span></div><a class="btn amber" href="/sims/postgresql.html">Launch Terminal &rarr;</a></div>
       <div class="simcard" data-sim="redis" data-phase="phase1"><div class="simpills"><span class="steppill">22 STEPS</span><span class="tierpill">Phase 1 · ₹399</span></div><h3>Redis</h3><p>Save values, set expiry times, count orders, try writing to the copy.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/22</span></div><a class="btn amber" href="/sims/redis.html">Launch Terminal &rarr;</a></div>
       <div class="simcard" data-sim="object-store" data-phase="phase1"><div class="simpills"><span class="steppill">15 STEPS</span><span class="tierpill">Phase 1 · ₹399</span></div><h3>Object Store</h3><p>Put fake receipts in one store and watch the mirror copy them.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/15</span></div><a class="btn amber" href="/sims/object-store.html">Launch Terminal &rarr;</a></div>
@@ -113,9 +131,9 @@
         <span class="buytag">Before you buy &mdash; Free</span>
         <div class="buyprice">₹0</div>
         <ul>
-          <li>Try 3 simulations free — Before the Terminal, Kafka, and the Error Decoder</li>
+          <li>Try 5 simulations free — Before the Terminal, Kafka, Error Decoder, Linux and Git</li>
           <li>See all 18 lesson titles</li>
-          <li>Read Lesson 0 + the error decoder free</li>
+          <li>Read Lesson 0, the Error Decoder and the Linux and Git lessons free</li>
           <li>No payment needed</li>
         </ul>
       </div>
@@ -243,12 +261,14 @@
 
   <div class="section" id="curriculum">
     <h2>Course curriculum</h2>
-    <p class="lead">18 lessons in total: 7 in Phase 1, 9 in Phase 2, plus Lesson 0 and the Error Decoder &mdash; both free. Tap a phase to see its lessons. The two free lessons are marked Try free.</p>
+    <p class="lead">18 lessons in total: 7 in Phase 1, 9 in Phase 2, plus Lesson 0, the Error Decoder and two free skill labs (Linux and Git) &mdash; all free. Tap a phase to see its lessons. The two free lessons are marked Try free.</p>
     <details class="curriculum">
-      <summary><span>Free &mdash; Start here</span><span class="meta">2 lessons &middot; ₹0</span><span class="plus">+</span></summary>
+      <summary><span>Free &mdash; Start here</span><span class="meta">4 lessons &middot; ₹0</span><span class="plus">+</span></summary>
       <div class="cbody"><div class="cbody-inner">
       <div class="lesson-row" data-lesson="lesson-0" data-phase="free"><span class="n">01</span><div class="lr-main"><a href="/lessons/lesson-0.html">Lesson 0: Before the Terminal</a> <span class="pill sim">Try free</span><div class="sub">What Linux, a terminal, Docker and a port mean — in plain English. Plus how to install Docker and check your machine. Free.</div><div class="sub"><a href="/sims/lesson-0.html">&#9654; Try the simulation free</a></div></div><span class="rowtags"><span class="ptag">Free</span><span class="stag">Docker &amp; Linux · Beginner</span></span></div>
       <div class="lesson-row" data-lesson="error-decoder" data-phase="free"><span class="n">18</span><div class="lr-main"><a href="/lessons/error-decoder.html">Error Decoder — Find Your Error, Fix It</a> <span class="pill sim">Try free</span><div class="sub">35 errors beginners hit, each with what it means, the one fix, and how to check it worked. Free.</div><div class="sub"><a href="/sims/error-decoder.html">&#9654; Try the simulation free</a></div></div><span class="rowtags"><span class="ptag">Free</span><span class="stag">Reference · Error Decoder</span></span></div>
+      <div class="lesson-row" data-lesson="linux-basics" data-phase="free"><span class="n">+</span><div class="lr-main"><a href="/lessons/linux-basics.html">Free skill: Linux Command Line</a> <span class="pill sim">Try free</span><div class="sub">The 12 commands you will use every day on every server.</div><div class="sub"><a href="/sims/linux-basics.html">&#9654; Try the simulation free</a></div></div><span class="rowtags"><span class="ptag">Free</span><span class="stag">Free skill · Beginner</span></span></div>
+      <div class="lesson-row" data-lesson="git-basics" data-phase="free"><span class="n">+</span><div class="lr-main"><a href="/lessons/git-basics.html">Free skill: Git &amp; Version Control</a> <span class="pill sim">Try free</span><div class="sub">Save versions, branch safely and merge — the core team workflow.</div><div class="sub"><a href="/sims/git-basics.html">&#9654; Try the simulation free</a></div></div><span class="rowtags"><span class="ptag">Free</span><span class="stag">Free skill · Beginner</span></span></div>
       </div></div>
     </details>
     <details class="curriculum" open>
@@ -279,13 +299,14 @@
     </details>
   </div>
 </div>
+</main>
 <footer class="site"><b>PromptStudio</b> &middot; DevOps Kit &mdash; learn by doing, on your own machine.<br>Every lab uses fake data only &mdash; fake orders, fake names, fake receipts. Nothing real, nothing to leak.<br>Payment failed, or stuck more than 15 minutes? Mail us: <a href="mailto:support@promptstudioai.in">support@promptstudioai.in</a> — we reply within 24 hours.</footer>
-<div class="stickybar">
+<div class="stickybar" role="region" aria-label="Buy the course">
   <div class="sb-prices">Phase 1: ₹399 &bull; Phase 2: ₹799 &bull; Both: ₹999<small>One-time &bull; UPI accepted</small></div>
   <button class="btn pay-btn" id="sticky-buy" data-phase="phase1" type="button">Buy Phase 1 — ₹399</button>
   <a class="btn" id="sticky-continue" href="/lessons/p1-start.html" hidden>Continue learning &rarr;</a>
 </div>
-<script src="/assets/hero.js"></script>
+<script defer src="/assets/hero.js"></script>
 
 <div class="auth-modal" id="auth-modal" hidden>
   <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
@@ -308,12 +329,12 @@
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script src="/assets/auth.js"></script>
-<script src="/assets/devops-app.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script defer src="/assets/i18n.js"></script>
+<script defer src="/assets/auth.js"></script>
+<script defer src="/assets/devops-app.js"></script>
 
 </body>
 </html>

@@ -542,3 +542,28 @@ body.locked .sim-shell > #lock-screen { margin-top: auto; margin-bottom: auto; }
   .stepcard .stepactions { margin-top: 8px; }
   .stepcard .scmd { max-height: 72px; overflow-y: auto; }
 }
+
+/* a11y-additions */
+:focus-visible{outline:3px solid #0b5fff;outline-offset:2px;border-radius:4px}
+.terminal :focus-visible,.hero-term :focus-visible{outline-color:#f5a524}
+.skip-link{position:absolute;left:8px;top:-60px;background:#0b5fff;color:#fff;padding:10px 14px;border-radius:6px;z-index:1000;font-weight:700;text-decoration:none}
+.skip-link:focus{top:8px}
+#main{outline:none}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+@media print{.site-header,.sim-topbar,.sticky-cta,.auth-slot,.sidebar-toggle{display:none!important}}
+
+/* i18n */
+.lang-switch{font:inherit;font-size:13px;padding:6px 8px;border-radius:8px;border:1px solid rgba(128,128,128,.4);background:transparent;color:inherit;margin-right:8px;max-width:110px;cursor:pointer}
+.lang-switch option{color:#111;background:#fff}
+.lang-floating{position:fixed;right:10px;bottom:10px;z-index:900;background:#fff;color:#111}
+.lang-suggest{display:flex;gap:8px;align-items:center;justify-content:center;padding:8px 12px;background:#fff7e0;color:#4a3500;font-size:15px}
+.lang-suggest button{font:inherit;border:0;border-radius:8px;padding:6px 12px;background:#14161b;color:#fff;cursor:pointer}
+.lang-suggest .ls-x{background:transparent;color:inherit;font-size:20px;padding:0 8px}
+html[lang=hi] body{font-family:'Noto Sans Devanagari',system-ui,-apple-system,'Segoe UI',sans-serif}
+html[lang=te] body{font-family:'Noto Sans Telugu',system-ui,-apple-system,'Segoe UI',sans-serif}
+html[lang=ta] body{font-family:'Noto Sans Tamil',system-ui,-apple-system,'Segoe UI',sans-serif}
+html[lang=hi] code,html[lang=te] code,html[lang=ta] code,html[lang=hi] .terminal,html[lang=te] .terminal,html[lang=ta] .terminal{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+html[lang=hi] body,html[lang=te] body,html[lang=ta] body{line-height:1.7}
+
+.sim-topbar .lang-switch{color:#fff;border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.08)}
+.sim-topbar .lang-switch option{color:#111;background:#fff}
