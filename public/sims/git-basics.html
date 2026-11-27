@@ -14,11 +14,8 @@
 <meta property="og:description" content="Git is the tool every developer and DevOps engineer uses to save versions of their work, undo mistakes and work in a team. In this practice terminal you…">
 <meta property="og:url" content="https://promptstudioai.in/sims/git-basics.html">
 <meta name="twitter:card" content="summary">
-<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="/assets/style.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap">
 <link rel="stylesheet" href="/assets/genz.css">
 </head>
 <body data-page="sim" data-sim="git-basics" data-phase="free">
@@ -45,11 +42,7 @@
   </div>
 </div>
 
-<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script defer src="/assets/fun.js"></script>
 <script defer src="/assets/i18n.js"></script>
-<script defer src="/assets/auth.js"></script>
-<script defer src="/assets/devops-app.js"></script>
+<script defer src="/assets/boot.js"></script>
 <script>window.SIM_DATA = {"slug": "git-basics", "title": "Git — Save and Track Your Work", "intro": "Git is the tool every developer and DevOps engineer uses to save versions of their work, undo mistakes and work in a team. In this practice terminal you create a repository, make commits, branch off safely, and merge back.", "proof": "Save the output of git log. It proves you made real commits.", "welcome": "Git practice terminal. You are in an empty folder. Type a command, or follow the step above.", "world": {"containers": {}, "fs": {"/home/learner": []}, "file_contents": {}}, "steps": [{"cmd": "git init", "note": "Turns this folder into a Git repository — a folder Git watches.", "out": ["Initialized empty Git repository in /home/learner/.git/"]}, {"cmd": "git config user.name \"Learner\"", "note": "Tell Git your name. Every save (commit) records who made it.", "out": ["(no output — that is normal)"]}, {"cmd": "git config user.email \"learner@example.com\"", "note": "And your email.", "out": ["(no output — that is normal)"]}, {"cmd": "echo \"my first file\" > app.txt", "note": "Create a file to track.", "out": ["(no output — that is normal)"]}, {"cmd": "git status", "note": "status shows what changed. app.txt is new and not saved yet.", "out": ["On branch main", "nothing to commit, working tree clean"]}, {"cmd": "git add app.txt", "note": "add puts the file in the 'to be saved' box (the staging area).", "out": ["(no output — that is normal)"]}, {"cmd": "git commit -m \"Add app.txt\"", "note": "commit saves a snapshot with a short message. This is your first version.", "out": ["[main a1b2c3d] Add app.txt", " 1 file changed, 1 insertion(+)"]}, {"cmd": "git log", "note": "log lists all saved versions, newest first.", "out": ["a1b2c3d Add app.txt"]}, {"cmd": "git branch feature", "note": "A branch is a safe copy to try ideas without touching your main work.", "out": ["(no output — that is normal)"]}, {"cmd": "git checkout feature", "note": "Switch to the feature branch.", "out": ["Switched to branch 'feature'"]}, {"cmd": "echo \"new idea\" > idea.txt", "note": "Work on the branch.", "out": ["(no output — that is normal)"]}, {"cmd": "git add idea.txt", "note": "Stage the new file.", "out": ["(no output — that is normal)"]}, {"cmd": "git commit -m \"Add idea.txt\"", "note": "Save it on the feature branch.", "out": ["[feature e4f5a6b] Add idea.txt", " 1 file changed, 1 insertion(+)"]}, {"cmd": "git checkout main", "note": "Go back to main. Your idea is not here yet.", "out": ["Switched to branch 'main'"]}, {"cmd": "git merge feature", "note": "merge brings the feature branch's work into main.", "out": ["Merge made by the 'ort' strategy.", " app.py | 1 +", " 1 file changed, 1 insertion(+)"]}, {"cmd": "git log", "note": "Both commits are now in main. That is the whole core workflow.", "out": ["c7d8e9f Merge branch 'feature'", "e4f5a6b Add idea.txt", "a1b2c3d Add app.txt"]}]};</script><script defer src="/assets/sim.js"></script><script defer src="/assets/sim-chrome.js"></script></body></html>

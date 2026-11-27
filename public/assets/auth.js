@@ -223,7 +223,8 @@
     return currentUser.getIdToken(false);
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
+  function onReady(fn) { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn); else fn(); }
+  onReady(function () {
     var m = modal();
     if (m) {
       var close = document.getElementById('auth-close');

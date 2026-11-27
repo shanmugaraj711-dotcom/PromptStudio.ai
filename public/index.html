@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DevOps Kit — Learn by Doing, On Your Own Machine | PromptStudio</title>
+<meta name="description" content="Learn DevOps by doing: practise Kafka, PostgreSQL failover, Redis, Docker and Kubernetes in a safe browser terminal, then run the same commands on your…">
+<meta name="theme-color" content="#14161b">
+<link rel="canonical" href="https://promptstudioai.in/">
+<link rel="icon" href="/favicon.ico">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="DevOps Kit by PromptStudio">
+<meta property="og:title" content="DevOps Kit — Learn by Doing, On Your Own Machine | PromptStudio">
+<meta property="og:description" content="Learn DevOps by doing: practise Kafka, PostgreSQL failover, Redis, Docker and Kubernetes in a safe browser terminal, then run the same commands on your…">
+<meta property="og:url" content="https://promptstudioai.in/">
+<meta name="twitter:card" content="summary">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/genz.css">
+</head>
+<body class="has-sticky" data-page="landing">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <a class="nav-home" href="/" aria-label="Home"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 3l9 8.5"/><path d="M5 10.5V21h14V10.5"/><path d="M9.5 21v-6h5v6"/></svg></a>
+  <a class="wordmark" href="/">DevOps Kit <small>by PromptStudio</small></a>
+  <span class="bill-pill">Zero Cloud Bill</span>
+  <span class="auth-slot" id="auth-slot"></span>
+</header>
+<main id="main" tabindex="-1"><div class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow">Learn by doing &bull; On your laptop</span>
+    <h1>Build real backend infrastructure. Zero cloud bill.</h1>
+    <p class="subhead">Run Kafka, PostgreSQL failover, Redis, and multi-service pipelines locally with free Docker tools. Plain English. One idea per step.</p>
+    <a class="btn amber cta" href="#try-sim">Try the Practice Terminal Demo &rarr;</a>
+    <div class="hero-term" id="hero-term">
+      <div class="hero-term-chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="fname">patroni-failover — bash</span></div>
+      <div class="hero-term-body" id="hero-term-body"></div>
+    </div>
+    <div class="hero-chips">
+      <span class="chip">18 lessons</span>
+      <span class="chip">20 terminal simulations</span>
+      <span class="chip">No cloud bill</span>
+      <span class="chip">Fake data only</span>
+    </div>
+  </div>
+</div>
+<div class="continue-banner" id="continue-banner" hidden></div>
+<div class="wrap"><section class="lx-promo" aria-labelledby="lxp-h"><span class="eyebrow">New</span><h2 id="lxp-h">Practice on a real Linux server — right in your browser</h2><p>Type real commands on a safe practice server: fix permissions, run a web server, find why an app is down. 12 modules, 124 guided missions, no install, no cloud bill.</p><div class="lx-promo-btns"><a class="btn amber" href="/sims/linux-server-demo.html">Try the free demo →</a><a class="btn secondary" href="/roadmap.html">DevOps A–Z roadmap</a><a class="btn secondary" href="/#plans">Unlock the full lab</a></div></section></div>
+
+<div class="wrap">
+  <div class="section">
+    <h2>How learning works</h2>
+    <div class="rail">
+      <div class="rail-step"><span class="rail-num">1</span><b>Read 1 plain-English concept</b><p>Three minutes. One idea per step. No jargon without a simple meaning next to it.</p></div>
+      <div class="rail-step"><span class="rail-num">2</span><b>Run commands on fake data in Docker</b><p>The same commands as the real lab, on your own machine. Nothing real, nothing to leak.</p></div>
+      <div class="rail-step"><span class="rail-num">3</span><b>Break it on purpose &amp; fix it</b><p>Kill the database. Stop a backend. Watch the standby take over — then fix it yourself.</p></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>What you&rsquo;ll learn</h2>
+    <p class="lead">Two phases. Seven labs in Phase 1, nine guides in Phase 2 — plus two free lessons to start.</p>
+    <div class="skills">
+      <div class="skill skill--data"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M3 12h12M3 18h15"/></svg><b>Kafka</b><small>messages in a line</small></div>
+      <div class="skill skill--data"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg><b>PostgreSQL + Patroni</b><small>database + standby</small></div>
+      <div class="skill skill--data"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg><b>Redis</b><small>fast memory store</small></div>
+      <div class="skill skill--data"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8l8-4 8 4v8l-8 4-8-4V8z"/><path d="M4 8l8 4 8-4M12 12v8"/></svg><b>Object Store</b><small>files that mirror</small></div>
+      <div class="skill"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M8 20h8M12 6 5 8m7-2 7 2"/><path d="M2.5 13 5 8l2.5 5a2.6 2.6 0 0 1-5 0zM16.5 13 19 8l2.5 5a2.6 2.6 0 0 1-5 0z"/></svg><b>Load Balancer</b><small>one guard, three backends</small></div>
+      <div class="skill"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="8" width="18" height="10" rx="1"/><path d="M7 8V5h10v3M7 13h4"/></svg><b>Docker &amp; K8s</b><small>containers on your machine</small></div>
+      <div class="skill"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="M3 13l9 5 9-5"/></svg><b>Terraform</b><small>infrastructure as code</small></div>
+      <div class="skill"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16"/><path d="M7 14l3-4 3 2 4-5"/></svg><b>CI/CD &amp; Monitoring</b><small>pipelines that ship</small></div>
+    </div>
+  </div>
+</div>
+
+  <div class="section">
+    <h2>Free before you buy</h2>
+    <p class="lead">Free lessons and five free simulations. No payment needed. Start here if you have never touched a terminal.</p>
+    <div class="cards">
+      <div class="card">
+        <h3>Lesson 0 — Before the Terminal</h3>
+        <p class="tagline">What Linux, a terminal, Docker and a port mean — in plain English. Plus how to install Docker and check your machine with one script.</p>
+        <p class="tagline"><b>Docker &amp; Linux · Beginner</b></p>
+        <a class="btn" href="/lessons/lesson-0.html">Read Lesson 0 — free</a>
+      </div>
+      <div class="card">
+        <h3>Error Decoder</h3>
+        <p class="tagline">35 errors beginners hit — permission denied, port already in use, connection refused. Each one: what it means, the one fix, how to check it worked.</p>
+        <p class="tagline"><b>Reference · Error Decoder</b></p>
+        <a class="btn" href="/lessons/error-decoder.html">Open the Error Decoder — free</a>
+      </div>
+    </div>
+  </div>
+
+<div class="simdeck" id="try-sim">
+  <div class="wrap">
+    <h2>Try a Simulation First</h2>
+    <p class="lead">Browser labs. No install, works on your phone. Five are free to try (Before the Terminal, Kafka, Error Decoder, Linux and Git) — the rest unlock with Phase 1 (₹399), Phase 2 (₹799), or both together (₹999). Every simulation is a practice version: it shows the lab&rsquo;s real outputs, but nothing here runs a live service.</p>
+    <div class="simdeck-scroll">
+      <div class="simcard" data-sim="lesson-0" data-phase="free"><div class="simpills"><span class="steppill">6 STEPS</span><span class="tierpill free">Free</span></div><h3>Before the Terminal</h3><p>Check Docker is there, then run the machine check script.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><span>0/6</span></div><a class="btn amber" href="/sims/lesson-0.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="kafka" data-phase="phase1"><div class="simpills"><span class="steppill">16 STEPS</span><span class="tierpill free">Free</span></div><h3>Apache Kafka</h3><p>Create a topic, send three fake orders, watch the mirror copy them.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/16</span></div><a class="btn amber" href="/sims/kafka.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="error-decoder" data-phase="free"><div class="simpills"><span class="steppill">9 STEPS</span><span class="tierpill free">Free</span></div><h3>Error Decoder</h3><p>Cause four common errors on purpose, then fix each one.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/9</span></div><a class="btn amber" href="/sims/error-decoder.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="linux-basics" data-phase="free"><div class="simpills"><span class="steppill">13 STEPS</span><span class="tierpill free">Free</span></div><h3>Linux Command Line</h3><p>Your first 13 commands: look around, make files, copy, rename, delete.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/13</span></div><a class="btn amber" href="/sims/linux-basics.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="git-basics" data-phase="free"><div class="simpills"><span class="steppill">16 STEPS</span><span class="tierpill free">Free</span></div><h3>Git &amp; Version Control</h3><p>Commit, branch and merge — the workflow every team uses.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/16</span></div><a class="btn amber" href="/sims/git-basics.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="postgresql" data-phase="phase1"><div class="simpills"><span class="steppill">25 STEPS</span><span class="tierpill">Phase 1 · ₹399</span></div><h3>PostgreSQL Failover</h3><p>Copy rows to a standby, then fail over by hand and with Patroni.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/25</span></div><a class="btn amber" href="/sims/postgresql.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="redis" data-phase="phase1"><div class="simpills"><span class="steppill">22 STEPS</span><span class="tierpill">Phase 1 · ₹399</span></div><h3>Redis</h3><p>Save values, set expiry times, count orders, try writing to the copy.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/22</span></div><a class="btn amber" href="/sims/redis.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="object-store" data-phase="phase1"><div class="simpills"><span class="steppill">15 STEPS</span><span class="tierpill">Phase 1 · ₹399</span></div><h3>Object Store</h3><p>Put fake receipts in one store and watch the mirror copy them.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/15</span></div><a class="btn amber" href="/sims/object-store.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="load-balancer" data-phase="phase1"><div class="simpills"><span class="steppill">20 STEPS</span><span class="tierpill">Phase 1 · ₹399</span></div><h3>Load Balancer</h3><p>Ask one door six times, kill a backend, watch the site stay up.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/20</span></div><a class="btn amber" href="/sims/load-balancer.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="end-to-end" data-phase="phase1"><div class="simpills"><span class="steppill">28 STEPS</span><span class="tierpill">Phase 1 · ₹399</span></div><h3>End-to-End Pipeline</h3><p>Send one fake order through the whole shop, then kill the database.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/28</span></div><a class="btn amber" href="/sims/end-to-end.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="p1-start" data-phase="phase1"><div class="simpills"><span class="steppill">9 STEPS</span><span class="tierpill">Phase 1 · ₹399</span></div><h3>Phase 1 Start</h3><p>Knock on all five doors: messages, database, memory, files, front door.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/9</span></div><a class="btn amber" href="/sims/p1-start.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="p2-start" data-phase="phase2"><div class="simpills"><span class="steppill">5 STEPS</span><span class="tierpill">Phase 2 · ₹799</span></div><h3>Phase 2 Start</h3><p>Check the five tools: Git, Docker, Kubernetes, Python, Linux.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><span>0/5</span></div><a class="btn amber" href="/sims/p2-start.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="p2-zero-cost" data-phase="phase2"><div class="simpills"><span class="steppill">31 STEPS</span><span class="tierpill">Phase 2 · ₹799</span></div><h3>Zero-Cost Lab</h3><p>Run a free website in a container and write a check script.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/31</span></div><a class="btn amber" href="/sims/p2-zero-cost.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="p2-kubernetes" data-phase="phase2"><div class="simpills"><span class="steppill">21 STEPS</span><span class="tierpill">Phase 2 · ₹799</span></div><h3>Kubernetes</h3><p>Start a small local cluster and put your site on it.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/21</span></div><a class="btn amber" href="/sims/p2-kubernetes.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="p2-break-fix" data-phase="phase2"><div class="simpills"><span class="steppill">25 STEPS</span><span class="tierpill">Phase 2 · ₹799</span></div><h3>Break-and-Fix</h3><p>Break six small things on purpose, then fix each one.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/25</span></div><a class="btn amber" href="/sims/p2-break-fix.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="p2-cheat-sheets" data-phase="phase2"><div class="simpills"><span class="steppill">8 STEPS</span><span class="tierpill">Phase 2 · ₹799</span></div><h3>Cheat Sheets</h3><p>Run the most-used commands and see what each answers.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/8</span></div><a class="btn amber" href="/sims/p2-cheat-sheets.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="p2-interview" data-phase="phase2"><div class="simpills"><span class="steppill">9 STEPS</span><span class="tierpill">Phase 2 · ₹799</span></div><h3>Interview Pack</h3><p>Answer four interview moments with a real command.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/9</span></div><a class="btn amber" href="/sims/p2-interview.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="p2-portfolio" data-phase="phase2"><div class="simpills"><span class="steppill">9 STEPS</span><span class="tierpill">Phase 2 · ₹799</span></div><h3>Portfolio Projects</h3><p>Build the pipeline, the infrastructure, and the monitoring check.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/9</span></div><a class="btn amber" href="/sims/p2-portfolio.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="p2-resume" data-phase="phase2"><div class="simpills"><span class="steppill">10 STEPS</span><span class="tierpill">Phase 2 · ₹799</span></div><h3>Resume Bullets</h3><p>Prove each resume bullet with the command behind it.</p><div class="simprog"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>0/10</span></div><a class="btn amber" href="/sims/p2-resume.html">Launch Terminal &rarr;</a></div>
+      <div class="simcard" data-sim="p2-best-sites" data-phase="phase2"><div class="simpills"><span class="steppill">4 STEPS</span><span class="tierpill">Phase 2 · ₹799</span></div><h3>Best Sites</h3><p>Ask four tools for their own built-in help.</p><div class="simprog"><i></i><i></i><i></i><i></i><span>0/4</span></div><a class="btn amber" href="/sims/p2-best-sites.html">Launch Terminal &rarr;</a></div>
+    </div>
+  </div>
+</div>
+
+<div class="simdeck">
+  <div class="wrap">
+    <h2 id="plans">Before you buy / After you buy</h2>
+    <p class="lead">No surprises. This is exactly what is free, and what each phase unlocks. After you buy, you download the kit &mdash; your own copy of every lesson and lab file, to run on your own computer. No cloud, no bill.</p>
+    <div class="buygrid">
+      <div class="buycard">
+        <span class="buytag">Before you buy &mdash; Free</span>
+        <div class="buyprice">₹0</div>
+        <ul>
+          <li>Try 5 simulations free — Before the Terminal, Kafka, Error Decoder, Linux and Git</li>
+          <li>See all 18 lesson titles</li>
+          <li>Read Lesson 0, the Error Decoder and the Linux and Git lessons free</li>
+          <li>No payment needed</li>
+        </ul>
+      </div>
+      <div class="buycard">
+        <span class="buytag">After you buy Phase 1 &mdash; ₹399</span>
+        <div class="buyprice">₹399 <small>one-time</small></div>
+        <ul>
+          <li>Lessons 2&ndash;8, full guides</li>
+          <li>All 7 Phase 1 simulations unlocked</li>
+          <li>Phase 1 kit download: 9 lesson files, 6 lab folders (each with its docker-compose.yml), the portfolio folder, kit-doctor.sh and reset.sh</li>
+          <li>Your progress is saved, resume anytime</li>
+        </ul>
+      </div>
+      <div class="buycard">
+        <span class="buytag">After you buy Phase 2 &mdash; ₹799</span>
+        <div class="buyprice">₹799 <small>one-time</small></div>
+        <ul>
+          <li>Lessons 9&ndash;17, full guides</li>
+          <li>Phase 2 does not include Phase 1 — buy Phase 1 separately, or get both together for ₹999.</li>
+          <li>Phase 2 kit download: 9 guide files + changelog &mdash; Linux, Git, Docker, Kubernetes, Terraform, CI/CD, monitoring, portfolio projects, interview pack</li>
+          <li>Your progress is saved, resume anytime</li>
+        </ul>
+      </div>
+      <div class="buycard">
+        <span class="buytag">Best value &mdash; Both phases &mdash; ₹999</span>
+        <div class="buyprice">₹999 <small>one-time</small></div>
+        <ul>
+          <li>Both phases together — save ₹199 vs ₹1,198</li>
+          <li>All 18 lessons, all 18 simulations unlocked</li>
+          <li>Both kit downloads: Phase 1 + Phase 2</li>
+          <li>Your progress is saved, resume anytime</li>
+        </ul>
+      </div>
+    </div>
+    <p class="buy-note">Simulations are practice versions &mdash; real commands and real outputs, but no live service runs. The kit gives you the full lessons and lab files to run on your own computer.</p>
+    <p class="buy-note">If you get stuck: 1. Run <code>bash kit-doctor.sh</code> in the Phase 1 folder &mdash; it checks Docker, ports, disk and memory. 2. Look the exact error line up in the Error Decoder. 3. Email support@promptstudioai.in &mdash; we reply within 24 hours.</p>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="section">
+    <h2>Two phases</h2>
+    <p class="lead">Start with free Lesson 0, then Phase 1. If you want Linux, Git and Docker from zero first, do Phase 2 first. Or get both phases together for ₹999 — save ₹199.</p>
+    <div class="cards">
+      <div class="card">
+        <h3>Phase 1 &mdash; The Data Tier</h3>
+        <p class="tagline">The new tech: how data moves, copies itself, and survives a crash.</p>
+        <div class="price">₹399 <small>one-time</small></div>
+        <span class="microbadge">One-time &bull; No subscription</span>
+        <ul>
+          <li>Kafka &mdash; messages in a line, copied to a second cluster</li>
+          <li>PostgreSQL &mdash; main database, standby copy, failover with Patroni</li>
+          <li>Redis &mdash; a fast memory store, with a read-only copy</li>
+          <li>Object store &mdash; file storage that mirrors itself</li>
+          <li>Load balancer &mdash; one guard, three backends</li>
+          <li>Replication and failover, end to end</li>
+          <li>One full end-to-end lab: one fake order, all the way through</li>
+          <li>7 practice simulations with real commands and real outputs — no live service runs</li>
+          <li>Failure drills — kill it, watch it recover, prove no data lost</li>
+          <li>Proof-of-work artefacts for your portfolio</li>
+          <li>Email support — we reply within 24 hours</li>
+        </ul>
+        <button class="btn amber pay-btn" data-phase="phase1" type="button">Buy Phase 1 — ₹399</button>
+        <button class="btn owned-download" data-phase="phase1" type="button" hidden>✓ You own this — Download the kit (.zip)</button>
+        <p class="owned-note" data-phase="phase1" hidden>✓ You own Phase 1. Your progress saves.</p>
+        <p class="paynote">Pay once with UPI, card or netbanking. Keep it forever.</p>
+      </div>
+      <div class="card featured">
+        <h3>Phase 2 &mdash; The Rest of DevOps</h3>
+        <p class="tagline">The base skills and the rest of the toolkit, from zero.</p>
+        <div class="price">₹799 <small>one-time</small></div>
+        <span class="microbadge">One-time &bull; No subscription</span>
+        <ul>
+          <li>Linux, Git, Docker &mdash; the base skills, from zero</li>
+          <li>Kubernetes &mdash; your app on a small local cluster</li>
+          <li>Terraform, CI/CD, monitoring</li>
+          <li>Break-and-fix labs &mdash; learn like on-call work</li>
+          <li>Interview pack, portfolio projects, resume bullets</li>
+          <li>Best sites &mdash; what to pick, and why</li>
+          <li>Email support — we reply within 24 hours</li>
+        </ul>
+        <button class="btn amber pay-btn" data-phase="phase2" type="button">Buy Phase 2 — ₹799</button>
+        <button class="btn owned-download" data-phase="phase2" type="button" hidden>✓ You own this — Download the kit (.zip)</button>
+        <p class="owned-note" data-phase="phase2" hidden>✓ You own Phase 2. Your progress saves.</p>
+        <p class="paynote">Pay once with UPI, card or netbanking. Keep it forever.</p>
+      </div>
+      <div class="card featured bundle-wide">
+        <h3>Both phases &mdash; the full kit</h3>
+        <p class="tagline">Everything in Phase 1 and Phase 2, together. Save ₹199.</p>
+        <div class="price">₹999 <small>one-time</small></div>
+        <span class="microbadge">One-time &bull; No subscription &bull; Best value</span>
+        <ul>
+          <li>All 18 lessons, full guides</li>
+          <li>All 18 practice simulations unlocked</li>
+          <li>Both kit downloads — Phase 1 + Phase 2</li>
+          <li>Your progress is saved, resume anytime</li>
+          <li>Email support — we reply within 24 hours</li>
+        </ul>
+        <button class="btn amber pay-btn" data-phase="bundle" type="button">Buy both phases — ₹999</button>
+        <button class="btn owned-download" data-phase="phase1" type="button" hidden>✓ You own this — Download Phase 1 (.zip)</button>
+        <button class="btn owned-download" data-phase="phase2" type="button" hidden>✓ You own this — Download Phase 2 (.zip)</button>
+        <p class="owned-note" data-phase="bundle" hidden>✓ You own both phases. Your progress saves.</p>
+        <p class="paynote">Pay once with UPI, card or netbanking. Keep it forever.</p>
+      </div>
+    </div>
+    <p class="paynote">Stuck more than 15 minutes? Email us: <a href="mailto:support@promptstudioai.in">support@promptstudioai.in</a> — we reply within 24 hours.</p>
+  </div>
+
+  <div class="section">
+    <h2>Your level in each topic</h2>
+    <p class="lead">Every topic has its own ladder: Beginner, then Intermediate, then Advanced. Finish a <b>built</b> stage and you can really do the thing — not just read about it.</p>
+    <div class="levels-grid">
+<div class="level-topic"><h3>Kafka</h3><div class="lv"><b>Beginner:</b> Send three fake orders into one cluster so messages wait in a line. (<a href="/lessons/p1-kafka.html">Kafka</a>)</div><div class="lv"><b>Intermediate:</b> Watch the copy tool (MirrorMaker 2) copy orders to a second cluster. (<a href="/lessons/p1-kafka.html">Kafka</a>)</div><div class="lv"><b>Advanced:</b> Fix a stopped mirror — find the bad port, watch the missing order appear on the second cluster. (<a href="/lessons/p1-kafka.html">Kafka</a>)</div></div>
+<div class="level-topic"><h3>PostgreSQL</h3><div class="lv"><b>Beginner:</b> Run a main database with one standby copy. (<a href="/lessons/p1-postgresql.html">PostgreSQL</a>)</div><div class="lv"><b>Intermediate:</b> Switch to the standby copy with the failover tool (Patroni). (<a href="/lessons/p1-postgresql.html">PostgreSQL</a>)</div><div class="lv"><b>Advanced:</b> Kill the database on purpose, bring it back like on-call work. (<a href="/lessons/p1-postgresql.html">PostgreSQL</a>)</div></div>
+<div class="level-topic"><h3>Redis</h3><div class="lv"><b>Beginner:</b> Use a fast memory store for counts and queues. (<a href="/lessons/p1-redis.html">Redis</a>)</div><div class="lv"><b>Intermediate:</b> Test reading data from a read-only copy. (<a href="/lessons/p1-redis.html">Redis</a>)</div><div class="lv"><b>Advanced:</b> Fix Redis out of memory — set a clean-up rule (eviction policy). (<a href="/lessons/p1-redis.html">Redis</a>)</div></div>
+<div class="level-topic"><h3>Object Store</h3><div class="lv"><b>Beginner:</b> Save fake receipts into one file store. (<a href="/lessons/p1-object-store.html">Object Store</a>)</div><div class="lv"><b>Intermediate:</b> Watch a mirror copy receipts to a second store. (<a href="/lessons/p1-object-store.html">Object Store</a>)</div><div class="lv"><b>Advanced:</b> Fix a stopped mirror — start it again, count both sides. (<a href="/lessons/p1-object-store.html">Object Store</a>)</div></div>
+<div class="level-topic"><h3>Load Balancer</h3><div class="lv"><b>Beginner:</b> Put one guard in front of three backends. (<a href="/lessons/p1-load-balancer.html">Load Balancer</a>)</div><div class="lv"><b>Intermediate:</b> Kill one backend, check the site stays up. (<a href="/lessons/p1-load-balancer.html">Load Balancer</a>)</div><div class="lv"><b>Advanced:</b> Break a backend or config on purpose, fix it like on-call work. (<a href="/lessons/p1-load-balancer.html">Load Balancer</a>)</div></div>
+<div class="level-topic"><h3>Docker &amp; Containers</h3><div class="lv"><b>Beginner:</b> Install Docker, check your machine, run your first container. (<a href="/lessons/lesson-0.html">Lesson 0</a>, <a href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a>)</div><div class="lv"><b>Intermediate:</b> Run a tiny web server in a box, stop and start it. (<a href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a>)</div><div class="lv"><b>Advanced:</b> Fix a container that starts then stops. (<a href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a>)</div></div>
+<div class="level-topic"><h3>Kubernetes</h3><div class="lv"><b>Beginner:</b> Learn pods, services, and deploys on a small cluster. (<a href="/lessons/p2-kubernetes.html">Kubernetes</a>)</div><div class="lv"><b>Intermediate:</b> Scale the app 1 to 3 copies and swap its version. (<a href="/lessons/p2-kubernetes.html">Kubernetes</a>)</div><div class="lv"><b>Advanced:</b> Fix a pod stuck crashing — find the wrong database name. (<a href="/lessons/p2-kubernetes.html">Kubernetes</a>)</div></div>
+<div class="level-topic"><h3>Linux, Git &amp; CI/CD</h3><div class="lv"><b>Beginner:</b> Save work online with Git and write a first script. (<a href="/lessons/lesson-0.html">Lesson 0</a>, <a href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a>)</div><div class="lv"><b>Intermediate:</b> Make saving work run a check by itself, show pass or fail. (<a href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a>)</div><div class="lv"><b>Advanced:</b> Fix a broken script and a failed check. (<a href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a>)</div></div>
+<div class="level-topic"><h3>Whole System &amp; On-Call</h3><div class="lv"><b>Beginner:</b> See how data moves, copies itself, survives a crash. (<a href="/lessons/p1-start.html">Start Here</a>, <a href="/lessons/p2-start.html">Start Here</a>)</div><div class="lv"><b>Intermediate:</b> Trace one fake order through web, queue, database, file store. (<a href="/lessons/p1-end-to-end.html">End-to-End</a>)</div><div class="lv"><b>Advanced:</b> Break the order pipeline — stop the worker, watch it catch up. (<a href="/lessons/p1-end-to-end.html">End-to-End</a>)</div></div>
+<div class="level-topic"><h3>Career &amp; Proof</h3><div class="lv"><b>Beginner:</b> Answer real support interview questions in plain words. (<a href="/lessons/p2-interview.html">Interview Pack</a>)</div><div class="lv"><b>Intermediate:</b> Build three small portfolio projects as proof. (<a href="/lessons/p2-portfolio.html">Portfolio</a>)</div><div class="lv"><b>Advanced:</b> Turn finished projects into honest, simple resume bullets. (<a href="/lessons/p2-resume.html">Resume Bullets</a>)</div></div>
+    </div>
+  </div>
+
+  <div class="section" id="curriculum">
+    <h2>Course curriculum</h2>
+    <p class="lead">18 lessons in total: 7 in Phase 1, 9 in Phase 2, plus Lesson 0, the Error Decoder and two free skill labs (Linux and Git) &mdash; all free. Tap a phase to see its lessons. The two free lessons are marked Try free.</p>
+    <details class="curriculum">
+      <summary><span>Free &mdash; Start here</span><span class="meta">4 lessons &middot; ₹0</span><span class="plus">+</span></summary>
+      <div class="cbody"><div class="cbody-inner">
+      <div class="lesson-row" data-lesson="lesson-0" data-phase="free"><span class="n">01</span><div class="lr-main"><a href="/lessons/lesson-0.html">Lesson 0: Before the Terminal</a> <span class="pill sim">Try free</span><div class="sub">What Linux, a terminal, Docker and a port mean — in plain English. Plus how to install Docker and check your machine. Free.</div><div class="sub"><a href="/sims/lesson-0.html">&#9654; Try the simulation free</a></div></div><span class="rowtags"><span class="ptag">Free</span><span class="stag">Docker &amp; Linux · Beginner</span></span></div>
+      <div class="lesson-row" data-lesson="error-decoder" data-phase="free"><span class="n">18</span><div class="lr-main"><a href="/lessons/error-decoder.html">Error Decoder — Find Your Error, Fix It</a> <span class="pill sim">Try free</span><div class="sub">35 errors beginners hit, each with what it means, the one fix, and how to check it worked. Free.</div><div class="sub"><a href="/sims/error-decoder.html">&#9654; Try the simulation free</a></div></div><span class="rowtags"><span class="ptag">Free</span><span class="stag">Reference · Error Decoder</span></span></div>
+      <div class="lesson-row" data-lesson="linux-basics" data-phase="free"><span class="n">+</span><div class="lr-main"><a href="/lessons/linux-basics.html">Free skill: Linux Command Line</a> <span class="pill sim">Try free</span><div class="sub">The 12 commands you will use every day on every server.</div><div class="sub"><a href="/sims/linux-basics.html">&#9654; Try the simulation free</a></div></div><span class="rowtags"><span class="ptag">Free</span><span class="stag">Free skill · Beginner</span></span></div>
+      <div class="lesson-row" data-lesson="git-basics" data-phase="free"><span class="n">+</span><div class="lr-main"><a href="/lessons/git-basics.html">Free skill: Git &amp; Version Control</a> <span class="pill sim">Try free</span><div class="sub">Save versions, branch safely and merge — the core team workflow.</div><div class="sub"><a href="/sims/git-basics.html">&#9654; Try the simulation free</a></div></div><span class="rowtags"><span class="ptag">Free</span><span class="stag">Free skill · Beginner</span></span></div>
+      </div></div>
+    </details>
+    <details class="curriculum" open>
+      <summary><span>Phase 1 &mdash; The Data Tier</span><span class="meta">7 lessons &middot; ₹399</span><span class="plus">+</span></summary>
+      <div class="cbody"><div class="cbody-inner">
+      <div class="lesson-row" data-lesson="p1-start" data-phase="phase1"><span class="n">02</span><div class="lr-main"><a href="/lessons/p1-start.html">Start Here — Phase 1: The Data Tier</a> <span class="pill sim">Sim included</span><div class="sub">What the kit teaches, and how the two phases fit together. Read this first — it sets the order.</div><div class="sub"><a href="/sims/p1-start.html">&#9654; Simulation — included with Phase 1</a></div></div><span class="rowtags"><span class="ptag">P1</span><span class="stag">Whole System · Beginner</span></span></div>
+      <div class="lesson-row" data-lesson="p1-kafka" data-phase="phase1"><span class="n">03</span><div class="lr-main"><a href="/lessons/p1-kafka.html">Kafka Lab — Messages in a Line</a> <span class="pill sim">Try free</span><div class="sub">Send three fake orders into one cluster and watch the mirror copy them to a second one. Messages in a line, copied.</div><div class="sub"><a href="/sims/kafka.html">&#9654; Try the simulation free</a></div></div><span class="rowtags"><span class="ptag">P1</span><span class="stag">Kafka · Beginner → Advanced</span></span></div>
+      <div class="lesson-row" data-lesson="p1-postgresql" data-phase="phase1"><span class="n">04</span><div class="lr-main"><a href="/lessons/p1-postgresql.html">PostgreSQL Lab — Main Database, Standby, Failover</a> <span class="pill sim">Sim included</span><div class="sub">One main database, one standby copy, and a failover — first by hand, then with Patroni. No data lost.</div><div class="sub"><a href="/sims/postgresql.html">&#9654; Simulation — included with Phase 1</a></div></div><span class="rowtags"><span class="ptag">P1</span><span class="stag">PostgreSQL · Beginner → Advanced</span></span></div>
+      <div class="lesson-row" data-lesson="p1-redis" data-phase="phase1"><span class="n">05</span><div class="lr-main"><a href="/lessons/p1-redis.html">Redis Lab — A Fast Memory Store</a> <span class="pill sim">Sim included</span><div class="sub">A fast memory store for counts, queues and short-lived values — with a read-only copy to test.</div><div class="sub"><a href="/sims/redis.html">&#9654; Simulation — included with Phase 1</a></div></div><span class="rowtags"><span class="ptag">P1</span><span class="stag">Redis · Beginner → Advanced</span></span></div>
+      <div class="lesson-row" data-lesson="p1-object-store" data-phase="phase1"><span class="n">06</span><div class="lr-main"><a href="/lessons/p1-object-store.html">Object Store Lab — A File Cupboard</a> <span class="pill sim">Sim included</span><div class="sub">Put fake receipts in one file store and watch the mirror copy them. Cheap, simple storage.</div><div class="sub"><a href="/sims/object-store.html">&#9654; Simulation — included with Phase 1</a></div></div><span class="rowtags"><span class="ptag">P1</span><span class="stag">Object Store · Beginner → Advanced</span></span></div>
+      <div class="lesson-row" data-lesson="p1-load-balancer" data-phase="phase1"><span class="n">07</span><div class="lr-main"><a href="/lessons/p1-load-balancer.html">Load Balancer Lab — One Guard, Three Backends</a> <span class="pill sim">Sim included</span><div class="sub">One guard in front, three backends behind. Kill one backend and the site stays up.</div><div class="sub"><a href="/sims/load-balancer.html">&#9654; Simulation — included with Phase 1</a></div></div><span class="rowtags"><span class="ptag">P1</span><span class="stag">Load Balancer · Beginner → Advanced</span></span></div>
+      <div class="lesson-row" data-lesson="p1-end-to-end" data-phase="phase1"><span class="n">08</span><div class="lr-main"><a href="/lessons/p1-end-to-end.html">End-to-End Lab — One Fake Order, All the Way Through</a> <span class="pill sim">Sim included</span><div class="sub">One fake order, all the way through: web, queue, database, file store. The whole shop, small.</div><div class="sub"><a href="/sims/end-to-end.html">&#9654; Simulation — included with Phase 1</a></div></div><span class="rowtags"><span class="ptag">P1</span><span class="stag">Whole System · Intermediate → Advanced</span></span></div>
+      </div></div>
+    </details>
+    <details class="curriculum">
+      <summary><span>Phase 2 &mdash; The Rest of DevOps</span><span class="meta">9 lessons &middot; ₹799</span><span class="plus">+</span></summary>
+      <div class="cbody"><div class="cbody-inner">
+      <div class="lesson-row" data-lesson="p2-start" data-phase="phase2"><span class="n">09</span><div class="lr-main"><a href="/lessons/p2-start.html">Start Here — Phase 2: Linux, Git, Docker and More</a> <span class="pill sim">Sim included</span><div class="sub">Phase 2 from zero: Linux, Git, Docker, then Kubernetes, Terraform, CI/CD and monitoring.</div><div class="sub"><a href="/sims/p2-start.html">&#9654; Simulation — included with Phase 2</a></div></div><span class="rowtags"><span class="ptag">P2</span><span class="stag">Whole System · Beginner</span></span></div>
+      <div class="lesson-row" data-lesson="p2-zero-cost" data-phase="phase2"><span class="n">10</span><div class="lr-main"><a href="/lessons/p2-zero-cost.html">Zero-Cost Lab — One Machine, No Cloud Bill</a> <span class="pill sim">Sim included</span><div class="sub">How to learn all of this on one machine with no cloud bill. Free tools only, real skills.</div><div class="sub"><a href="/sims/p2-zero-cost.html">&#9654; Simulation — included with Phase 2</a></div></div><span class="rowtags"><span class="ptag">P2</span><span class="stag">Docker &amp; Linux · Beginner → Advanced</span></span></div>
+      <div class="lesson-row" data-lesson="p2-kubernetes" data-phase="phase2"><span class="n">11</span><div class="lr-main"><a href="/lessons/p2-kubernetes.html">Kubernetes Lab — Your App on a Small Local Cluster</a> <span class="pill sim">Sim included</span><div class="sub">Your app on a small local cluster. Pods, services and deploys — the ideas, not the jargon.</div><div class="sub"><a href="/sims/p2-kubernetes.html">&#9654; Simulation — included with Phase 2</a></div></div><span class="rowtags"><span class="ptag">P2</span><span class="stag">Kubernetes · Beginner → Advanced</span></span></div>
+      <div class="lesson-row" data-lesson="p2-break-fix" data-phase="phase2"><span class="n">12</span><div class="lr-main"><a href="/lessons/p2-break-fix.html">Break-and-Fix Labs — Learn Like On-Call Work</a> <span class="pill sim">Sim included</span><div class="sub">Break it on purpose, then fix it. Kill the database, stop a backend, fix the config — like on-call work.</div><div class="sub"><a href="/sims/p2-break-fix.html">&#9654; Simulation — included with Phase 2</a></div></div><span class="rowtags"><span class="ptag">P2</span><span class="stag">Practice · Docker &amp; Git</span></span></div>
+      <div class="lesson-row" data-lesson="p2-cheat-sheets" data-phase="phase2"><span class="n">13</span><div class="lr-main"><a href="/lessons/p2-cheat-sheets.html">Cheat Sheets — Commands You Will Actually Use</a> <span class="pill sim">Sim included</span><div class="sub">The commands you will actually use, on one page each. Copy them, run them, keep them.</div><div class="sub"><a href="/sims/p2-cheat-sheets.html">&#9654; Simulation — included with Phase 2</a></div></div><span class="rowtags"><span class="ptag">P2</span><span class="stag">Reference · Cheat Sheets</span></span></div>
+      <div class="lesson-row" data-lesson="p2-interview" data-phase="phase2"><span class="n">14</span><div class="lr-main"><a href="/lessons/p2-interview.html">Interview Pack — Real Questions, What They Really Test</a> <span class="pill sim">Sim included</span><div class="sub">Real interview questions for support roles, and what each one really tests. With plain answers.</div><div class="sub"><a href="/sims/p2-interview.html">&#9654; Simulation — included with Phase 2</a></div></div><span class="rowtags"><span class="ptag">P2</span><span class="stag">Career · Beginner</span></span></div>
+      <div class="lesson-row" data-lesson="p2-portfolio" data-phase="phase2"><span class="n">15</span><div class="lr-main"><a href="/lessons/p2-portfolio.html">Portfolio Projects — Proof, Not Just Notes</a> <span class="pill sim">Sim included</span><div class="sub">Three small projects that prove you can do the work — not just notes, but running things.</div><div class="sub"><a href="/sims/p2-portfolio.html">&#9654; Simulation — included with Phase 2</a></div></div><span class="rowtags"><span class="ptag">P2</span><span class="stag">Career · Intermediate</span></span></div>
+      <div class="lesson-row" data-lesson="p2-resume" data-phase="phase2"><span class="n">16</span><div class="lr-main"><a href="/lessons/p2-resume.html">Resume Bullets — From Your Projects, In Simple Words</a> <span class="pill sim">Sim included</span><div class="sub">Turn your projects into resume bullets in simple words. No jargon, no padding, just proof.</div><div class="sub"><a href="/sims/p2-resume.html">&#9654; Simulation — included with Phase 2</a></div></div><span class="rowtags"><span class="ptag">P2</span><span class="stag">Career · Advanced</span></span></div>
+      <div class="lesson-row" data-lesson="p2-best-sites" data-phase="phase2"><span class="n">17</span><div class="lr-main"><a href="/lessons/p2-best-sites.html">Best Sites — What To Pick, And Why</a> <span class="pill sim">Sim included</span><div class="sub">Where to learn more, and what to pick. The best free sites, with what each one is good for.</div><div class="sub"><a href="/sims/p2-best-sites.html">&#9654; Simulation — included with Phase 2</a></div></div><span class="rowtags"><span class="ptag">P2</span><span class="stag">Reference · Best Sites</span></span></div>
+      </div></div>
+    </details>
+  </div>
+</div>
+</main>
+<footer class="site"><b>PromptStudio</b> &middot; DevOps Kit &mdash; learn by doing, on your own machine.<br>Every lab uses fake data only &mdash; fake orders, fake names, fake receipts. Nothing real, nothing to leak.<br>Payment failed, or stuck more than 15 minutes? Mail us: <a href="mailto:support@promptstudioai.in">support@promptstudioai.in</a> — we reply within 24 hours.<br><a href="/about.html">About</a> &middot; <a href="/contact.html">Contact</a> &middot; <a href="/privacy.html">Privacy</a> &middot; <a href="/terms.html">Terms</a> &middot; <a href="/refund.html">Refunds</a></footer>
+<div class="stickybar" role="region" aria-label="Buy the course">
+  <div class="sb-prices">Phase 1: ₹399 &bull; Phase 2: ₹799 &bull; Both: ₹999<small>One-time &bull; UPI accepted</small></div>
+  <button class="btn pay-btn" id="sticky-buy" data-phase="phase1" type="button">Buy Phase 1 — ₹399</button>
+  <a class="btn" id="sticky-continue" href="/lessons/p1-start.html" hidden>Continue learning &rarr;</a>
+</div>
+<script defer src="/assets/hero.js"></script>
+
+<div class="auth-modal" id="auth-modal" hidden>
+  <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
+    <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
+    <h2>Sign in to DevOps Kit</h2>
+    <p class="auth-sub">Your progress saves, so you can stop and come back.</p>
+    <button class="btn auth-google" id="auth-google" type="button">Continue with Google</button>
+    <div class="auth-or"><span>or with email</span></div>
+    <div class="auth-tabs">
+      <button type="button" id="auth-tab-signin" class="active">Sign in</button>
+      <button type="button" id="auth-tab-signup">Create account</button>
+    </div>
+    <form id="auth-form">
+      <label>Email<input id="auth-email" type="email" autocomplete="email" required></label>
+      <label>Password<input id="auth-password" type="password" autocomplete="current-password" required minlength="6"></label>
+      <p class="auth-error" id="auth-error" hidden></p>
+      <button class="btn amber auth-submit" id="auth-submit" type="submit">Sign in</button>
+    </form>
+    <p class="auth-switch"><span id="auth-switch-note">No account yet? </span><button type="button" id="auth-switch-link" class="linklike">Create one</button></p>
+  </div>
+</div>
+
+<script defer src="/assets/i18n.js"></script>
+<script defer src="/assets/boot.js"></script>
+
+</body>
+</html>

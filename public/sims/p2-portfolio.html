@@ -14,11 +14,8 @@
 <meta property="og:description" content="A portfolio is proof, not notes: running things an interviewer can check. This practice terminal walks through the three proof projects — a pipeline,…">
 <meta property="og:url" content="https://promptstudioai.in/sims/p2-portfolio.html">
 <meta name="twitter:card" content="summary">
-<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="/assets/style.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap">
 <link rel="stylesheet" href="/assets/genz.css">
 </head>
 <body data-page="sim" data-sim="p2-portfolio" data-phase="phase2">
@@ -45,11 +42,7 @@
   </div>
 </div>
 
-<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script defer src="/assets/fun.js"></script>
 <script defer src="/assets/i18n.js"></script>
-<script defer src="/assets/auth.js"></script>
-<script defer src="/assets/devops-app.js"></script>
+<script defer src="/assets/boot.js"></script>
 <script>window.SIM_DATA = {"title": "Portfolio Projects Simulation — Proof, Not Just Notes", "intro": "A portfolio is proof, not notes: running things an interviewer can check. This practice terminal walks through the three proof projects — a pipeline, infrastructure as code, and monitoring — and checks each one works.", "proof": "Save the three proofs: the commit that added the pipeline, the plan that adds 2 things, and the monitoring answer with its targets up.", "steps": [{"cmd": "mkdir -p .github/workflows", "out": ["(no output — that is normal)"], "note": "Project 2 — a pipeline that tests, then builds. First make the folder for the workflow file."}, {"cmd": "cat > .github/workflows/build.yml << 'EOF'\nname: build\non: [push]\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - name: Test the site\n        run: test -f index.html\nEOF", "out": ["(no output — the file is written)"], "note": "The pipeline tests the site first, then builds the image. A broken site never gets built.", "done_when": {"file_written": "/home/learner/.github/workflows/build.yml"}, "defer": true}, {"cmd": "git init", "out": ["Initialized empty Git repository in /home/learner/.git/"]}, {"cmd": "git add .", "out": ["(no output — that is normal)"], "note": "Stage everything for the first commit."}, {"cmd": "git commit -m \"Add CI workflow\"", "out": ["[main a1b2c3d] Add CI workflow", " 4 files changed, 4 insertions(+)"], "note": "The pipeline file is saved. In the real project you push it and watch it go green."}, {"cmd": "terraform init", "out": ["Initializing the backend...", "", "Initializing provider plugins...", "- Finding latest version of hashicorp/docker...", "- Installing hashicorp/docker v3.0.2...", "- Installed hashicorp/docker v3.0.2", "", "Terraform has been successfully initialized!"], "note": "Project 3 — infrastructure as code. Init downloads the Docker provider the file asks for."}, {"cmd": "terraform plan", "out": ["Terraform will perform the following actions:", "", "  # docker_container.web will be created", "  + resource \"docker_container\" \"web\" {", "      + image = \"nginx:1.25\"", "      + name  = \"web\"", "    }", "", "Plan: 2 to add, 0 to change, 0 to destroy."], "note": "Plan: 2 to add. Nothing is made yet — a plan only shows what would happen."}, {"cmd": "docker compose up -d", "out": ["✔ Container prometheus  Started", "✔ Container grafana  Started"], "note": "The monitoring stack: Prometheus watches, Grafana draws the graphs."}, {"cmd": "curl http://localhost:9090/api/v1/targets", "out": ["{", "  \"status\": \"success\",", "  \"targets\": \"up\"", "}"], "note": "Prometheus answers, and its targets are up. That is the proof the monitoring works."}], "world": {"containers": {"prometheus": {"project": "root"}, "grafana": {"project": "root"}}, "fs": {"/home/learner": ["README.md", "index.html", "main.tf"]}, "file_contents": {"/home/learner/README.md": "# My site\n", "/home/learner/index.html": "<h1>My DevOps practice site</h1>\n", "/home/learner/main.tf": "resource \"docker_container\" \"web\" {\n  image = \"nginx:latest\"\n  name = \"web\"\n}\n"}, "curl_map": {"localhost:9090": ["{", "  \"status\": \"success\",", "  \"targets\": \"up\"", "}"]}, "up_out": {"root": ["✔ Container prometheus  Started", "✔ Container grafana  Started"]}}, "welcome": "Portfolio practice terminal. Three projects, checked step by step. Type a command, or follow the step above."};</script><script defer src="/assets/sim.js"></script><script defer src="/assets/sim-chrome.js"></script></body></html>

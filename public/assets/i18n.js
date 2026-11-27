@@ -9,11 +9,9 @@
 (function () {
   'use strict';
   var LANGS = [['en', 'English'], ['hi', 'हिन्दी'], ['te', 'తెలుగు'], ['ta', 'தமிழ்']];
-  var FONTS = {
-    hi: 'Noto+Sans+Devanagari:wght@400;600;700',
-    te: 'Noto+Sans+Telugu:wght@400;600;700',
-    ta: 'Noto+Sans+Tamil:wght@400;600;700'
-  };
+  /* No web fonts are downloaded: Windows, macOS, Android and iOS all ship Devanagari/Telugu/Tamil fonts,
+     and avoiding third-party hosts keeps the site usable on locked-down office networks. */
+  var FONTS = {};
   var STORE = 'dk_lang';
   var INLINE = { A: 1, B: 1, STRONG: 1, EM: 1, I: 1, CODE: 1, BR: 1, SPAN: 1, SMALL: 1, KBD: 1, U: 1, SUP: 1, SUB: 1, MARK: 1 };
   var SKIP_TAG = { SCRIPT: 1, STYLE: 1, PRE: 1, CODE: 1, KBD: 1, SAMP: 1, TEXTAREA: 1, INPUT: 1, SELECT: 1, OPTION: 1, SVG: 1, NOSCRIPT: 1 };
@@ -141,6 +139,7 @@
 
   function fetchDict(l) {
     if (cache[l]) return Promise.resolve(cache[l]);
+    if (window.__DK_I18N__ && window.__DK_I18N__[l]) { cache[l] = window.__DK_I18N__[l]; return Promise.resolve(cache[l]); } // offline kit
     return fetch('/i18n/' + l + '.json', { credentials: 'same-origin' })
       .then(function (r) { if (!r.ok) throw new Error('i18n ' + r.status); return r.json(); })
       .then(function (d) { cache[l] = d; return d; });
