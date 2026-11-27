@@ -1,0 +1,10 @@
+{
+  "name": "DevOps Kit by PromptStudio",
+  "short_name": "DevOps Kit",
+  "description": "Learn DevOps by doing — practice terminals that run in your browser.",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "background_color": "#fbf9ff",
+  "theme_color": "#6a35ff",
+  "icons": [{ "src": "/assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

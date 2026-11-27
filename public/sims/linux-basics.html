@@ -14,11 +14,8 @@
 <meta property="og:description" content="Every server in the world runs Linux. Here you practise the 12 commands you will use every single day: look around, make folders, create and copy files,…">
 <meta property="og:url" content="https://promptstudioai.in/sims/linux-basics.html">
 <meta name="twitter:card" content="summary">
-<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="/assets/style.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap">
 <link rel="stylesheet" href="/assets/genz.css">
 </head>
 <body data-page="sim" data-sim="linux-basics" data-phase="free">
@@ -45,11 +42,7 @@
   </div>
 </div>
 
-<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script defer src="/assets/fun.js"></script>
 <script defer src="/assets/i18n.js"></script>
-<script defer src="/assets/auth.js"></script>
-<script defer src="/assets/devops-app.js"></script>
+<script defer src="/assets/boot.js"></script>
 <script>window.SIM_DATA = {"slug": "linux-basics", "title": "Linux Command Line — Your First 12 Commands", "intro": "Every server in the world runs Linux. Here you practise the 12 commands you will use every single day: look around, make folders, create and copy files, and clean up. Nothing can break — this is a safe practice terminal in your browser.", "proof": "Save the final ls output. It proves you can move around and manage files on a Linux machine.", "welcome": "Linux practice terminal. You are in your home folder. Type a command, or follow the step above.", "world": {"containers": {}, "fs": {"/home/learner": ["readme.txt"]}, "file_contents": {"/home/learner/readme.txt": "Welcome to Linux!\nThis file lives in your home folder.\n"}}, "steps": [{"cmd": "pwd", "note": "pwd = 'print working directory'. It tells you which folder you are standing in.", "out": ["/home/learner"]}, {"cmd": "ls", "note": "ls = 'list'. It shows what is inside the current folder.", "out": ["readme.txt"]}, {"cmd": "cat readme.txt", "note": "cat shows the text inside a file.", "out": ["Welcome to Linux!", "This file lives in your home folder."]}, {"cmd": "mkdir projects", "note": "mkdir = 'make directory'. A directory is just a folder.", "out": ["(no output — that is normal)"]}, {"cmd": "cd projects", "note": "cd = 'change directory'. You are now inside the projects folder.", "out": ["(no output — that is normal)"]}, {"cmd": "touch notes.txt", "note": "touch creates a new empty file.", "out": ["(no output — that is normal)"]}, {"cmd": "echo \"hello devops\" > notes.txt", "note": "echo prints text. The > arrow sends that text into a file instead of the screen.", "out": ["(no output — that is normal)"]}, {"cmd": "cat notes.txt", "note": "Read it back — your text is saved in the file.", "out": ["hello devops"]}, {"cmd": "cp notes.txt backup.txt", "note": "cp = 'copy'. Now you have two files with the same text.", "out": ["(no output — that is normal)"]}, {"cmd": "mv backup.txt old-notes.txt", "note": "mv = 'move'. It also renames a file.", "out": ["(no output — that is normal)"]}, {"cmd": "ls", "note": "You should see notes.txt and old-notes.txt.", "out": ["notes.txt  old-notes.txt"]}, {"cmd": "rm old-notes.txt", "note": "rm = 'remove'. There is no recycle bin in Linux — deleted means gone, so be careful.", "out": ["(no output — that is normal)"]}, {"cmd": "cd ..", "note": "'..' means 'one folder up'. You are back in your home folder.", "out": ["(no output — that is normal)"]}]};</script><script defer src="/assets/sim.js"></script><script defer src="/assets/sim-chrome.js"></script></body></html>

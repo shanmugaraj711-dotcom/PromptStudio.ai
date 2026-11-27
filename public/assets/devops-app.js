@@ -9,7 +9,7 @@
   var LESSON_TITLES = {
     "lesson-0": "Lesson 0 — Before the Terminal",
     "error-decoder": "Error Decoder",
-    "linux-basics": "Linux Command Line", "git-basics": "Git Basics",
+    "linux-basics": "Linux Command Line", "git-basics": "Git Basics", "linux-server": "Linux Server Lab",
     "p1-start": "Start Here — Phase 1", "p1-kafka": "Kafka Lab",
     "p1-postgresql": "PostgreSQL Lab", "p1-redis": "Redis Lab",
     "p1-object-store": "Object Store Lab", "p1-load-balancer": "Load Balancer Lab",
@@ -21,7 +21,7 @@
   };
   var PHASE1_LESSONS = ["p1-start", "p1-kafka", "p1-postgresql", "p1-redis", "p1-object-store", "p1-load-balancer", "p1-end-to-end"];
   var PHASE2_LESSONS = ["p2-start", "p2-zero-cost", "p2-kubernetes", "p2-break-fix", "p2-cheat-sheets", "p2-interview", "p2-portfolio", "p2-resume", "p2-best-sites"];
-  var FREE_SIMS = { kafka: true, 'lesson-0': true, 'error-decoder': true, 'linux-basics': true, 'git-basics': true };
+  var FREE_SIMS = { kafka: true, 'lesson-0': true, 'error-decoder': true, 'linux-basics': true, 'git-basics': true, 'linux-server-demo': true };
   var FREE_LESSONS = { "lesson-0": true, "error-decoder": true, "linux-basics": true, "git-basics": true };
   var PHASE_NAMES = { phase1: "Phase 1", phase2: "Phase 2", bundle: "Both phases" };
   var PHASE_PRICES = { phase1: "₹399", phase2: "₹799", bundle: "₹999" };

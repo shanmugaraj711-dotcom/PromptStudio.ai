@@ -1,3 +1,4 @@
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 300 700; font-display: swap; src: url('/assets/fonts/space-grotesk-latin.woff2') format('woff2'); }
 /* genz.css — bold, bright "Gen Z" skin for DevOps Kit. Loaded AFTER style.css.
    Look: chunky outlines, hard shadows, sticker pills, electric violet + sunny yellow.
    Layout and behaviour are untouched; remove this file to go back to the old look. */
@@ -179,3 +180,8 @@ body > .section { max-width: 860px; margin-left: auto; margin-right: auto; paddi
 
 /* contrast: free pills always dark-on-lime */
 .tierpill.free, .simcard .tierpill.free, .pill.sim { background: var(--lime) !important; color: var(--ink) !important; }
+
+/* landing promo for the Linux Server Lab */
+.lx-promo { margin: 26px 0 0; background: linear-gradient(135deg, #ece4ff, #fff7e0); border: 2px solid var(--ink); border-radius: 20px; box-shadow: var(--pop); padding: 18px 18px 20px; }
+.lx-promo h2 { font-size: clamp(22px, 5vw, 30px); margin: 8px 0 6px; } .lx-promo p { margin: 0 0 12px; max-width: 62ch; }
+.lx-promo-btns { display: flex; gap: 10px; flex-wrap: wrap; }

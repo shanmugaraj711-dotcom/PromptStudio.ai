@@ -14,11 +14,8 @@
 <meta property="og:description" content="Every tool has a built-in help book — you never have to memorise every flag. This practice terminal practises asking four tools for their own help, so you…">
 <meta property="og:url" content="https://promptstudioai.in/sims/p2-best-sites.html">
 <meta name="twitter:card" content="summary">
-<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="/assets/style.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap">
 <link rel="stylesheet" href="/assets/genz.css">
 </head>
 <body data-page="sim" data-sim="p2-best-sites" data-phase="phase2">
@@ -45,11 +42,7 @@
   </div>
 </div>
 
-<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script defer src="/assets/fun.js"></script>
 <script defer src="/assets/i18n.js"></script>
-<script defer src="/assets/auth.js"></script>
-<script defer src="/assets/devops-app.js"></script>
+<script defer src="/assets/boot.js"></script>
 <script>window.SIM_DATA = {"title": "Best Sites Simulation — Ask the Tools for Help", "intro": "Every tool has a built-in help book — you never have to memorise every flag. This practice terminal practises asking four tools for their own help, so you know where to look next time.", "proof": "Save the four help screens. Next time you forget a command, you know the one line that shows you how.", "steps": [{"cmd": "docker --help", "out": ["Usage:  docker [OPTIONS] COMMAND", "", "Commands:", "  compose     Define and run multi-container applications with Docker", "  exec        Execute a command in a running container", "  images      List images", "  logs        Fetch the logs of a container", "  ps          List containers", "  rm          Remove one or more containers", "  run         Run a command in a new container", "  start       Start one or more stopped containers", "  stop        Stop one or more running containers", "  version     Show the Docker version information", "", "Run 'docker COMMAND --help' for more information on a command."], "note": "Docker's own help: every command it knows, on one screen."}, {"cmd": "kubectl --help", "out": ["kubectl controls the Kubernetes cluster manager.", "", "Basic Commands:", "  get           Display one or many resources", "  apply         Apply a configuration to a resource", "  edit          Edit a resource (the practice editor fixes it)", "  scale         Scale a deployment to more or fewer copies", "  set image     Swap a deployment to a new image version", "  delete        Delete resources", "  describe      Show details of a specific resource", "  logs          Print the logs for a container in a pod", "  port-forward  Forward one or more local ports to a pod", "  rollout       Manage the rollout of a resource", "  version       Print the client and server version information"], "note": "kubectl's help: get, apply, describe, logs — the ones you will use most."}, {"cmd": "git --help", "out": ["usage: git <command> [<args>]", "", "Commands this practice terminal understands:", "  init, status, add, commit, log, branch, checkout, merge, clone, config, push, pull"], "note": "Git's help: the short list of commands this terminal answers."}, {"cmd": "terraform --help", "out": ["Usage: terraform [global options] <subcommand> [args]", "", "Common commands:", "  init       Prepare your working directory for other commands", "  plan       Show changes required by the current configuration", "  apply      Create or update infrastructure", "  destroy    Destroy previously-created infrastructure"], "note": "Terraform's help: four commands, in the order you run them."}], "world": {"containers": {}, "fs": {"/home/learner": ["README.md"]}, "up_out": {}}, "welcome": "Help lookup practice terminal. Ask the tools for their own help. Type a command, or follow the step above."};</script><script defer src="/assets/sim.js"></script><script defer src="/assets/sim-chrome.js"></script></body></html>
