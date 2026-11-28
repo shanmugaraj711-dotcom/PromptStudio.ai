@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Redis Lab — A Fast Memory Store — DevOps Kit</title>
-<meta name="description" content="Redis is a fast memory store: it keeps small answers in memory so they can be read in a blink.">
+<meta name="description" content="Redis is a fast memory store. It keeps small answers in memory so they can be read in a blink.">
 <meta name="theme-color" content="#14161b">
 <link rel="canonical" href="https://promptstudioai.in/lessons/p1-redis.html">
 <link rel="icon" href="/favicon.ico">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="DevOps Kit by PromptStudio">
 <meta property="og:title" content="Redis Lab — A Fast Memory Store — DevOps Kit">
-<meta property="og:description" content="Redis is a fast memory store: it keeps small answers in memory so they can be read in a blink.">
+<meta property="og:description" content="Redis is a fast memory store. It keeps small answers in memory so they can be read in a blink.">
 <meta property="og:url" content="https://promptstudioai.in/lessons/p1-redis.html">
 <meta name="twitter:card" content="summary">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -33,115 +33,237 @@
 </header>
 <main class="lesson-wrap">
 <nav class="lesson-sidebar" id="lesson-sidebar" aria-label="All lessons"><div class="sb-head"><b>DevOps Kit</b><span>All 18 lessons</span></div><div class="sb-group"><span class="sb-group-title">Start here</span><a class="sb-link" href="/lessons/lesson-0.html">Lesson 0</a></div><div class="sb-group"><span class="sb-group-title">Phase 1 · The Data Tier</span><a class="sb-link" href="/lessons/p1-start.html">Start Here</a><a class="sb-link" href="/lessons/p1-kafka.html">Kafka</a><a class="sb-link" href="/lessons/p1-postgresql.html">PostgreSQL</a><a class="sb-link current" aria-current="page" href="/lessons/p1-redis.html">Redis</a><a class="sb-link" href="/lessons/p1-object-store.html">Object Store</a><a class="sb-link" href="/lessons/p1-load-balancer.html">Load Balancer</a><a class="sb-link" href="/lessons/p1-end-to-end.html">End-to-End</a></div><div class="sb-group"><span class="sb-group-title">Phase 2 · The Rest of DevOps</span><a class="sb-link" href="/lessons/p2-start.html">Start Here</a><a class="sb-link" href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a><a class="sb-link" href="/lessons/p2-kubernetes.html">Kubernetes</a><a class="sb-link" href="/lessons/p2-break-fix.html">Break-and-Fix</a><a class="sb-link" href="/lessons/p2-cheat-sheets.html">Cheat Sheets</a><a class="sb-link" href="/lessons/p2-interview.html">Interview Pack</a><a class="sb-link" href="/lessons/p2-portfolio.html">Portfolio</a><a class="sb-link" href="/lessons/p2-resume.html">Resume Bullets</a><a class="sb-link" href="/lessons/p2-best-sites.html">Best Sites</a></div><div class="sb-group"><span class="sb-group-title">Free skills</span><a class="sb-link" href="/lessons/linux-basics.html">Linux Command Line</a><a class="sb-link" href="/lessons/git-basics.html">Git Basics</a></div><div class="sb-group"><span class="sb-group-title">Reference</span><a class="sb-link" href="/lessons/error-decoder.html">Error Decoder</a></div></nav><div class="lesson-main"><div class="lock-screen" id="lock-screen" hidden><p class="lock-loading" hidden>Checking your sign-in…</p><span class="lock-icon">🔒</span><h2>This lesson is in Phase 1 — ₹399, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase1" type="button" hidden>Buy Phase 1 — ₹399</button><a class="lock-back" href="/">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><span id="main" tabindex="-1"></span><h1>Redis Lab — A Fast Memory Store</h1><span class="phasebadge">Phase 1 · The Data Tier</span><h2>What this is and why it matters</h2>
-<p><strong>Redis</strong> is a fast memory store: it keeps small answers in memory so they can be read in a blink.</p>
-<p>In real systems, asking the main database for every small answer is slow — a memory store takes that load off it.</p>
-<p>This lab runs a main store and a copy that follows it, then the copy stops following and becomes a main store itself.</p>
+<p><strong>Redis</strong> is a fast memory store. It keeps small answers in memory so they can be read in a blink.</p>
+<p>Think of it like a small whiteboard next to a shop counter.</p>
+<ul><li>The big record book sits in the back room. Finding an answer in it takes time.</li><li>The whiteboard on the counter holds the few answers people ask for again and again.</li><li>A worker glances at the whiteboard and answers at once.</li><li>Nobody opens the big book for every small question.</li></ul>
+<p>In real systems, asking the main record store for every small answer is slow. A memory store takes that load off it.</p>
+<p>This lab runs two Redis stores on your own computer: a main one and a copy that follows it. You will save fake values, set expiry times, use a counter, and see what happens when you try to write to the copy. Then the copy stops following and becomes a main store itself.</p>
+<p>One idea per line, in order:</p>
+<ul><li>Memory is the fast working space of a computer. Reading from memory is fast.</li><li>A store keeps things by name, so you can ask for them back by that name.</li><li>The main store is called redis-a in this lab.</li><li>The copy is called redis-b in this lab. It follows redis-a.</li><li>A copy takes reads only. It refuses writes.</li><li>Expiry means a saved answer deletes itself after a set time.</li><li>A counter is a number that goes up by one each time something happens.</li></ul>
+<p>All data in this lab is fake: made-up users, made-up login codes, made-up counts.</p>
 <div class="ladder"><div class="ladder-title">Your level in Redis</div><div class="ladder-steps"><span class="step-unit"><span class="step done">&#10003; Step 1 &middot; Beginner</span><span class="ladder-arrow">&rarr;</span></span><span class="step-unit"><span class="step done">&#10003; Step 2 &middot; Intermediate</span><span class="ladder-arrow">&rarr;</span></span><span class="step-unit"><span class="step done">&#10003; Step 3 &middot; Advanced <span class="here">&#8592; You are here</span></span></span></div><div class="ladder-note">After this lesson you can: <b>Fix a Redis that refuses new writes and prove writing works again.</b></div><div class="ladder-note">You have finished this topic&rsquo;s ladder.</div><div class="ladder-note">Advanced challenge: <b>Redis says out of memory — set a clean-up rule (eviction policy) and a limit, write again.</b> — try it in <a href="/lessons/p1-redis.html">Redis</a>.</div></div><h2>Test status</h2>
 <p>Syntax-checked only (20 November 2026). The compose file was checked for correct syntax. This lab was not run end-to-end on this machine, because this machine has no Docker. Follow it on your own machine with Docker, and if a step fails, read the error first — that is the real skill.</p>
 <h2>What this lab is</h2>
 <p>You will run two Redis stores on your own machine: a main one and a copy that follows it. You will save fake values, set expiry times, use a counter, and see what happens when you try to write to the copy. All data is fake.</p>
 <h2>What you need first</h2>
-<ul><li>Docker running (Phase 2, <a href="/lessons/p2-zero-cost.html">zero-cost-lab.md</a>).</li><li>The file in this folder: <code>docker-compose.yml</code>.</li></ul>
-<h2>Words you need here</h2>
-<ul><li><strong>Redis</strong> — a store that keeps data in memory, so reads are very fast. It is used for caches, counters and short-term data.</li><li><strong>Key and value</strong> — Redis stores things by name. The name is the key, the thing stored is the value. Example: key <code>user:101</code>, value <code>Asha</code>.</li><li><strong>Cache</strong> — a fast copy of an answer, kept so you do not have to ask the slow database again.</li><li><strong>Expiry (TTL)</strong> — a time limit on a key. When the time runs out, Redis deletes the key by itself.</li><li><strong>Replica</strong> — a copy that follows the main store. It takes reads only.</li><li><strong>CRDT</strong> — a way for two stores to accept writes at the same time and merge them. It is a paid feature. This lab shows the idea in plain words and shows the free one-way copy instead.</li></ul>
+<ul><li>Docker running. Lesson 0 shows how to install it and check it.</li><li>The file in the folder <code>phase1/redis-lab/</code> — verified on disk: <code>docker-compose.yml</code>. That is the only file the lab needs. It also holds a helper file called <code>drill.sh</code>, which the lab does not ask you to run. You do not need to open either file. The lab steps tell you the commands to run.</li><li>Do the Kafka lab and the PostgreSQL lab first if you are following the phase order.</li></ul>
+<h2>Words you need, before you use them</h2>
+<ul><li><strong>Redis</strong> — a store that keeps data in memory, so reads are very fast. It is used for caches, counters and short-term data.</li><li><strong>Key and value</strong> — Redis stores things by name. The name is the key. The thing stored is the value. Example: key <code>user:101</code>, value <code>Asha</code>. The colon <code>:</code> in <code>user:101</code> is only a naming habit. It separates the kind of thing (<code>user</code>) from its number (<code>101</code>). Redis does not treat the colon specially. You could name the key <code>user101</code> instead. The colon only makes it easier for humans to read.</li><li><strong>Cache</strong> — a fast copy of an answer, kept so you do not have to ask the slow record store again.</li><li><strong>Expiry (TTL)</strong> — a time limit on a key. TTL is short for &quot;time to live&quot;, meaning how many seconds the key has left to live. When the time runs out, Redis deletes the key by itself.</li><li><strong>Replica</strong> — a copy that follows the main store. It takes reads only.</li><li><strong>Counter</strong> — a number stored in Redis that you add 1 to, again and again. Each add is one step.</li><li><strong>CRDT</strong> — short for Conflict-free Replicated Data Type. It is a way for two stores to accept writes at the same time and merge them. It is a paid feature in Redis products. This lab shows the idea in plain words in Step 7, and shows the free one-way copy instead. The free Redis in this lab does not have CRDT.</li><li><strong>One-way copy</strong> — one store follows another. Writes go to the main store only. The copy only reads.</li><li><strong>Two-way sync</strong> — two stores both accept writes, and merge the changes so both end up the same. That merge rule is the CRDT idea.</li><li><strong><code>(nil)</code></strong> — the word redis-cli prints when a key has nothing stored under it. It means &quot;nothing here&quot;. It is not an error. It is the answer &quot;this key does not exist right now&quot;.</li><li><strong><code>redis-cli</code></strong> — the command-line tool for talking to Redis. It runs inside the container. The letters <code>cli</code> are short for &quot;command-line interface&quot;, meaning a tool you use by typing.</li><li><strong>PONG</strong> — the answer Redis gives when you ask it &quot;are you alive?&quot; with the <code>ping</code> command. <code>ping</code> is the question, <code>PONG</code> is the answer. If you see <code>PONG</code>, the store is up and answering.</li><li><strong>Volume</strong> — a named place on your machine where Docker keeps a container&#x27;s data. The data lives in a volume, so it survives a restart. Wiping the volume wipes the data.</li><li><strong>Append-only file</strong> — a file Redis writes every change into, so data survives a restart. The lab turns this on with <code>--appendonly yes</code> in the file <code>phase1/redis-lab/docker-compose.yml</code>. You do not type that flag yourself. It is already in the compose file. In real work, check the disk settings before you trust it.</li><li><strong>Practice data</strong> — all values in this lab are fake, on your own machine, for learning only.</li></ul>
+<h2>The doors (ports) in this lab</h2>
+<ul><li><code>redis-a</code>, the main store, answers on door <code>6379</code> on your machine.</li><li><code>redis-b</code>, the copy, answers on door <code>6380</code> on your machine. Inside its own container, the copy still uses door <code>6379</code>, but from outside you reach it on <code>6380</code>. That is why two stores can run on one machine without fighting over the same door.</li><li>You do not type these door numbers in the commands below, because the commands run inside the containers. The door numbers matter only if another program on your machine already uses door <code>6379</code>. If a start fails with <code>port is already allocated</code>, it means the door is already held. Stop the other program that uses it, or stop the old containers, then try again.</li></ul>
 <h2>Step 1 — Start both stores</h2>
-<p>From inside this folder:</p>
-<div class="tryit"><a class="btn amber" href="/sims/redis.html">Try it Yourself &raquo;</a><span>Open the practice terminal and run it yourself — nothing installs. Included with Phase 1. Simulation — practice version. Run the real lab with Docker to do it for real.</span></div><div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose up -d</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>[+] Running 2/2
+<p>First, move your terminal into the lab folder. The folder is <code>phase1/redis-lab/</code>. Open your terminal in that folder. If your terminal opens somewhere else, move into it first with <code>cd</code> followed by the path to that folder on your machine.</p>
+<p>What this is: start both Redis stores together. Why we run it: nothing else in this lab can work until both stores are running.</p>
+<p>Type this, then press Enter:</p>
+<div class="tryit"><a class="btn amber" href="/sims/redis.html">Try it Yourself &raquo;</a><span>Open the practice terminal and run it yourself — nothing installs. Included with Phase 1. Simulation — practice version. Run the real lab with Docker to do it for real.</span></div><div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose up -d</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker</code> — the Docker tool.</li><li><code>compose</code> — the part of Docker that starts several containers together from one file.</li><li><code>up</code> — start everything listed in the file.</li><li><code>-d</code> — short for detached. It means run in the background and give me my terminal back, instead of filling my screen with logs.</li></ul>
+<p>What you should see, line by line:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>[+] Running 2/2
  ✔ Container redis-a  Started
- ✔ Container redis-b  Started</code></pre></div></div>
-<p>Check:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose ps</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>NAME       STATUS
+ ✔ Container redis-b  Started</code></pre></div>
+<ul><li><code>[+] Running 2/2</code> — 2 out of 2 containers are running.</li><li><code>Container redis-a Started</code> — the main store container started.</li><li><code>Container redis-b Started</code> — the copy container started.</li><li>How to tell it worked: both lines say <code>Started</code>.</li></ul>
+<p>Now check they are both up. What this is: <code>ps</code> lists the containers Compose is running. Why we run it: the start lines scroll past fast, and this check proves both containers are still up right now.</p>
+<p>Type this, then press Enter:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose ps</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker compose</code> — the Docker Compose tool, as above.</li><li><code>ps</code> — short for &quot;process status&quot;. It lists the running containers.</li></ul>
+<p>What you should see: a table with <code>redis-a</code> and <code>redis-b</code>, each with STATUS <code>Up</code>. The real table has more columns than the example below. What matters is both names, each with STATUS <code>Up</code>.</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>NAME       STATUS
 redis-a    Up
-redis-b    Up</code></pre></div></div>
-<p>(The real table has more columns. What matters is both names, each with STATUS &quot;Up&quot;.) Check they answer:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli ping</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>PONG</code></pre></div></div>
-<p>If it breaks: if <code>ping</code> shows nothing, wait 10 seconds and try again. Redis starts fast, but the first start downloads the image.</p>
+redis-b    Up</code></pre></div>
+<p>Now check they answer. What this is: <code>ping</code> asks a Redis store &quot;are you alive?&quot; Why we run it: a container can say <code>Up</code> and still not be ready to answer. <code>PONG</code> proves it is answering.</p>
+<p>Type this, then press Enter:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli ping</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker exec</code> — run a command inside a container that is already running. <code>exec</code> means execute, or run.</li><li><code>redis-a</code> — the container name. This is the main store container. Check the name: <code>redis-a</code>, not <code>redis-b</code>.</li><li><code>redis-cli</code> — the tool for talking to Redis. It runs inside the container.</li><li><code>ping</code> — the Redis command that asks &quot;are you alive?&quot;</li></ul>
+<p>What you should see:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>PONG</code></pre></div>
+<ul><li><code>PONG</code> is the answer to <code>ping</code>. It means the store is up and answering.</li></ul>
+<p>If it breaks: if <code>ping</code> shows nothing, wait 10 seconds and try again. Redis starts fast, but the first start downloads the image. An image is the recipe Docker uses to build a container. The first download takes time. You can tell the download is done when the <code>ping</code> command answers <code>PONG</code>.</p>
 <h2>Step 2 — Save and read a value</h2>
-<p>Save a fake user:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli SET user:101 Asha</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>OK</code></pre></div></div>
-<p>If it breaks: &quot;Could not connect&quot; means redis-a is not up yet — run <code>docker compose ps</code> and wait until it shows &quot;Up&quot;.</p>
-<p>Read it back:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli GET user:101</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>&quot;Asha&quot;</code></pre></div></div>
-<p>The quotes are part of how redis-cli shows a value. The value stored is <code>Asha</code>.</p>
-<p>If it breaks: if you see <code>(nil)</code> (&quot;nothing here&quot;), the SET step never saved — run the SET command again and check it prints <code>OK</code>.</p>
+<p>What this is: save one fake user in the main store, then read it back. Why we run it: it proves the main store saves and returns values.</p>
+<p>Save a fake user. Type this, then press Enter:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli SET user:101 Asha</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker exec redis-a redis-cli</code> — run the Redis tool inside the main store container, as in Step 1.</li><li><code>SET</code> — the Redis command that saves a value. <code>SET</code> means &quot;store this&quot;.</li><li><code>user:101</code> — the key, or the name to store it under. <code>user</code> is the kind of thing. <code>101</code> is its number. The colon is only a naming habit, as explained above.</li><li><code>Asha</code> — the value, or the thing stored. This is a fake name, made up for this lab.</li></ul>
+<p>What you should see:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>OK</code></pre></div>
+<ul><li><code>OK</code> means the save worked. That is the whole answer. There is no more detail to read.</li></ul>
+<p>If it breaks: <code>Could not connect</code> means redis-a is not up yet. Run <code>docker compose ps</code> and wait until it shows <code>Up</code>.</p>
+<p>Read it back. Type this, then press Enter:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli GET user:101</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker exec redis-a redis-cli</code> — run the Redis tool inside the main store container.</li><li><code>GET</code> — the Redis command that reads a value back. <code>GET</code> means &quot;give me the value stored under this name&quot;.</li><li><code>user:101</code> — the key to read. It must match the key you saved exactly, including the colon and the number.</li></ul>
+<p>What you should see:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>&quot;Asha&quot;</code></pre></div>
+<ul><li><code>&quot;Asha&quot;</code> is the value you saved. The quotes are part of how redis-cli shows a value. The value stored is <code>Asha</code>, without quotes. The quotes are only display marks.</li><li>How to tell it worked: the answer is the name you saved.</li></ul>
+<p>If it breaks: if you see <code>(nil)</code> (&quot;nothing here&quot;), the SET step never saved. <code>(nil)</code> means no value is stored under that key. Run the SET command again and check it prints <code>OK</code>.</p>
 <h2>Step 3 — Set a value that deletes itself</h2>
-<p>Save a login code that lasts 60 seconds:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli SETEX login-code:101 60 482913</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>OK</code></pre></div></div>
-<p>Check how long is left:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli TTL login-code:101</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>58</code></pre></div></div>
-<p>If it breaks: if TTL shows <code>-2</code>, the key is already gone — its 60 seconds ran out before you checked. Run the SETEX command again. Wait 65 seconds and read it again:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli GET login-code:101</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>(nil)</code></pre></div></div>
-<p><code>(nil)</code> means &quot;nothing here&quot; — the key deleted itself when its time ran out. This is how login codes and short-lived sessions work: the store cleans up by itself.</p>
-<p>If it breaks: if the code is still there after 65 seconds, check you waited long enough — the key lives for a full 60 seconds from the SETEX command, not from when you first read it.</p>
+<p>What this is: save a login code that lasts 60 seconds, then watch it disappear. Why we run it: this is how login codes and short-lived sessions work. The store cleans up by itself. Nobody has to delete the code by hand.</p>
+<p>Save a login code that lasts 60 seconds. Type this, then press Enter:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli SETEX login-code:101 60 482913</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker exec redis-a redis-cli</code> — run the Redis tool inside the main store container.</li><li><code>SETEX</code> — the Redis command that saves a value with an expiry time. <code>SETEX</code> means &quot;set with expiry&quot;. It is <code>SET</code> plus a time limit.</li><li><code>login-code:101</code> — the key. <code>login-code</code> is the kind of thing. <code>101</code> is its number.</li><li><code>60</code> — the time limit, in seconds. The key will live for 60 seconds from this command. This number comes before the value. The order matters: key, then seconds, then value.</li><li><code>482913</code> — the value, the fake login code. This is a made-up six-digit code, not a real code. It is fake, for practice only.</li></ul>
+<p>What you should see:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>OK</code></pre></div>
+<ul><li><code>OK</code> means the save worked.</li></ul>
+<p>Check how long is left. What this is: <code>TTL</code> asks how many seconds a key has left to live. Why we run it: it proves the countdown is running.</p>
+<p>Type this, then press Enter:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli TTL login-code:101</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>TTL</code> — short for &quot;time to live&quot;. It asks &quot;how many seconds does this key have left?&quot;</li><li><code>login-code:101</code> — the key to check.</li></ul>
+<p>What you should see: a number near 60. It counts down: 58, 57, and so on. Your number depends on how many seconds passed between the SETEX command and this check.</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>58</code></pre></div>
+<ul><li><code>58</code> means 58 seconds are left. The key was saved 60 seconds ago in the example, and 2 seconds passed before the check. Your number will be different. That is fine.</li><li>How to tell it worked: the answer is a number near 60, counting down.</li></ul>
+<p>Two other TTL answers you may see, and what they mean:</p>
+<ul><li><code>-2</code> means the key is already gone. Its 60 seconds ran out before you checked. Run the SETEX command again.</li><li><code>-1</code> means the key exists but has no expiry time. That should not happen for this key, because SETEX always sets an expiry. If you see <code>-1</code>, you are checking a different key, or the key was saved with plain <code>SET</code> instead of <code>SETEX</code>.</li></ul>
+<p>Wait 65 seconds and read it again. Type this, then press Enter, after waiting a full 65 seconds:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli GET login-code:101</code></pre></div>
+<p>What you should see:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>(nil)</code></pre></div>
+<ul><li><code>(nil)</code> means &quot;nothing here&quot;. The key deleted itself when its time ran out.</li><li>How to tell it worked: the code is gone. That is the expected result, not a failure.</li></ul>
+<p>If it breaks: if the code is still there after 65 seconds, check you waited long enough. The key lives for a full 60 seconds from the SETEX command, not from when you first read it. Count 65 seconds from the moment you pressed Enter on the SETEX command, then read it again.</p>
 <h2>Step 4 — Use a counter</h2>
-<p>Counters are the simplest thing Redis does well. Make one:</p>
+<p>What this is: a number that goes up by one each time something happens. Why we run it: counters are the simplest thing Redis does well. In the end-to-end lab, a worker does this every time an order is saved. That is how the app shows &quot;how many orders&quot; without asking the record store.</p>
+<p>Type these five commands, one at a time, pressing Enter after each:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli SET orders:count 0
 docker exec redis-a redis-cli INCR orders:count
 docker exec redis-a redis-cli INCR orders:count
 docker exec redis-a redis-cli INCR orders:count
-docker exec redis-a redis-cli GET orders:count</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>&quot;3&quot;</code></pre></div></div>
-<p>Each INCR adds 1. In the end-to-end lab, a worker does this every time an order is saved — that is how the app shows &quot;how many orders&quot; without asking the database.</p>
-<p>If it breaks: if GET shows <code>&quot;0&quot;</code>, the first SET step was skipped — run <code>SET orders:count 0</code> first, then the three INCRs.</p>
+docker exec redis-a redis-cli GET orders:count</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>SET orders:count 0</code> — save a key called <code>orders:count</code> with the value <code>0</code>. This sets the counter to zero before you start counting.</li><li><code>INCR</code> — short for increment, which means add 1. It adds 1 to the stored number and prints the new number.</li><li><code>INCR orders:count</code> — add 1 to the counter. There are three INCR commands, so the counter goes 0, then 1, then 2, then 3.</li><li><code>GET orders:count</code> — read the counter back.</li></ul>
+<p>Each of the five commands prints its own answer:</p>
+<ul><li>After <code>SET orders:count 0</code>, you should see <code>OK</code>.</li><li>After the first <code>INCR orders:count</code>, you should see <code>1</code>.</li><li>After the second <code>INCR</code>, you should see <code>2</code>.</li><li>After the third <code>INCR</code>, you should see <code>3</code>.</li><li>After <code>GET orders:count</code>, you should see <code>&quot;3&quot;</code>.</li></ul>
+<p>What you should see at the end:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>&quot;3&quot;</code></pre></div>
+<ul><li><code>&quot;3&quot;</code> is the final counter value. Each INCR added 1. Three INCRs after starting at 0 gives 3.</li><li>The quotes are part of how redis-cli shows a value. The value stored is <code>3</code>.</li><li>How to tell it worked: the final answer is <code>&quot;3&quot;</code>, and the three INCR answers before it were <code>1</code>, <code>2</code>, and <code>3</code>, in order.</li></ul>
+<p>If it breaks: if GET shows <code>&quot;0&quot;</code>, the first SET step was skipped, and the counter never started. Run <code>SET orders:count 0</code> first, then the three INCRs. If GET shows a number higher than <code>&quot;3&quot;</code>, you ran the INCR commands more than three times. That is fine for learning, but start again from <code>SET orders:count 0</code> if you want a clean <code>&quot;3&quot;</code>.</p>
 <h2>Step 5 — Read the same values from the copy</h2>
-<p>The copy follows the main store. Read from it:</p>
+<p>What this is: read the values you saved on the main store, but ask the copy instead. Why we run it: it proves the copy follows the main store. The copy should already have the same values.</p>
+<p>Type these two commands, one at a time, pressing Enter after each:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-b redis-cli GET user:101
-docker exec redis-b redis-cli GET orders:count</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>&quot;Asha&quot;
-&quot;3&quot;</code></pre></div></div>
-<p>If it breaks: if either shows <code>(nil)</code>, the copy has not caught up yet — wait 10 seconds and read again.</p>
-<p>Now check what the copy thinks it is:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-b redis-cli INFO replication</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code># Replication
+docker exec redis-b redis-cli GET orders:count</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker exec redis-b</code> — run a command inside the copy container. Check the name: <code>redis-b</code>, not <code>redis-a</code>.</li><li><code>redis-cli GET user:101</code> — read the value stored under the key <code>user:101</code>.</li><li><code>redis-cli GET orders:count</code> — read the value stored under the key <code>orders:count</code>.</li></ul>
+<p>What you should see, one answer per command:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>&quot;Asha&quot;
+&quot;3&quot;</code></pre></div>
+<ul><li><code>&quot;Asha&quot;</code> is the answer to the first command.</li><li><code>&quot;3&quot;</code> is the answer to the second command.</li><li>How to tell it worked: the copy shows the same two values you saved on the main store.</li></ul>
+<p>If it breaks: if either shows <code>(nil)</code>, the copy has not caught up yet. Wait 10 seconds and read again.</p>
+<p>Now check what the copy thinks it is. What this is: <code>INFO replication</code> asks a Redis store to describe its replication state: what role it has, and which store it follows. Why we run it: the two values above prove the data copied. This command proves the copy knows it is a follower.</p>
+<p>Type this, then press Enter:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-b redis-cli INFO replication</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker exec redis-b redis-cli</code> — run the Redis tool inside the copy container.</li><li><code>INFO</code> — the Redis command that prints information about the store.</li><li><code>replication</code> — the topic to print. It means &quot;tell me about copying and following&quot;.</li></ul>
+<p>What you should see, line by line:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code># Replication
 role:slave
 master_host:redis-a
-master_port:6379</code></pre></div></div>
-<p>That is the proof it is following the main store.</p>
-<p>If it breaks: if the role shows <code>master</code>, the copy never linked to the main store — restart it with <code>docker compose restart redis-b</code> and wait 10 seconds.</p>
+master_port:6379</code></pre></div>
+<ul><li><code># Replication</code> — a heading. The <code>#</code> mark means this line is a section heading, not data.</li><li><code>role:slave</code> — the copy&#x27;s role is <code>slave</code>. Older Redis still calls a replica &quot;slave&quot;. In this output, <code>slave</code> means the same thing as replica: a copy that follows the main store. It is an old word for the same job. The lab&#x27;s own words call it a replica.</li><li><code>master_host:redis-a</code> — the main store it follows is named <code>redis-a</code>. <code>master</code> is the old word for the main store, the same as primary. <code>host</code> means the machine or container name.</li><li><code>master_port:6379</code> — the main store&#x27;s door number is <code>6379</code>. That is redis-a&#x27;s door, as listed at the top of this lesson.</li><li>The real output is longer than the four lines above. It has more lines about the copy state. The lines that matter are the <code>role</code> line and the <code>master_host</code> line.</li><li>How to tell it worked: the role line says <code>slave</code> and the host line says <code>redis-a</code>. That is the proof it is following the main store.</li></ul>
+<p>If it breaks: if the role shows <code>master</code>, the copy never linked to the main store. <code>master</code> as a role means &quot;I am a main store, I follow nobody&quot;. Restart the copy with the command below, then wait 10 seconds. What this is: <code>restart</code> stops a service and starts it again. Why we run it: a fresh start makes the copy link to the main store again.</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose restart redis-b</code></pre></div>
+<p>Word by word: <code>docker compose restart redis-b</code> — restart the service named <code>redis-b</code>.</p>
 <h2>Step 6 — Try to write on the copy (it must refuse)</h2>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-b redis-cli SET user:102 Ravi</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>(error) READONLY You can&#x27;t write against a read only replica.</code></pre></div></div>
-<p>That error is the proof. A one-way copy takes reads only. This is correct and expected — do not try to fix it.</p>
-<p>If it breaks: if the SET returns <code>OK</code> instead of the READONLY error, you ran it on redis-a by mistake — check the container name in the command (<code>redis-b</code>, not <code>redis-a</code>) and try again.</p>
+<p>What this is: a save command aimed at the copy. Why we run it: a one-way copy takes reads only. Trying a write and watching it fail is the proof. The error is the expected result. Do not try to fix it.</p>
+<p>Type this, then press Enter:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-b redis-cli SET user:102 Ravi</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker exec redis-b redis-cli</code> — run the Redis tool inside the copy container. Check the name: <code>redis-b</code>, not <code>redis-a</code>.</li><li><code>SET user:102 Ravi</code> — save a key called <code>user:102</code> with the value <code>Ravi</code>, a fake name.</li></ul>
+<p>What you should see:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>(error) READONLY You can&#x27;t write against a read only replica.</code></pre></div>
+<ul><li><code>(error)</code> — the command failed.</li><li><code>READONLY</code> — the reason: this store is read-only.</li><li><code>You can&#x27;t write against a read only replica.</code> — the plain-English reason: you cannot save a value on a copy that only follows.</li><li>How to tell it worked: you see this error. The error IS the proof. A one-way copy takes reads only. This is correct and expected.</li></ul>
+<p>If it breaks: if the SET returns <code>OK</code> instead of the READONLY error, you ran it on redis-a by mistake. Check the container name in the command (<code>redis-b</code>, not <code>redis-a</code>) and try again.</p>
 <h2>Step 7 — The two-way idea, in plain words</h2>
-<p>What if two stores both accept writes at the same time? Then they must merge the changes. That merge rule is called a CRDT. It is a paid feature in Redis products. The free Redis in this lab does not have it. The idea is the same as a shared document: if two people change the same line at the same time, the system needs a rule for which change wins. With a CRDT, the rule is built into the data itself, so both copies end up the same without arguing. For this lab, remember this: one-way copy is free and simple; two-way copy is a paid feature with rules you must understand before you use it.</p>
+<p>What this is: an idea, not a command. There is nothing to type in this step. Why it is here: so you understand what the free lab does NOT do.</p>
+<p>What if two stores both accept writes at the same time? Then they must merge the changes. That merge rule is called a CRDT. It is a paid feature in Redis products. The free Redis in this lab does not have it.</p>
+<p>The idea is the same as a shared document. If two people change the same line at the same time, the system needs a rule for which change wins. With a CRDT, the rule is built into the data itself, so both copies end up the same without arguing.</p>
+<p>For this lab, remember this: one-way copy is free and simple. Two-way copy is a paid feature with rules you must understand before you use it. The lesson does not name which paid Redis product sells it. Do not go and buy anything for this step. The idea is the lesson. The free one-way copy in Steps 1 to 6 is the skill.</p>
 <h2>Clean up</h2>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose down</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>✔ Container redis-a  Removed
-✔ Container redis-b  Removed</code></pre></div></div>
-<p>If it breaks: &quot;No such container&quot; means the stores are already stopped — nothing to do.</p>
-<p>The data is in named volumes, so it survives a restart. Run <code>docker compose down -v</code> to wipe it. The data was fake.</p>
+<p>What this is: stop both stores and remove their containers. Why we run it: the lab is done, and the next lab should start clean.</p>
+<p>Type this, while you are inside the <code>phase1/redis-lab/</code> folder, then press Enter:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose down</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker compose down</code> — stop the containers and remove them. <code>down</code> is stronger than <code>stop</code>: <code>stop</code> leaves the containers in place so you can start them again; <code>down</code> removes them.</li></ul>
+<p>What you should see:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>✔ Container redis-a  Removed
+✔ Container redis-b  Removed</code></pre></div>
+<ul><li>The tick <code>✔</code> means done. Each line says one container was removed.</li></ul>
+<p>If it breaks: <code>No such container</code> means the stores are already stopped. Nothing to do.</p>
+<h3><code>down</code> versus <code>down -v</code> — read this before you wipe anything</h3>
+<p>The data is in named volumes, so it survives a restart. A volume is a named place on your machine where Docker keeps a container&#x27;s data. <code>docker compose down</code> removes the containers but leaves the volumes, so the data is still there the next time you start. Run the command below to wipe it. What this is: <code>down -v</code> stops the containers, removes them, and wipes the volumes too. Why we run it: only when you want the data gone for good.</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose down -v</code></pre></div>
+<p>Word by word: <code>docker compose down</code> stops and removes the containers. <code>-v</code> means also wipe the volumes. Without <code>-v</code>, the data survives. With <code>-v</code>, the data is gone.</p>
+<p>The data was fake, so losing it is fine. But do not run <code>down -v</code> by accident when you meant to keep your counter and values for the next step. If you run the drill below, do it before this wipe.</p>
 <h2>What you can now say, truthfully</h2>
 <p>&quot;I ran two Redis stores, saved and read values, set keys that expire by themselves, used a counter, and proved a replica takes reads only.&quot;</p>
 <h2>What this lab does NOT cover</h2>
-<ul><li>Redis Cluster (many nodes sharing the data) is a bigger setup. The ideas are the same; the setup is bigger.</li><li>Redis persistence (saving to disk) is on in this lab with <code>--appendonly yes</code>, so data survives a restart. In real work, check the disk settings before you trust it.</li></ul>
+<ul><li>Redis Cluster (many nodes sharing the data) is a bigger setup. The ideas are the same; the setup is bigger. A cluster splits the data across many nodes instead of copying all of it to one follower.</li><li>Redis persistence (saving to disk) is on in this lab with <code>--appendonly yes</code>, so data survives a restart. That flag lives in the file <code>phase1/redis-lab/docker-compose.yml</code>, on the line that starts each store. You do not type it. In real work, check the disk settings before you trust it.</li></ul>
 <h2>Failure drill — Promote the copy</h2>
-<p>This drill proves a copy can become a main store, and take writes, when you tell it to stop following.</p>
-<p>Do Steps 1 to 5 first, so the copy already holds the same data as the main store.</p>
-<p>Step 1 — Tell the copy to stop following. Run this from inside this folder:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-b redis-cli REPLICAOF NO ONE</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>OK</code></pre></div></div>
-<p>If it breaks: if it shows an error, redis-b is not up — run <code>docker compose ps</code> and wait until it shows &quot;Up&quot;.</p>
-<p>Step 2 — Check what the copy thinks it is now:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-b redis-cli INFO replication</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>role:master</code></pre></div></div>
-<p>The copy is now a main store. It no longer follows redis-a.</p>
-<p>If it breaks: if the role still shows <code>slave</code>, wait 10 seconds and check again — the change takes a moment.</p>
-<p>Step 3 — Prove it takes writes now:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-b redis-cli SET user:102 Ravi</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>OK</code></pre></div></div>
-<p>Read it back:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-b redis-cli GET user:102</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>&quot;Ravi&quot;</code></pre></div></div>
-<p>The copy saved a value of its own.</p>
-<p>If it breaks: if the SET still shows the READONLY error, Step 1 did not take — run <code>REPLICAOF NO ONE</code> again and check it prints <code>OK</code>.</p>
+<p>This drill proves a copy can become a main store, and take writes, when you tell it to stop following. Do Steps 1 to 5 first, so the copy already holds the same data as the main store. Step 6 is not needed before the drill, because Step 6 only proves the copy refuses writes. The drill is the opposite: it makes the copy accept writes.</p>
+<h3>Drill Step 1 — Tell the copy to stop following</h3>
+<p>Run this from inside the folder <code>phase1/redis-lab/</code>. Type this, then press Enter:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-b redis-cli REPLICAOF NO ONE</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker exec redis-b redis-cli</code> — run the Redis tool inside the copy container.</li><li><code>REPLICAOF</code> — the Redis command that sets which store this store follows. <code>REPLICAOF</code> means &quot;be a replica of&quot;.</li><li><code>NO ONE</code> — follow nobody. The two words together mean &quot;stop following&quot;. After this command, the copy follows no main store. It stands alone.</li></ul>
+<p>What you should see:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>OK</code></pre></div>
+<ul><li><code>OK</code> means the command worked. The copy stopped following.</li></ul>
+<p>If it breaks: if it shows an error, redis-b is not up. Run <code>docker compose ps</code> and wait until it shows <code>Up</code>.</p>
+<h3>Drill Step 2 — Check what the copy thinks it is now</h3>
+<p>Type this, then press Enter:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-b redis-cli INFO replication</code></pre></div>
+<p>This is the same command as Step 5. What you should see now is one line:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>role:master</code></pre></div>
+<ul><li><code>role:master</code> — the copy is now a main store. <code>master</code> is the old word for a main store. It no longer follows redis-a.</li><li>The real output is longer than this one line. Find the <code>role:</code> line in it. That is the line that matters.</li><li>How to tell it worked: the role line changed from <code>slave</code> to <code>master</code>.</li></ul>
+<p>If it breaks: if the role still shows <code>slave</code>, wait 10 seconds and check again. The change takes a moment.</p>
+<h3>Drill Step 3 — Prove it takes writes now</h3>
+<p>Type this, then press Enter:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-b redis-cli SET user:102 Ravi</code></pre></div>
+<p>This is the same save command that failed in Step 6. Word by word: save a key called <code>user:102</code> with the value <code>Ravi</code>, inside the copy container.</p>
+<p>What you should see:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>OK</code></pre></div>
+<ul><li><code>OK</code> means the save worked. The copy now accepts writes.</li></ul>
+<p>Read it back. Type this, then press Enter:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-b redis-cli GET user:102</code></pre></div>
+<p>What you should see:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>&quot;Ravi&quot;</code></pre></div>
+<ul><li><code>&quot;Ravi&quot;</code> is the value you just saved. The copy saved a value of its own.</li></ul>
+<p>If it breaks: if the SET still shows the READONLY error, Drill Step 1 did not take. Run <code>REPLICAOF NO ONE</code> again and check it prints <code>OK</code>.</p>
 <p>Checklist — tick each one when you have seen it:</p>
 <ul><li>☐ The copy stopped following: <code>REPLICAOF NO ONE</code> printed <code>OK</code>.</li><li>☐ The copy is now a main store: <code>INFO replication</code> shows <code>role:master</code>.</li><li>☐ The copy takes writes: the new value saved and read back.</li></ul>
-<p>Reset — run this from the <code>phase1</code> folder to wipe the drill and start fresh:</p>
+<h3>Reset after the drill</h3>
+<p>Run this from the <code>phase1</code> folder to wipe the drill and start fresh. What this is: <code>reset.sh</code> is a helper script in the <code>phase1</code> folder. Its argument tells it which lab folder to wipe. Why we run it: it stops both stores and wipes the data, then prints that it is done.</p>
+<p>Move your terminal into the <code>phase1</code> folder first. Then type this and press Enter:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>bash reset.sh redis-lab</code></pre></div>
-<p>You should see: the script stops both stores and wipes the data, then prints that it is done.</p>
-<p>If it breaks: &quot;Permission denied&quot; means the script is not marked runnable — run <code>chmod +x reset.sh</code> and try again.</p>
-<p>Or, from inside this folder, the plain way: run <code>docker compose down -v</code>. That stops both stores and wipes the data. The data was fake.</p>
-<p>One honest note: after this drill you have two main stores, redis-a and redis-b, and they do not talk to each other. A value saved on one does not appear on the other. That is why the reset matters — start fresh before the next lab.</p>
+<p>Word by word:</p>
+<ul><li><code>bash</code> — the program that runs script files.</li><li><code>reset.sh</code> — the script file. It lives in the <code>phase1</code> folder. That is why you must be inside <code>phase1</code> first.</li><li><code>redis-lab</code> — the argument. It tells the script which lab folder to wipe. It is the folder name <code>redis-lab</code>, inside <code>phase1</code>.</li></ul>
+<p>What you should see: the script stops both stores and wipes the data, then prints that it is done.</p>
+<p>If it breaks: <code>Permission denied</code> means the script is not marked runnable. <code>Runnable</code> means the file is allowed to run as a program. Fix it with the command below, then try again. What this is: <code>chmod +x</code> adds the run permission to a file. Why we run it: without the run permission, your machine refuses to run the script.</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>chmod +x reset.sh</code></pre></div>
+<p>Word by word: <code>chmod</code> changes file permissions. <code>+x</code> means add the execute (run) permission. <code>reset.sh</code> is the file.</p>
+<p>Or, from inside the folder <code>phase1/redis-lab/</code>, the plain way: run the command below. What this is: <code>down -v</code> stops the containers, removes them, and wipes the volumes. That stops both stores and wipes the data. The data was fake.</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose down -v</code></pre></div>
+<p>One honest note: after this drill you have two main stores, redis-a and redis-b, and they do not talk to each other. A value saved on one does not appear on the other. That is why the reset matters. Start fresh before the next lab.</p>
 <h2>Save your proof</h2>
-<p>The proof for this lab is the promoted copy: <code>role:master</code> in its replication info, and the counter value it holds. Save both with these commands, run from inside this folder, after the drill:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir -p ../portfolio/proof
-docker exec redis-b redis-cli INFO replication &gt; ../portfolio/proof/redis-promoted.txt
-docker exec redis-b redis-cli GET orders:count &gt;&gt; ../portfolio/proof/redis-promoted.txt</code></pre></div>
-<p>Open the file and check it shows <code>role:master</code> and <code>&quot;3&quot;</code>. That file is your proof.</p>
-<p>You should see: nothing in the terminal when you run the save commands — the output went into the file, not the screen.</p>
-<p>If it breaks: if the file is empty, the drill did not run yet — do the drill first (Steps 1 to 3 above), then save again.</p><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> In the terminal, type: <code>docker exec redis-a redis-cli ping</code> — what one-word reply shows the memory store is awake?</p><p><a href="/sims/redis.html">Open the practice terminal to test this &rarr;</a></p><details class="exercise-answer"><summary>Show answer</summary><p>You should see <code>PONG</code>.</p></details></div><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button><nav class="pager"><a class="prev" href="/lessons/p1-postgresql.html"><span>← Previous lesson</span><span class="pname">PostgreSQL</span></a><a class="next" href="/lessons/p1-object-store.html"><span>Next lesson →</span><span class="pname">Object Store</span></a></nav></div></div></main>
+<p>The proof for this lab is the promoted copy: <code>role:master</code> in its replication info, and the counter value it holds. Save both with these commands, run from inside the folder <code>phase1/redis-lab/</code>, after the drill.</p>
+<p>First, make the proof folder if it does not exist. Type this and press Enter:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir -p ../portfolio/proof</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>mkdir</code> — short for &quot;make directory&quot;. It makes a new folder.</li><li><code>-p</code> — make the parent folders too, if they are missing, and do not complain if the folder already exists.</li><li><code>../portfolio/proof</code> — the path to the folder. The two dots <code>..</code> mean &quot;go up one folder&quot;. You are in <code>phase1/redis-lab/</code>. <code>..</code> takes you up to <code>phase1/</code>. Then <code>portfolio/proof</code> takes you down into the <code>portfolio</code> folder, then into the <code>proof</code> folder inside it. So the full folder is <code>phase1/portfolio/proof/</code>.</li></ul>
+<p>Then save the replication info. Type this and press Enter:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-b redis-cli INFO replication &gt; ../portfolio/proof/redis-promoted.txt</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker exec redis-b redis-cli INFO replication</code> — ask the copy for its replication info, as in Drill Step 2.</li><li><code>&gt;</code> — redirect. It means &quot;send the output into a file, instead of printing it on the screen&quot;. It overwrites the file if the file already exists.</li><li><code>../portfolio/proof/redis-promoted.txt</code> — the file to write. It lives in <code>phase1/portfolio/proof/</code>, and its name is <code>redis-promoted.txt</code>.</li></ul>
+<p>Then add the counter value to the same file. Type this and press Enter:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-b redis-cli GET orders:count &gt;&gt; ../portfolio/proof/redis-promoted.txt</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker exec redis-b redis-cli GET orders:count</code> — read the counter from the copy.</li><li><code>&gt;&gt;</code> — redirect and append. It means &quot;add the output to the end of the file, without erasing what is already there&quot;. One <code>&gt;</code> overwrites. Two <code>&gt;&gt;</code> appends. That is the difference, and it matters here: the first command used one <code>&gt;</code>, which created the file. This command uses two <code>&gt;&gt;</code>, which adds the counter to the end of the same file.</li><li><code>../portfolio/proof/redis-promoted.txt</code> — the same file as above.</li></ul>
+<p>Open the file and check it shows <code>role:master</code> and <code>&quot;3&quot;</code>. That file is your proof. The <code>&quot;3&quot;</code> is the counter value from Step 4. If your counter shows a different number because you ran INCR extra times, that number is your proof. It must match what your own counter actually held.</p>
+<p>What you should see: nothing in the terminal when you run the save commands. The output went into the file, not the screen. Silence means it worked.</p>
+<p>If it breaks: if the file is empty, the drill did not run yet. Do the drill first (Drill Steps 1 to 3 above), then save again.</p><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> In the terminal, type: <code>docker exec redis-a redis-cli ping</code> — what one-word reply shows the memory store is awake?</p><p><a href="/sims/redis.html">Open the practice terminal to test this &rarr;</a></p><details class="exercise-answer"><summary>Show answer</summary><p>You should see <code>PONG</code>.</p></details></div><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button><nav class="pager"><a class="prev" href="/lessons/p1-postgresql.html"><span>← Previous lesson</span><span class="pname">PostgreSQL</span></a><a class="next" href="/lessons/p1-object-store.html"><span>Next lesson →</span><span class="pname">Object Store</span></a></nav></div></div></main>
 <div class="auth-modal" id="auth-modal" hidden>
   <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
     <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>

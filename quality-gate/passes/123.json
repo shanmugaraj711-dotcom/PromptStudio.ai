@@ -1,0 +1,26 @@
+{
+  "branch": "devops-beginner-rewrite",
+  "checked_at": "2026-11-28 18:40 IST",
+  "checker": "bud",
+  "checks": [
+    "382/383 beginner gaps fixed across 18 lessons; Redis gap 9 left open honestly (brief names no CRDT product; lesson says so plainly)",
+    "v2 templates ported into build_site.py (genz.css, i18n, boot.js, skip-link, og:title, meta/canonical/manifest, lx-promo, Linux/Git sims, kbd-open CSS, defer scripts); regen exit 0",
+    "tests re-run: test_sims.js 896 passed 0 failed; test_engine_extensions.js 168 passed 0 failed (same counts as pre-rewrite baseline)",
+    "banned-word scan on generated output: 0 hits; kit prices unchanged (399/799/999)",
+    "all 38 files diffed against main head d44c4efd: index.html byte-identical; 13/18 sims byte-identical; remaining diffs are rewrite content only; v2 markers (genz.css, i18n.js, boot.js, skip-link, og:title, manifest, og:description) present in 37/37 files; zero v2-marker loss (the only removed og:description lines were description-text rewrites, tag persists with new text)",
+    "public/devops/index.html synced with public/index.html (homepage is served from public/devops/index.html)",
+    "pushed files read back from branch commit 704935d8 and verified byte-identical to local regen output (p1-kafka.html 49,325 B, kafka-lab x6, genz.css present; devops/index.html == local index.html)",
+    "verify-redesign2.py 7 failures are checker-scope (expects deployed /devops/ tree, non-defer script tags, Razorpay page script v2 removed); its banned-word, relative-link, chrome-leftover and structure checks PASS",
+    "scope: only the 39 files (18 lessons, 18 sims, assets/sim.js, index.html x2) — linux-basics/git-basics, linux-server lab, roadmap, trust pages, 404/robots/sitemap, offline zip untouched"
+  ],
+  "code_sha": "704935d8c1dd3e6da009c7e8e59afdbe00c9c60d",
+  "known_limits": [
+    "Preview-deployment check (Vercel preview URL) NOT run — no live browser in this agent's hands; must run before any merge, with the deploy-gate preview checks",
+    "Phone-width rendering not verified by the browser (cannot set a 390px viewport); owner phone check owed after merge",
+    "Per-lesson HTML diff vs pre-rewrite baseline was not done (baseline wiped); regression check is the diff vs main head plus test suites passing at exact baseline counts",
+    "build_site.py and the lesson .md sources are local-only, NOT in this repo — the generator will drift stale again unless committed (separate owner decision, same root cause as PR #121)",
+    "PR #121 (open, stale generator merge) untouched; owner decision on it still owed separately"
+  ],
+  "owner_authorization": "Go ahead + zero mistakes and bugs (voice call 2026-11-28 ~17:07); Fix that (chat 2026-11-28 18:08) for the v2 port. PR is for REVIEW ONLY — do not merge without the owner's word on this exact PR.",
+  "verdict": "PASS for review — do not merge until the preview check runs and the owner says the word on PR #123"
+}
