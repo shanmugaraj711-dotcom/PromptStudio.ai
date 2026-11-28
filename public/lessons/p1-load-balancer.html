@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Load Balancer Lab — One Guard, Three Backends — DevOps Kit</title>
-<meta name="description" content="A load balancer is a traffic guard: it stands in front of copies of your app and sends each visitor to a different copy.">
+<meta name="description" content="A load balancer is a traffic guard. It stands in front of copies of your app and sends each visitor to a different copy.">
 <meta name="theme-color" content="#14161b">
 <link rel="canonical" href="https://promptstudioai.in/lessons/p1-load-balancer.html">
 <link rel="icon" href="/favicon.ico">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="DevOps Kit by PromptStudio">
 <meta property="og:title" content="Load Balancer Lab — One Guard, Three Backends — DevOps Kit">
-<meta property="og:description" content="A load balancer is a traffic guard: it stands in front of copies of your app and sends each visitor to a different copy.">
+<meta property="og:description" content="A load balancer is a traffic guard. It stands in front of copies of your app and sends each visitor to a different copy.">
 <meta property="og:url" content="https://promptstudioai.in/lessons/p1-load-balancer.html">
 <meta name="twitter:card" content="summary">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -33,113 +33,189 @@
 </header>
 <main class="lesson-wrap">
 <nav class="lesson-sidebar" id="lesson-sidebar" aria-label="All lessons"><div class="sb-head"><b>DevOps Kit</b><span>All 18 lessons</span></div><div class="sb-group"><span class="sb-group-title">Start here</span><a class="sb-link" href="/lessons/lesson-0.html">Lesson 0</a></div><div class="sb-group"><span class="sb-group-title">Phase 1 · The Data Tier</span><a class="sb-link" href="/lessons/p1-start.html">Start Here</a><a class="sb-link" href="/lessons/p1-kafka.html">Kafka</a><a class="sb-link" href="/lessons/p1-postgresql.html">PostgreSQL</a><a class="sb-link" href="/lessons/p1-redis.html">Redis</a><a class="sb-link" href="/lessons/p1-object-store.html">Object Store</a><a class="sb-link current" aria-current="page" href="/lessons/p1-load-balancer.html">Load Balancer</a><a class="sb-link" href="/lessons/p1-end-to-end.html">End-to-End</a></div><div class="sb-group"><span class="sb-group-title">Phase 2 · The Rest of DevOps</span><a class="sb-link" href="/lessons/p2-start.html">Start Here</a><a class="sb-link" href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a><a class="sb-link" href="/lessons/p2-kubernetes.html">Kubernetes</a><a class="sb-link" href="/lessons/p2-break-fix.html">Break-and-Fix</a><a class="sb-link" href="/lessons/p2-cheat-sheets.html">Cheat Sheets</a><a class="sb-link" href="/lessons/p2-interview.html">Interview Pack</a><a class="sb-link" href="/lessons/p2-portfolio.html">Portfolio</a><a class="sb-link" href="/lessons/p2-resume.html">Resume Bullets</a><a class="sb-link" href="/lessons/p2-best-sites.html">Best Sites</a></div><div class="sb-group"><span class="sb-group-title">Free skills</span><a class="sb-link" href="/lessons/linux-basics.html">Linux Command Line</a><a class="sb-link" href="/lessons/git-basics.html">Git Basics</a></div><div class="sb-group"><span class="sb-group-title">Reference</span><a class="sb-link" href="/lessons/error-decoder.html">Error Decoder</a></div></nav><div class="lesson-main"><div class="lock-screen" id="lock-screen" hidden><p class="lock-loading" hidden>Checking your sign-in…</p><span class="lock-icon">🔒</span><h2>This lesson is in Phase 1 — ₹399, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase1" type="button" hidden>Buy Phase 1 — ₹399</button><a class="lock-back" href="/">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><span id="main" tabindex="-1"></span><h1>Load Balancer Lab — One Guard, Three Backends</h1><span class="phasebadge">Phase 1 · The Data Tier</span><h2>What this is and why it matters</h2>
-<p>A <strong>load balancer</strong> is a traffic guard: it stands in front of copies of your app and sends each visitor to a different copy.</p>
-<p>In real systems, one copy doing all the work gets overloaded, and one dead copy takes the whole site down.</p>
-<p>This lab runs one guard in front of three backends, then kills one backend and shows the site staying up.</p>
+<p>A <strong>load balancer</strong> is a traffic guard. It stands in front of copies of your app and sends each visitor to a different copy.</p>
+<p>One copy doing all the work gets overloaded. One dead copy takes the whole site down. The guard fixes both problems.</p>
+<p>Think of a school with three identical canteen counters and one person at the door. The person at the door sends the first student to counter 1, the next to counter 2, the next to counter 3, then back to counter 1. No counter gets all the students. If counter 2 closes, the person at the door just sends students to counters 1 and 3. Nobody goes hungry. That person at the door is the load balancer. The counters are the backends.</p>
+<p>In this lab you run one guard in front of three backends. You ask the guard for the page six times and see a different backend answer each time. Then you kill one backend and watch the site stay up. That is the whole lab, and it is the whole point of a load balancer.</p>
 <div class="ladder"><div class="ladder-title">Your level in Load Balancer</div><div class="ladder-steps"><span class="step-unit"><span class="step done">&#10003; Step 1 &middot; Beginner</span><span class="ladder-arrow">&rarr;</span></span><span class="step-unit"><span class="step done">&#10003; Step 2 &middot; Intermediate</span><span class="ladder-arrow">&rarr;</span></span><span class="step-unit"><span class="step done">&#10003; Step 3 &middot; Advanced <span class="here">&#8592; You are here</span></span></span></div><div class="ladder-note">After this lesson you can: <b>Bring a stopped backend back and fix a broken config during an on-call drill.</b></div><div class="ladder-note">You have finished this topic&rsquo;s ladder.</div><div class="ladder-note">Advanced challenge: <b>Site error &#x27;Bad Gateway&#x27; (502) — find the wrong port in the server config (nginx.conf), check it, reload, see the site answer OK (200).</b> — try it in <a href="/lessons/p1-load-balancer.html">Load Balancer</a>.</div></div><h2>Test status</h2>
-<p>Syntax-checked only (20 November 2026). The compose file and the NGINX settings were checked for correct syntax. This lab was not run end-to-end on this machine, because this machine has no Docker. Follow it on your own machine with Docker, and if a step fails, read the error first — that is the real skill.</p>
-<p>v2 (20 November 2026): the backends now use an image that works on ARM64 as well as x86_64. Each backend answers with its own name, so you can see which one answered. Still syntax-checked only, not run end to end.</p>
-<h2>What this lab is</h2>
-<p>You will run three small backends and one NGINX load balancer in front of them. You will ask the load balancer for the page six times and see a different backend answer each time. Then you will kill one backend and watch the site stay up.</p>
-<h2>What you need first</h2>
-<ul><li>Docker running (Phase 2, <a href="/lessons/p2-zero-cost.html">zero-cost-lab.md</a>).</li><li>The files in this folder: <code>docker-compose.yml</code>, <code>nginx.conf</code>.</li></ul>
+<p>Syntax-checked only (20 November 2026). The compose file and the NGINX settings were checked for correct syntax. This lab was not run end-to-end on this machine, because this machine has no Docker. Follow it on your own machine with Docker. No step here is promised to work on a real machine — if a step fails, read the error first. That is the real skill.</p>
+<p>v2 (20 November 2026): the backends now use an image that works on ARM64 as well as x86_64. ARM64 and x86_64 are two kinds of computer chip. x86_64 is the kind in most Windows and Linux PCs. ARM64 is the kind in newer Macs and in many small computers. An image built for only one kind will not run on the other — this one works on both, so the lab works on either kind of machine. Each backend answers with its own name, so you can see which one answered. Still syntax-checked only, not run end to end.</p>
 <h2>Words you need here</h2>
-<ul><li><strong>Load balancer</strong> — a traffic guard. It stands in front of copies of your app and sends each visitor to a different copy.</li><li><strong>Backend</strong> — one copy of your app, behind the load balancer.</li><li><strong>Upstream</strong> — NGINX&#x27;s word for the list of backends.</li><li><strong>Round robin</strong> — taking turns: backend 1, then 2, then 3, then 1 again. That is how NGINX shares the work by default.</li><li><strong>F5</strong> — a paid box that does this job in big companies. This lab uses NGINX instead. It is free, and it teaches the same idea. The lab says so honestly wherever it matters.</li></ul>
+<p>Read this list first. Every word below is used in the steps. Nothing here is used before it is defined.</p>
+<ul><li><strong>Docker</strong> — a tool that runs small sealed boxes on your machine. Each box holds one program and everything that program needs. You need Docker running before Step 1.</li><li><strong>Container</strong> — one sealed box run by Docker. In this lab there are four boxes: <code>lb</code>, <code>web1</code>, <code>web2</code>, and <code>web3</code>. Each box does one job.</li><li><strong>Image</strong> — the recipe Docker uses to build a box. A box is a running image.</li><li><strong>Service</strong> — one named job in the file <code>docker-compose.yml</code>. Each service becomes one container. The four services here are <code>lb</code>, <code>web1</code>, <code>web2</code>, and <code>web3</code>.</li><li><strong>docker-compose.yml</strong> — a recipe file. It lists the four services, what image each one uses, and how they talk to each other. It lives in the folder <code>phase1/load-balancer-lab</code>.</li><li><strong>Load balancer</strong> — a traffic guard. It stands in front of copies of your app and sends each visitor to a different copy.</li><li><strong>Backend</strong> — one copy of your app, behind the load balancer. In this lab the three backends are called <code>web1</code>, <code>web2</code>, and <code>web3</code>. Each one is a tiny program that answers with its own name, so you can see which one answered.</li><li><strong>NGINX</strong> — a free program that can act as a load balancer. Say it &quot;engine-X&quot;. In this lab NGINX is the guard. The guard&#x27;s box is called <code>lb</code>, short for &quot;load balancer&quot;.</li><li><strong>nginx.conf</strong> — the settings file for NGINX. It lives in the folder <code>phase1/load-balancer-lab</code>. It holds two things: a list of the three backends, and a front door that hands visitors to them. The file is explained line by line in Step 1 below — you do not need to edit it.</li><li><strong>Upstream</strong> — NGINX&#x27;s word for the list of backends. In <code>nginx.conf</code>, the list is called <code>backends</code> and holds <code>web1</code>, <code>web2</code>, and <code>web3</code>.</li><li><strong>Round robin</strong> — taking turns. Backend 1, then 2, then 3, then 1 again. That is how NGINX shares the work by default. Like dealing cards around a table, one each in turn.</li><li><strong>Port</strong> — a door number on a machine. The guard listens on door <code>8080</code> on your machine. Inside its box it listens on door <code>80</code>. The recipe file maps door <code>8080</code> on your machine to door <code>80</code> inside the box, so when you visit <code>localhost:8080</code> you reach the guard.</li><li><strong>localhost</strong> — a name that means &quot;this machine&quot;. <code>http://localhost:8080/</code> means &quot;the web page served by my own machine, on door 8080&quot;. Nothing leaves your machine.</li><li><strong>curl</strong> — a small tool that asks a web page for its content and prints the answer in your terminal. It is a command, not a browser. You type it, it fetches, it prints.</li><li><strong>HTTP</strong> — the language browsers and web programs use to ask for pages. Plain HTTP is not locked or scrambled. This lab uses plain HTTP on your own machine only.</li><li><strong>Terminal</strong> — the black window where you type commands. Every command in this lab is typed in the terminal, then you press Enter.</li><li><strong>Folder / directory</strong> — the same thing. A folder holds files. This lab says &quot;folder&quot; every time.</li><li><strong>F5</strong> — a paid box that does the load-balancer job in big companies. This lab uses NGINX instead. It is free, and it teaches the same idea. The lab says so honestly wherever it matters.</li></ul>
+<h2>What you need first</h2>
+<ul><li>Docker running on your machine. The lesson points to Phase 2, <a href="/lessons/p2-zero-cost.html">zero-cost-lab.md</a>, for setting Docker up. Do that first if Docker is not installed yet.</li><li>How to tell Docker is running: open your terminal and type <code>docker ps</code>, then press Enter. <code>docker</code> is the tool. <code>ps</code> means &quot;show the boxes that are running&quot;. If Docker is running, you see a list — even an empty list — with no error. If you see an error about the daemon, Docker is not running yet. A daemon is just a background program — here, the Docker program itself running behind the scenes.</li><li>The files in the folder <code>phase1/load-balancer-lab</code>. That folder holds <code>docker-compose.yml</code> and <code>nginx.conf</code>. Both paths were checked to exist on disk. The folder also holds a helper file called <code>drill.sh</code>. You do not need to open it — the failure drill below uses plain commands instead.</li></ul>
+<h2>Getting into the right folder</h2>
+<p>Every command in this lab is run from inside the folder <code>phase1/load-balancer-lab</code>.</p>
+<ul><li><strong>What:</strong> <code>cd</code> means &quot;change folder&quot;. It moves your terminal into a folder.</li><li><strong>Why:</strong> the commands below look for <code>docker-compose.yml</code> in the folder your terminal is sitting in. If you are in the wrong folder, they fail.</li><li><strong>How:</strong> open your terminal in the folder <code>phase1/load-balancer-lab</code> on your machine. If your terminal opens somewhere else, type <code>cd</code> followed by the path to that folder on your machine, then press Enter.</li><li><strong>Check you are in the right place:</strong> type <code>ls</code> and press Enter. <code>ls</code> means &quot;list the files here&quot;. You should see <code>docker-compose.yml</code> and <code>nginx.conf</code> in the list. If you do not see them, you are in the wrong folder. Move again until <code>ls</code> shows them.</li></ul>
 <h2>Step 1 — Start the guard and the three backends</h2>
-<p>From inside this folder:</p>
-<div class="tryit"><a class="btn amber" href="/sims/load-balancer.html">Try it Yourself &raquo;</a><span>Open the practice terminal and run it yourself — nothing installs. Included with Phase 1. Simulation — practice version. Run the real lab with Docker to do it for real.</span></div><div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose up -d</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>[+] Running 4/4
+<p><strong>What this step does:</strong> it starts four boxes: the NGINX guard called <code>lb</code>, and the three backends <code>web1</code>, <code>web2</code>, and <code>web3</code>.</p>
+<p><strong>Why:</strong> nothing else works until the guard and the backends are running. The guard has nobody to send visitors to if the backends are down.</p>
+<p><strong>The command, word by word, before you run it:</strong></p>
+<div class="tryit"><a class="btn amber" href="/sims/load-balancer.html">Try it Yourself &raquo;</a><span>Open the practice terminal and run it yourself — nothing installs. Included with Phase 1. Simulation — practice version. Run the real lab with Docker to do it for real.</span></div><div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose up -d</code></pre></div>
+<ul><li><code>docker</code> — the tool that runs boxes.</li><li><code>compose</code> — read the recipe file <code>docker-compose.yml</code> and run everything it lists.</li><li><code>up</code> — start everything in the recipe.</li><li><code>-d</code> — run in the background. Short for &quot;detached&quot;. It means: start the boxes and give me my terminal back, so I can type the next command. Without <code>-d</code>, the boxes would hold your terminal and you could not type anything else.</li></ul>
+<p><strong>Run it now,</strong> from inside the folder <code>phase1/load-balancer-lab</code>.</p>
+<p><strong>What you should see:</strong></p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>[+] Running 4/4
  ✔ Container lb    Started
  ✔ Container web1  Started
  ✔ Container web2  Started
- ✔ Container web3  Started</code></pre></div></div>
-<p>Check:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose ps</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>NAME    STATUS
+ ✔ Container web3  Started</code></pre></div>
+<p>Line by line:</p>
+<ul><li><code>[+] Running 4/4</code> — four out of four boxes are running. All of them.</li><li><code>✔ Container lb Started</code> — the guard box started. <code>✔</code> is a tick mark.</li><li><code>✔ Container web1 Started</code>, <code>✔ Container web2 Started</code>, <code>✔ Container web3 Started</code> — the three backend boxes started.</li></ul>
+<p><strong>How to tell it worked:</strong> run the check command below.</p>
+<p><strong>The check command, word by word:</strong></p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose ps</code></pre></div>
+<ul><li><code>docker compose</code> — the tool, reading the recipe file.</li><li><code>ps</code> — show the boxes from this recipe and their state.</li></ul>
+<p><strong>What you should see:</strong> a table with four names, each with STATUS &quot;Up&quot;. &quot;Up&quot; means the box is running.</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>NAME    STATUS
 lb      Up
 web1    Up
 web2    Up
-web3    Up</code></pre></div></div>
-<p>(The real table has more columns. What matters is all four names, each with STATUS &quot;Up&quot;.)</p>
-<p>If it breaks: if <code>lb</code> shows &quot;Exited&quot;, the NGINX settings file has a mistake. Read the log with <code>docker compose logs lb</code> — the error line names the line number in <code>nginx.conf</code>. Fix the line and run <code>docker compose up -d</code> again.</p>
+web3    Up</code></pre></div>
+<p>The real table has more columns than this. What matters is all four names, each with STATUS &quot;Up&quot;.</p>
+<p><strong>If it breaks:</strong> if <code>lb</code> shows &quot;Exited&quot;, the NGINX settings file has a mistake. &quot;Exited&quot; means the box ran and then stopped. Read the guard&#x27;s diary with:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose logs lb</code></pre></div>
+<ul><li><code>docker compose logs</code> — show the diary lines for one box. A log is the box&#x27;s diary — lines it printed while it ran.</li><li><code>lb</code> — the guard box.</li></ul>
+<p>The error line names the line number in <code>nginx.conf</code>. Fix that line and run <code>docker compose up -d</code> again.</p>
+<p><strong>What is inside nginx.conf?</strong> You do not need to edit it, but you should know what it says. Open the file <code>phase1/load-balancer-lab/nginx.conf</code>. It has two parts:</p>
+<ol><li>The backend list, called <code>upstream backends</code>. It names the three backends:</li><li><code>server web1:80;</code> — backend 1, on its door <code>80</code>.</li><li><code>server web2:80;</code> — backend 2, on its door <code>80</code>.</li><li><code>server web3:80;</code> — backend 3, on its door <code>80</code>.</li><li>The front door, called <code>server</code>. It says <code>listen 80;</code> — take visitors on door <code>80</code> — and <code>proxy_pass http://backends;</code> — hand each visitor to the backend list. <code>proxy_pass</code> means &quot;pass the visitor on to&quot;. <code>location /</code> means &quot;for every page address&quot;, so every visitor is handed on.</li></ol>
+<p>If a backend stops answering, NGINX skips it by itself and uses the ones that are still alive. That skipping is the whole trick of Step 3.</p>
+<p><strong>One thing the lesson does not spell out:</strong> you cannot visit a backend directly. The backends are not reachable from your machine — only through the guard. Do not try to open <code>web1</code> in a browser. Always go through <code>http://localhost:8080/</code>.</p>
 <h2>Step 2 — Ask for the page six times</h2>
-<p>Ask the load balancer for the page:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8080/</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Hostname: web1</code></pre></div></div>
-<p>The Hostname line tells you which backend answered. Ask again, five more times:</p>
+<p><strong>What this step does:</strong> you ask the guard for the page six times, and watch a different backend answer each time.</p>
+<p><strong>Why:</strong> this proves the guard shares the work. If the same backend answered every time, the guard would not be sharing anything.</p>
+<p><strong>The command, word by word, before you run it:</strong></p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8080/</code></pre></div>
+<ul><li><code>curl</code> — fetch a web page and print the answer in the terminal.</li><li><code>http://localhost:8080/</code> — the page to fetch. <code>http</code> is the web language. <code>localhost</code> means &quot;my own machine&quot;. <code>8080</code> is the guard&#x27;s door number on your machine. <code>/</code> means &quot;the front page&quot;.</li></ul>
+<p><strong>Run it once now.</strong> You should see several lines of answer. The lines include details about the backend that answered. Find the line that starts with:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>Hostname: web1</code></pre></div>
+<p><code>Hostname</code> is the name of the backend that answered. It will say <code>web1</code>, <code>web2</code>, or <code>web3</code>. The other lines in the answer are details about that backend — you can ignore them for this lab. The <code>Hostname</code> line is the proof. The lesson shows only the <code>Hostname</code> line because that is the line that matters.</p>
+<p><strong>Now ask again, five more times.</strong> Run the same command five more times:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8080/
 curl http://localhost:8080/
 curl http://localhost:8080/
 curl http://localhost:8080/
-curl http://localhost:8080/</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Hostname: web1
+curl http://localhost:8080/</code></pre></div>
+<p>That is one command, typed five times. Each run is one visit. Write down the <code>Hostname</code> line each time.</p>
+<p><strong>What you should see:</strong> the <code>Hostname</code> line takes turns — web1, web2, web3, web1, web2, web3. The order may start on a different backend — your first answer might be <code>web2</code> instead of <code>web1</code> — but all three names appear, and they keep taking turns:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>Hostname: web1
 Hostname: web2
 Hostname: web3
 Hostname: web1
 Hostname: web2
-Hostname: web3</code></pre></div></div>
-<p>That is round robin — the guard shares the work evenly.</p>
-<p>If it breaks: if <code>curl</code> says &quot;connection refused&quot;, the lb is not up yet — wait and try again. If every answer is the same backend, check <code>docker compose ps</code> — one of the backends may have failed to start, so the guard is only using the ones that are alive. That is still the guard working correctly, but fix the dead backend first (read its log) and try again.</p>
+Hostname: web3</code></pre></div>
+<p>That is round robin — the guard shares the work evenly, one visitor to each backend in turn. The starting backend does not matter: the guard remembers whose turn is next, and it may have already served a visitor before you started counting. What matters is that all three names appear and they keep taking turns.</p>
+<p><strong>If it breaks:</strong> if <code>curl</code> says &quot;connection refused&quot;, the guard is not up yet. &quot;Connection refused&quot; means nothing answered on door <code>8080</code>. Wait a few seconds and try again. If every answer is the same backend, check <code>docker compose ps</code> — one of the backends may have failed to start, so the guard is only using the ones that are alive. That is still the guard working correctly, but fix the dead backend first (read its diary with <code>docker compose logs web2</code>, using the real name) and try again.</p>
 <h2>Step 3 — Kill one backend and watch the site stay up</h2>
-<p>Stop backend 2:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose stop web2</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>✔ Container web2  Stopped</code></pre></div></div>
-<p>If it breaks: &quot;No such container&quot; means the name is wrong — run <code>docker compose ps</code> and use the name it shows.</p>
-<p>Ask for the page six more times. On Windows, run this in Git Bash, not PowerShell:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>for i in 1 2 3 4 5 6; do curl -s http://localhost:8080/ | grep Hostname; done</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Hostname: web1
+<p><strong>What this step does:</strong> you stop backend 2, ask for the page six more times, and watch the site stay up with only two backends. Then you bring backend 2 back.</p>
+<p><strong>Why:</strong> this is the real test. A site with one copy dies when that copy dies. A site with a guard stays up when one copy dies, because the guard skips the dead one by itself.</p>
+<p><strong>First — stop backend 2. The command, word by word:</strong></p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose stop web2</code></pre></div>
+<ul><li><code>docker compose stop</code> — stop one box from this recipe, but keep it around so it can be started again later. Different from <code>down</code>, which stops AND removes the boxes.</li><li><code>web2</code> — the box to stop. Backend 2.</li></ul>
+<p><strong>What you should see:</strong></p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>✔ Container web2  Stopped</code></pre></div>
+<p>One line. <code>Stopped</code> means the box is off but still exists.</p>
+<p><strong>If it breaks:</strong> &quot;No such container&quot; means the name is wrong — run <code>docker compose ps</code> and use one of the names it shows.</p>
+<p><strong>Next — ask for the page six more times, in one command. The command, word by word, before you run it:</strong></p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>for i in 1 2 3 4 5 6; do curl -s http://localhost:8080/ | grep Hostname; done</code></pre></div>
+<p>This looks long, so here it is in pieces:</p>
+<ul><li><code>for i in 1 2 3 4 5 6; do ... ; done</code> — a loop. It means &quot;do the thing inside, six times&quot;. <code>i</code> is a counting name that goes 1, 2, 3, 4, 5, 6. <code>do</code> starts the repeated part. <code>done</code> ends it. You are not typing the page request six times by hand — the loop does it for you.</li><li><code>curl -s http://localhost:8080/</code> — fetch the page. <code>-s</code> means &quot;silent&quot;: hide the progress lines curl normally prints, so only the page answer shows.</li><li><code>|</code> — a pipe. It means &quot;take the output of the command on the left and feed it into the command on the right&quot;.</li><li><code>grep Hostname</code> — keep only the lines that contain the word <code>Hostname</code>, and throw the rest away. <code>grep</code> means &quot;search lines for this word&quot;. This is why you see only the <code>Hostname</code> line six times, instead of the full answer six times.</li></ul>
+<p>On Windows, run this in Git Bash, not PowerShell. Git Bash is a terminal that understands this loop language. PowerShell is Windows&#x27; own terminal, and it does not understand <code>for ... do ... done</code> in this form. If you do not have Git Bash, it comes with Git for Windows — install Git and you get Git Bash with it.</p>
+<p><strong>What you should see:</strong> only <code>Hostname: web1</code> and <code>Hostname: web3</code>:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>Hostname: web1
 Hostname: web3
 Hostname: web1
 Hostname: web3
 Hostname: web1
-Hostname: web3</code></pre></div></div>
+Hostname: web3</code></pre></div>
 <p>Backend 2 never answers — the guard skips it by itself. The site stays up with two backends. That is the whole point of a load balancer: one copy can die and nobody notices.</p>
-<p>Bring it back:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose start web2</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>✔ Container web2  Started</code></pre></div></div>
-<p>Ask again:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8080/</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Hostname: web2</code></pre></div></div>
-<p>Backend 2 answers again within a few seconds.</p>
-<p>If it breaks: if web2 never answers, check it is really up with <code>docker compose ps</code> — if it shows &quot;Exited&quot;, read its log with <code>docker compose logs web2</code>.</p>
+<p><strong>Next — bring backend 2 back. The command, word by word:</strong></p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose start web2</code></pre></div>
+<ul><li><code>docker compose start</code> — start a box that was stopped earlier.</li><li><code>web2</code> — the box to start. Backend 2.</li></ul>
+<p><strong>What you should see:</strong></p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>✔ Container web2  Started</code></pre></div>
+<p><strong>Ask again, once:</strong></p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8080/</code></pre></div>
+<p><strong>What you should see:</strong> a <code>Hostname</code> line again — web1, web2 or web3:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>Hostname: web2</code></pre></div>
+<p>Your answer may name a different backend — web1 or web3 are also fine. Any of the three means backend 2 answers again within a few seconds.</p>
+<p><strong>If it breaks:</strong> if web2 never answers, check it is really up with <code>docker compose ps</code> — if it shows &quot;Exited&quot;, read its diary with <code>docker compose logs web2</code>.</p>
 <h2>Step 4 — See the guard&#x27;s view (optional)</h2>
-<p>Look at what NGINX thinks:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose logs lb</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>172.18.0.1 - - [20/Nov/2026:10:00:00 +0000] &quot;GET / HTTP/1.1&quot; 200 612</code></pre></div></div>
-<p>(The date and time will match when you ran it, not the line above.) There is no line that says which backend answered — NGINX&#x27;s normal log does not record that. The <code>curl</code> answers in Step 2 are the proof, not the log.</p>
+<p><strong>What this step does:</strong> it shows you the guard&#x27;s diary — one line per visit.</p>
+<p><strong>Why:</strong> so you can see what the guard records, and what it does NOT record. This step is optional. Skip it and nothing breaks.</p>
+<p><strong>The command, word by word:</strong></p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose logs lb</code></pre></div>
+<ul><li><code>docker compose logs</code> — show the diary lines for one box.</li><li><code>lb</code> — the guard box.</li></ul>
+<p><strong>What you should see:</strong> one line per visit, like this:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>172.18.0.1 - - [20/Nov/2026:10:00:00 +0000] &quot;GET / HTTP/1.1&quot; 200 612</code></pre></div>
+<p>Line by line — it has six parts:</p>
+<ul><li><code>172.18.0.1</code> — the visitor&#x27;s address inside the Docker network. An address is a number that names one machine or box on a network. This one is your machine as the guard sees it.</li><li><code>- -</code> — two dashes. They stand for two empty fields: the visitor gave no login name. Empty is normal here.</li><li><code>[20/Nov/2026:10:00:00 +0000]</code> — the date and time of the visit. Your date and time will match when YOU ran it, not the line above.</li><li><code>&quot;GET / HTTP/1.1&quot;</code> — the request. <code>GET</code> means &quot;give me this page&quot;. <code>/</code> is the front page. <code>HTTP/1.1</code> is the version of the web language used.</li><li><code>200</code> — the answer code. <code>200</code> means &quot;OK&quot;. The page was served fine. Other codes mean other things — <code>404</code> means &quot;page not found&quot;, <code>502</code> means &quot;the guard is up but no backend answered&quot; — but here you want <code>200</code>.</li><li><code>612</code> — the size of the answer, in bytes. A byte is the smallest unit of file size. <code>612</code> just means the answer was 612 bytes long.</li></ul>
+<p>There is no line here that says which backend answered. NGINX&#x27;s normal diary does not record that. The <code>curl</code> answers in Step 2 are the proof, not this diary.</p>
 <h2>Clean up</h2>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose down</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>✔ Container lb    Removed
+<p><strong>What this step does:</strong> it stops all four boxes and removes them.</p>
+<p><strong>Why:</strong> the lab is done. The boxes would otherwise keep running and using your machine.</p>
+<p><strong>The command, word by word:</strong></p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose down</code></pre></div>
+<ul><li><code>docker compose</code> — the tool, reading the recipe file.</li><li><code>down</code> — stop all the boxes in the recipe and remove them.</li></ul>
+<p>Run it from inside the folder <code>phase1/load-balancer-lab</code>.</p>
+<p><strong>What you should see:</strong></p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>✔ Container lb    Removed
 ✔ Container web1  Removed
 ✔ Container web2  Removed
-✔ Container web3  Removed</code></pre></div></div>
-<p>If it breaks: &quot;No such container&quot; means the services are already stopped — nothing to do.</p>
+✔ Container web3  Removed</code></pre></div>
+<p>Four lines, one per box. <code>✔</code> is a tick mark. <code>Removed</code> means the box is gone.</p>
+<p><strong>If it breaks:</strong> &quot;No such container&quot; means the services are already stopped — nothing to do.</p>
 <h2>What you can now say, truthfully</h2>
 <p>&quot;I ran NGINX as a load balancer in front of three backends, watched it share visitors round robin, killed one backend, and the site stayed up.&quot;</p>
 <h2>What this lab does NOT cover</h2>
-<ul><li>Real load balancers also check backend health on their own (health checks) and can share work by least-busy instead of round robin. NGINX can do both — this lab keeps the default, so you learn the idea first.</li><li>HTTPS (the locked version of web traffic) is a later topic. This lab uses plain HTTP on your own machine only.</li><li>A paid F5 box has more features than NGINX. The idea — spread traffic, skip dead backends — is the same.</li></ul>
+<ul><li>Real load balancers also check backend health on their own — health checks, meaning the guard asks each backend &quot;are you alive?&quot; on a schedule — and can share work by least-busy instead of round robin. &quot;Least-busy&quot; means sending each new visitor to the backend with the fewest visitors right now, instead of taking strict turns. NGINX can do both — this lab keeps the default, round robin, so you learn the idea first.</li><li>HTTPS is the locked version of web traffic. &quot;Locked&quot; means the traffic is scrambled so nobody in the middle can read it. HTTPS is a later topic. This lab uses plain HTTP on your own machine only.</li><li>A paid F5 box has more features than NGINX. The idea — spread traffic, skip dead backends — is the same.</li></ul>
 <h2>Failure drill — Lose a backend, stay up</h2>
+<p>This drill is the SAME test as Step 3, repeated on its own so you can practise it from a cold start. If you already did Step 3, you have already done this drill once. Do it again here if you want the practice — it is the same moves, in the same order.</p>
 <p>This drill proves the site stays up when one backend dies, because the guard skips the dead one by itself.</p>
 <p>Do Steps 1 and 2 first, so all three backends are answering.</p>
-<p>Step 1 — Stop backend 2. Run this from inside this folder:</p>
+<p><strong>Drill Step 1 — Stop backend 2.</strong> Run this from inside the folder <code>phase1/load-balancer-lab</code>:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose stop web2</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>✔ Container web2  Stopped</code></pre></div></div>
-<p>Step 2 — Ask for the page six times:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>for i in 1 2 3 4 5 6; do curl -s http://localhost:8080/ | grep Hostname; done</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Hostname: web1
+<p><strong>Drill Step 2 — Ask for the page six times:</strong></p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>for i in 1 2 3 4 5 6; do curl -s http://localhost:8080/ | grep Hostname; done</code></pre></div>
+<p>This is the loop from Step 3: fetch the page six times, keep only the <code>Hostname</code> line each time. See Step 3 for the word-by-word breakdown.</p>
+<p>You should see only <code>Hostname: web1</code> and <code>Hostname: web3</code>:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>Hostname: web1
 Hostname: web3
 Hostname: web1
 Hostname: web3
 Hostname: web1
-Hostname: web3</code></pre></div></div>
+Hostname: web3</code></pre></div>
 <p>Backend 2 never answers. The guard skips it by itself. The site stays up with two backends.</p>
-<p>Step 3 — Bring backend 2 back:</p>
+<p><strong>Drill Step 3 — Bring backend 2 back:</strong></p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose start web2</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>✔ Container web2  Started</code></pre></div></div>
 <p>Ask again:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8080/</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Hostname: web2</code></pre></div></div>
 <p>Backend 2 answers again within a few seconds.</p>
-<p>Checklist — tick each one when you have seen it:</p>
+<p><strong>Checklist — tick each one when you have seen it:</strong></p>
 <ul><li>☐ The site stayed up with web2 stopped.</li><li>☐ Only web1 and web3 answered the six curls — web2 never did.</li><li>☐ Web2 answered again after it was started back.</li></ul>
-<p>Reset — run this from the <code>phase1</code> folder to wipe the drill and start fresh:</p>
+<p><strong>Reset — wipe the drill and start fresh.</strong> Run this from the <code>phase1</code> folder (one folder up from the lab folder):</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>bash reset.sh load-balancer-lab</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>bash</code> — run this file with Bash, the terminal&#x27;s command language.</li><li><code>reset.sh</code> — a script file that stops the lab and deletes its data, so the lab starts fresh. It lives in the folder <code>phase1</code> — the file is <code>phase1/reset.sh</code>. That path was checked to exist on disk.</li><li><code>load-balancer-lab</code> — which lab to reset. The script needs the lab folder&#x27;s name.</li></ul>
 <p>You should see: the script stops the services and wipes the data, then prints that it is done.</p>
-<p>If it breaks: &quot;Permission denied&quot; means the script is not marked runnable — run <code>chmod +x reset.sh</code> and try again.</p>
-<p>Or, from inside this folder, the plain way: run <code>docker compose down</code>. That stops the guard and the three backends.</p>
+<p><strong>If it breaks:</strong> &quot;Permission denied&quot; means the file is not marked as runnable. &quot;Permission denied&quot; is the machine saying &quot;you are not allowed to run this file&quot;. Fix it with:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>chmod +x reset.sh</code></pre></div>
+<ul><li><code>chmod</code> — change a file&#x27;s permissions (who may do what with it).</li><li><code>+x</code> — add the &quot;may run this&quot; permission.</li><li><code>reset.sh</code> — the file to fix.</li></ul>
+<p>Then run the reset command again.</p>
+<p>Or, from inside the folder <code>phase1/load-balancer-lab</code>, the plain way: run <code>docker compose down</code>. That stops the guard and the three backends. No script needed.</p>
 <h2>Save your proof</h2>
-<p>The proof for this lab is the curl loop with web2 missing: six answers, only web1 and web3. Save it with this command, run from inside this folder while web2 is still stopped (Step 2 of the drill):</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir -p ../portfolio/proof
-for i in 1 2 3 4 5 6; do curl -s http://localhost:8080/ | grep Hostname; done &gt; ../portfolio/proof/load-balancer-web2-down.txt</code></pre></div>
-<p>Open the file and check web2 never appears in it. That file is your proof.</p>
-<p>You should see: nothing in the terminal when you run the save command — the six answers went into the file, not the screen.</p>
-<p>If it breaks: if the file is empty, web2 was already started again when you saved — stop web2 first (drill Step 1), then run the save command again.</p><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> In the terminal, type: <code>curl http://localhost:8080/</code> — which backend server (app copy behind the traffic guard) answers?</p><p><a href="/sims/load-balancer.html">Open the practice terminal to test this &rarr;</a></p><details class="exercise-answer"><summary>Show answer</summary><p>You should see <code>Hostname: web1</code>, showing that the first backend server answered.</p></details></div><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button><nav class="pager"><a class="prev" href="/lessons/p1-object-store.html"><span>← Previous lesson</span><span class="pname">Object Store</span></a><a class="next" href="/lessons/p1-end-to-end.html"><span>Next lesson →</span><span class="pname">End-to-End</span></a></nav></div></div></main>
+<p>The proof for this lab is the curl loop with web2 missing: six answers, only web1 and web3. Save it with the commands below, run from inside the folder <code>phase1/load-balancer-lab</code> <strong>while web2 is still stopped</strong> (Drill Step 2). Timing matters: the file must be saved while web2 is still stopped. If you start web2 back first, the file will hold web2 answers and prove nothing.</p>
+<p><strong>First — make the proof folder, word by word:</strong></p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir -p ../portfolio/proof</code></pre></div>
+<ul><li><code>mkdir</code> — make a folder. Short for &quot;make directory&quot;.</li><li><code>-p</code> — make the parent folders too if they are missing, and do not complain if the folder already exists.</li><li><code>../portfolio/proof</code> — the folder to make. <code>..</code> means &quot;go up one folder&quot; — from <code>phase1/load-balancer-lab</code> up to <code>phase1</code>. Then <code>portfolio/proof</code> is the folder inside <code>phase1/portfolio</code>. The full path is <code>phase1/portfolio/proof</code>, and it holds the proof files. That folder was checked to exist on disk.</li></ul>
+<p><strong>Then — save the six answers into a file:</strong></p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>for i in 1 2 3 4 5 6; do curl -s http://localhost:8080/ | grep Hostname; done &gt; ../portfolio/proof/load-balancer-web2-down.txt</code></pre></div>
+<p>This is the same six-time loop from Step 3, with one extra piece at the end:</p>
+<ul><li><code>&gt;</code> — send the output into a file instead of onto the screen. It overwrites the file if the file already exists.</li><li><code>../portfolio/proof/load-balancer-web2-down.txt</code> — the file to write into. A plain text file. Its name says what it holds: the load balancer&#x27;s answers with web2 down.</li></ul>
+<p><strong>What you should see:</strong> nothing in the terminal when you run the save command. That is correct — the six answers went into the file, not the screen. Silence means it worked here.</p>
+<p><strong>Check the file:</strong> open <code>phase1/portfolio/proof/load-balancer-web2-down.txt</code> and check web2 never appears in it. That file is your proof.</p>
+<p><strong>If it breaks:</strong> if the file is empty, web2 was already started again when you saved — stop web2 first (Drill Step 1), then run the save command again.</p><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> In the terminal, type: <code>curl http://localhost:8080/</code> — which backend server (app copy behind the traffic guard) answers?</p><p><a href="/sims/load-balancer.html">Open the practice terminal to test this &rarr;</a></p><details class="exercise-answer"><summary>Show answer</summary><p>You should see <code>Hostname: web1</code>, showing that the first backend server answered.</p></details></div><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button><nav class="pager"><a class="prev" href="/lessons/p1-object-store.html"><span>← Previous lesson</span><span class="pname">Object Store</span></a><a class="next" href="/lessons/p1-end-to-end.html"><span>Next lesson →</span><span class="pname">End-to-End</span></a></nav></div></div></main>
 <div class="auth-modal" id="auth-modal" hidden>
   <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
     <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>

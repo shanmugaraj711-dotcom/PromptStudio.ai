@@ -36,148 +36,483 @@
 <p>This is your <strong>quick reference</strong>: keep it open while you practise, and look things up here when you need them.</p>
 <p>In real work, nobody memorises every tool — the skill is knowing where to look and checking the result.</p>
 <p>Every line pairs one tool with what it does and what good output looks like, so a wrong result stands out at once.</p>
+<p>A cheat sheet is a one-page reminder card. Think of the formula sheet you get in an exam. You do not memorise every formula. You keep the sheet open, find the one you need, and use it.</p>
 <p>All commands below are standard, well-known commands for their tools, written for a Linux terminal (Ubuntu/Debian directly, or WSL2 Ubuntu on Windows). <code>systemctl</code> commands work on systemd Linux only — on Docker Desktop, start the app instead.</p>
-<p>How to read this file: every line pairs a command with what it does and what good output looks like. If the output looks different, check the error decoder (Phase 1) or the troubleshooting index at the end of this file.</p>
-<div class="ladder"><div class="ladder-title">Reference tool</div><div class="ladder-note">This page supports every topic — use it whenever you are stuck. It has no ladder of its own.</div></div><h2>Making files</h2>
-<div class="tryit"><a class="btn amber" href="/sims/p2-cheat-sheets.html">Try it Yourself &raquo;</a><span>Open the practice terminal and run it yourself — nothing installs. Included with Phase 2. Simulation — practice version. The real thing is the same commands, in your own terminal.</span></div><div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>nano &lt;file&gt;            Open a file in a simple text editor
-                       (Ctrl+O, Enter to save, Ctrl+X to leave)
-cat &gt; &lt;file&gt; &lt;&lt; &#x27;EOF&#x27;  Write lines into a file until the EOF line</code></pre></div>
-<p>YAML warning: use spaces, never Tab, in <code>.yml</code> files.</p>
+<p><strong>Test status: syntax-checked only.</strong> These commands were checked for correct syntax, but this sheet does not promise any of them was run end-to-end on a real machine. Try each one yourself and read what it prints.</p>
+<p>How to read this file: find the tool you are working with, read the WHAT and the WHY first, then type the command. After you press Enter, compare what you see with the &quot;You should see&quot; lines. If it looks different, that is information, not failure — read the error line and fix that one thing.</p>
+<div class="ladder"><div class="ladder-title">Reference tool</div><div class="ladder-note">This page supports every topic — use it whenever you are stuck. It has no ladder of its own.</div></div><h2>Words you need first</h2>
+<ul><li>A <strong>command</strong> is one line of text you type, then press Enter.</li><li>The <strong>terminal</strong> is the black window where you type commands. A <strong>shell</strong> is the program inside that window that reads your typed commands. If you have never opened one, do Lesson 0 first — it shows how.</li><li>A <strong>folder</strong> is a named box that holds files. Your computer is full of folders inside folders.</li><li>A <strong>file</strong> is one named thing inside a folder, like one page in a box.</li><li>A <strong>flag</strong> is a short extra word after a command, starting with <code>-</code> or <code>--</code>. It changes what the command does.</li><li>A <strong>placeholder</strong> looks like <code>&lt;file&gt;</code> or <code>&lt;name&gt;</code>. It is not a real word. You replace it with your real file name or real name. Never type the <code>&lt;</code> and <code>&gt;</code> brackets.</li><li>A <strong>container</strong> is a small sealed box that runs one program, with everything that program needs inside the box.</li><li>An <strong>image</strong> is the packed box before it runs. A container is the image running.</li><li>A <strong>service</strong> is a program that runs in the background and waits for requests, like a shopkeeper waiting behind a counter.</li></ul>
+<h2>The three words every command uses</h2>
+<p>Every command in this lesson is built from the same three ideas.</p>
+<ol><li><strong>The program name first.</strong> <code>docker</code>, <code>git</code>, <code>kubectl</code>, <code>ls</code>. This is the tool you are talking to.</li><li><strong>The action second.</strong> <code>ps</code>, <code>status</code>, <code>get</code>, <code>logs</code>. This is what you ask the tool to do.</li><li><strong>The details last.</strong> File names, folder names, flags. These say which thing, and how.</li></ol>
+<p>Example: <code>docker ps -a</code>.</p>
+<ul><li><code>docker</code> — the program. The tool that runs containers.</li><li><code>ps</code> — the action. Short for &quot;process status&quot;. It means &quot;list the containers&quot;.</li><li><code>-a</code> — the flag. It means &quot;all&quot;. Without it you see only running containers. With it you also see stopped ones.</li></ul>
+<p>If a command ever looks like a wall of letters, split it into those three parts and read it left to right. That is the whole trick.</p>
+<h2>Making files</h2>
+<h3>What it is</h3>
+<p>A text editor is a program that lets you write words into a file.</p>
+<p><code>nano</code> is the simplest editor. It opens inside the terminal itself.</p>
+<p><code>cat</code> is a program that prints a file&#x27;s words onto the screen. With a <code>&gt;</code> sign it can write words into a file instead.</p>
+<h3>Why we do it</h3>
+<p>Every project in this kit needs files: a web page, a recipe file, a settings file. You have to be able to make one before you can do anything else.</p>
+<h3>Command — open a file to write in it</h3>
+<div class="tryit"><a class="btn amber" href="/sims/p2-cheat-sheets.html">Try it Yourself &raquo;</a><span>Open the practice terminal and run it yourself — nothing installs. Included with Phase 2. Simulation — practice version. The real thing is the same commands, in your own terminal.</span></div><div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>nano &lt;file&gt;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>nano</code> — the editor program.</li><li><code>&lt;file&gt;</code> — placeholder. Replace it with the real file name, for example <code>nano index.html</code>. If the file does not exist yet, nano makes an empty one with that name.</li></ul>
+<p>You should see: the terminal screen clears and shows your file&#x27;s text, with a list of key shortcuts at the bottom.</p>
+<p>To save: press Ctrl+O, then press Enter. &quot;Save&quot; means &quot;write what I typed into the file on the disk&quot;.</p>
+<p>To leave: press Ctrl+X. &quot;Leave&quot; means &quot;close the editor and go back to the normal terminal&quot;.</p>
+<p>If it breaks: if Ctrl+O asks &quot;File Name to Write&quot;, it is asking you to confirm the name. Press Enter to accept the name shown.</p>
+<h3>Command — write lines into a file without opening an editor</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cat &gt; &lt;file&gt; &lt;&lt; &#x27;EOF&#x27;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>cat</code> — the program that prints or writes text.</li><li><code>&gt;</code> — this sign means &quot;send the text into the file that follows, instead of onto the screen&quot;.</li><li><code>&lt;file&gt;</code> — placeholder. The file to write into, for example <code>index.html</code>.</li><li><code>&lt;&lt; &#x27;EOF&#x27;</code> — this means &quot;read the lines I type next, until I type a line that says only <code>EOF</code>&quot;. <code>EOF</code> stands for &quot;end of file&quot;. It is a marker word, not a file.</li></ul>
+<p>How to use it: type the command, press Enter, then type your lines one by one. When you are done, type <code>EOF</code> alone on a line and press Enter. The file is written.</p>
+<p>You should see: nothing while you type. After the <code>EOF</code> line, you are back at the normal terminal prompt. That silence means it worked.</p>
+<p>If it breaks: if you never type the closing <code>EOF</code> line, the terminal keeps waiting for more lines. Type <code>EOF</code> alone on a line. If you typed the wrong file name, you made a file with the wrong name — delete it and try again.</p>
+<h3>The YAML warning — spaces, never Tab</h3>
+<p>YAML is a settings-file format. Files ending in <code>.yml</code> or <code>.yaml</code> are YAML files. YAML uses spaces at the start of a line to show which lines belong together. This is called <strong>indentation</strong>.</p>
+<p>A Tab key press looks like spaces on screen, but it is a different character, and YAML refuses it. So in <code>.yml</code> files, press the space bar for indentation. Never press Tab.</p>
+<p>You should see: if you used a Tab by mistake, the error names the line number. Go to that line, delete the Tab, and type spaces.</p>
 <h2>Linux</h2>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>pwd                    Show which folder you are in
-ls -la                 List files, including hidden ones
-cd &lt;folder&gt;            Move into a folder
-mkdir &lt;name&gt;           Make a new folder
-cat &lt;file&gt;             Print a file&#x27;s contents
-grep &lt;word&gt; &lt;file&gt;     Find a word inside a file
-chmod +x &lt;file&gt;        Make a file runnable
-ps aux                 List running programs
-top                    Watch live CPU and memory use
-df -h                  Show disk space
-free -h                Show memory use
-sudo systemctl start &lt;service&gt;    Start a service
-sudo systemctl status &lt;service&gt;   Check a service</code></pre></div>
+<p>Linux is the operating system — the base program that runs the computer and lets other programs run on it. These commands ask Linux simple questions about files and programs.</p>
+<h3>Command — show which folder you are in</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>pwd</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>pwd</code> — short for &quot;print working directory&quot;. &quot;Working directory&quot; means &quot;the folder I am standing in right now&quot;.</li></ul>
+<p>You should see: one line, a folder path, for example <code>/home/learner/devops-practice</code>. That is where you are.</p>
+<h3>Command — list files, including hidden ones</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>ls -la</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>ls</code> — short for &quot;list&quot;. It lists the files in the folder you are in.</li><li><code>-l</code> — the flag for &quot;long&quot;. It shows extra detail per file: size, date, permissions.</li><li><code>-a</code> — the flag for &quot;all&quot;. It also shows hidden files. A hidden file is one whose name starts with a dot, like <code>.github</code>. Linux hides dot-files from a plain <code>ls</code>.</li></ul>
+<p>You should see: one line per file, starting with letters like <code>drwxr-xr-x</code> or <code>-rw-r--r--</code>, then a size, a date, and a name.</p>
+<h3>Command — move into a folder</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cd &lt;folder&gt;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>cd</code> — short for &quot;change directory&quot;. &quot;Directory&quot; is the old word for folder.</li><li><code>&lt;folder&gt;</code> — placeholder. The folder to move into, for example <code>cd my-site</code>.</li></ul>
+<p>You should see: nothing. <code>cd</code> prints nothing when it works. That silence is normal. Type <code>pwd</code> to check where you landed.</p>
+<p>If it breaks: &quot;No such file or directory&quot; means the folder does not exist, or you typed its name wrong. Check the spelling with <code>ls</code>.</p>
+<h3>Command — make a new folder</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir &lt;name&gt;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>mkdir</code> — short for &quot;make directory&quot;.</li><li><code>&lt;name&gt;</code> — placeholder. The name of the new folder, for example <code>mkdir my-site</code>.</li></ul>
+<p>You should see: nothing when it works. Type <code>ls</code> to see the new folder listed.</p>
+<h3>Command — print a file&#x27;s contents</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cat &lt;file&gt;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>cat</code> — the program that prints text.</li><li><code>&lt;file&gt;</code> — placeholder. The file to print, for example <code>cat index.html</code>.</li></ul>
+<p>You should see: the file&#x27;s words printed on the screen.</p>
+<h3>Command — find a word inside a file</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>grep &lt;word&gt; &lt;file&gt;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>grep</code> — the program that searches text.</li><li><code>&lt;word&gt;</code> — placeholder. The word to look for, for example <code>grep hello index.html</code>.</li><li><code>&lt;file&gt;</code> — placeholder. The file to search in.</li></ul>
+<p>You should see: only the lines that hold the word, printed on the screen. For example, <code>grep hello index.html</code> prints each line in <code>index.html</code> that holds the word <code>hello</code>. If nothing prints, the word is not in the file. That is a result, not an error.</p>
+<h3>Command — make a file runnable</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>chmod +x &lt;file&gt;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>chmod</code> — short for &quot;change mode&quot;. It changes what people are allowed to do with a file.</li><li><code>+x</code> — the flag that means &quot;add execute&quot;. &quot;Execute&quot; means &quot;allowed to run as a program&quot;.</li><li><code>&lt;file&gt;</code> — placeholder. The file to change, for example <code>chmod +x kit-doctor.sh</code>.</li></ul>
+<p>Why: a script file is just text until you give it the &quot;run&quot; right. Without <code>+x</code>, Linux answers &quot;permission denied&quot; when you try to run it.</p>
+<p>You should see: nothing when it works. Run <code>ls -l &lt;file&gt;</code> and look for an <code>x</code> in the letters at the start of the line.</p>
+<h3>Command — list running programs</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>ps aux</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>ps</code> — short for &quot;process status&quot;. A &quot;process&quot; is one running program.</li><li><code>a</code> — show programs run by all users, not only yours.</li><li><code>u</code> — show them in a user-friendly way, with the user name and extra columns.</li><li><code>x</code> — also show programs with no terminal window attached.</li></ul>
+<p>You should see: a table. The columns that matter are <code>PID</code> (the program&#x27;s number — every running program gets a unique number), <code>%CPU</code> (how much of the processor it uses), <code>%MEM</code> (how much memory it uses), and <code>COMMAND</code> (the program&#x27;s name).</p>
+<h3>Command — watch live CPU and memory use</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>top</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>top</code> — the program that shows the busiest programs, live, updating every few seconds.</li></ul>
+<p>You should see: a full-screen table that keeps changing. The top lines use the most CPU.</p>
+<p>To leave: press <code>q</code>. If you do not press <code>q</code>, <code>top</code> keeps running and you cannot type other commands.</p>
+<h3>Command — show disk space</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>df -h</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>df</code> — short for &quot;disk free&quot;.</li><li><code>-h</code> — the flag for &quot;human-readable&quot;. It shows sizes like <code>20G</code> instead of a huge count of bytes.</li></ul>
+<p>You should see: a table with <code>Size</code>, <code>Used</code>, <code>Avail</code> (free space left), and <code>Mounted on</code> (which disk). If <code>Avail</code> is near zero, the disk is full.</p>
+<h3>Command — show memory use</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>free -h</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>free</code> — the program that shows free memory.</li><li><code>-h</code> — human-readable, as above.</li></ul>
+<p>You should see: a table with <code>total</code>, <code>used</code>, and <code>free</code> memory. If <code>free</code> is very small, the machine is short of memory.</p>
+<h3>Commands — start and check a service</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>sudo systemctl start &lt;service&gt;
+sudo systemctl status &lt;service&gt;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>sudo</code> — short for &quot;superuser do&quot;. It means &quot;run this with administrator power&quot;. Your normal account cannot start system services; <code>sudo</code> asks for your password and lends you the power for one command.</li><li><code>systemctl</code> — the program that controls services on Linux systems that use <code>systemd</code>. <code>systemd</code> is the part of Linux that starts and watches background programs.</li><li><code>start</code> — the action: begin running the service.</li><li><code>status</code> — the action: show whether it is running and what it printed lately.</li><li><code>&lt;service&gt;</code> — placeholder. The service&#x27;s name, for example <code>nginx</code> or <code>docker</code>.</li></ul>
+<p>You should see for <code>status</code>: a block of text. The line that matters says <code>Active: active (running)</code> if it works, or <code>Active: inactive</code> or <code>failed</code> if it does not.</p>
+<p>Important: <code>systemctl</code> only works on Linux that uses <code>systemd</code>. On Docker Desktop, there is no <code>systemd</code> — start the app the Docker way instead. If <code>systemctl</code> answers &quot;System has not been booted with systemd&quot;, you are on a machine without it. That is not an error in your typing.</p>
 <h2>Git</h2>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git init               Start tracking a folder
-git clone &lt;address&gt;    Copy a repository from GitHub to your machine
-git config user.name &quot;Your Name&quot;    Tell Git who you are (once)
-git config user.email &quot;you@example.com&quot;   (once)
-git status             Show what changed
-git add .              Stage all changes
-git commit -m &quot;message&quot;   Save changes with a message
-git log --oneline      Show past saves, one line each
-git branch             List branches
-git checkout -b &lt;name&gt;   Make a new branch and move into it
-git merge &lt;branch&gt;     Merge a branch into the current one
-git push               Send your saves to GitHub
-git pull               Download and integrate the latest changes
-                       (usually merge, or rebase if set up that way)</code></pre></div>
+<p>Git is a tracker for your files. It remembers every saved version, so you can go back, try a change on a side copy, and share your work.</p>
+<ul><li>A <strong>repository</strong> is a folder Git is tracking.</li><li>A <strong>commit</strong> is one saved version, with a message saying what changed.</li><li>A <strong>branch</strong> is a side copy of your work, so you can try something without touching the main copy.</li></ul>
+<h3>Command — start tracking a folder</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git init</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>git</code> — the tracker program.</li><li><code>init</code> — short for &quot;initialise&quot;. It means &quot;start tracking this folder&quot;.</li></ul>
+<p>You should see: <code>Initialized empty Git repository in ...</code>. Run it once, inside the folder you want to track. Never run it inside a folder that is already tracked.</p>
+<h3>Command — copy a repository from GitHub to your machine</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git clone &lt;address&gt;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>clone</code> — make a full copy.</li><li><code>&lt;address&gt;</code> — placeholder. The web address of the repository, for example the address GitHub shows on the repository page.</li></ul>
+<p>You should see: lines saying it is copying, then a new folder with the repository&#x27;s name.</p>
+<h3>Command — tell Git who you are (once)</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git config user.name &quot;Your Name&quot;
+git config user.email &quot;you@example.com&quot;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>config</code> — change a setting.</li><li><code>user.name</code> — the setting for your name. Replace <code>&quot;Your Name&quot;</code> with your real name, keeping the quotes.</li><li><code>user.email</code> — the setting for your email. Replace <code>you@example.com</code> with your real email.</li></ul>
+<p>Why: every commit you save is stamped with your name and email, so people know who made it. You set this once per machine. Git stores it in a small settings file in your home folder.</p>
+<p>You should see: nothing when it works.</p>
+<h3>Command — show what changed</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git status</code></pre></div>
+<p>You should see: a list of files you changed, files you added, and files Git does not track yet. Read this before every save. It is your &quot;what is about to happen&quot; check.</p>
+<h3>Command — stage all changes</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git add .</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>add</code> — the action: put files into the staging area.</li><li><code>.</code> — the dot means &quot;this folder and everything in it&quot;. So <code>git add .</code> stages every changed file in this folder.</li></ul>
+<p>&quot;Staging&quot; means &quot;putting files in a waiting pile for the next save&quot;. Nothing is saved yet. It is like putting items on the counter before paying.</p>
+<h3>Command — save changes with a message</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git commit -m &quot;message&quot;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>commit</code> — save the staged files as one version.</li><li><code>-m</code> — the flag for &quot;message&quot;. It lets you write the message on the same line.</li><li><code>&quot;message&quot;</code> — placeholder. Replace it with a short message saying what changed, for example <code>git commit -m &quot;Add home page&quot;</code>. Keep the quotes.</li></ul>
+<p>You should see: a line like <code>1 file changed, 1 insertion(+)</code>. That means the save worked.</p>
+<h3>Command — show past saves, one line each</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git log --oneline</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>log</code> — show the history of saves.</li><li><code>--oneline</code> — the flag that squeezes each save onto one line.</li></ul>
+<p>You should see: one line per save, newest first, each starting with a short code and your message.</p>
+<h3>Command — list branches</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git branch</code></pre></div>
+<p>You should see: a list of branch names. The one with a <code>*</code> in front is the branch you are on now.</p>
+<h3>Command — make a new branch and move into it</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git checkout -b &lt;name&gt;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>checkout</code> — move to a different branch.</li><li><code>-b</code> — the flag that means &quot;make the branch first, because it does not exist yet&quot;.</li><li><code>&lt;name&gt;</code> — placeholder. The new branch&#x27;s name, for example <code>git checkout -b fix-heading</code>.</li></ul>
+<p>You should see: <code>Switched to a new branch &#x27;fix-heading&#x27;</code>.</p>
+<h3>Command — merge a branch into the current one</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git merge &lt;branch&gt;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>merge</code> — combine another branch&#x27;s changes into the branch you are on now.</li><li><code>&lt;branch&gt;</code> — placeholder. The branch to bring in, for example <code>git merge fix-heading</code>.</li></ul>
+<p>You should see: a message saying the merge worked, or a message about a conflict (see the interview-pack lesson, question 4, for what a conflict is and how to fix it).</p>
+<h3>Command — send your saves to GitHub</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git push</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>push</code> — send your saved versions up to GitHub.</li></ul>
+<p>You should see: lines about counting and writing objects, ending with something like <code>main -&gt; main</code>. That means GitHub now has your saves.</p>
+<h3>Command — download and integrate the latest changes</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>git pull</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>pull</code> — fetch the latest changes from GitHub, then integrate them into your files.</li></ul>
+<p>&quot;Fetch&quot; means &quot;download only, touch nothing&quot;. &quot;Integrate&quot; means &quot;combine the downloaded changes with your files&quot;. <code>pull</code> does both steps at once. The combining is usually a <strong>merge</strong>. If your Git is set up to use a <strong>rebase</strong> instead, it replays your saves on top of the downloaded ones, one by one, so the history looks like a straight line. Rebase is a different way of combining; you do not need it as a beginner.</p>
+<p>You should see: a message saying files were updated, or &quot;Already up to date.&quot; if nothing changed.</p>
 <h2>Docker</h2>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker ps              List running containers
-docker ps -a           List all containers, including stopped ones
-docker images          List downloaded images
-docker run hello-world   Prove Docker works
-docker run -d -p 8080:80 --name web nginx
-                       Run nginx in the background on port 8080
-docker logs &lt;name&gt;     Read a container&#x27;s output
-docker stop &lt;name&gt;     Stop a container
-docker start &lt;name&gt;    Start a stopped container
-docker rm &lt;name&gt;       Remove a stopped container
-docker build -t &lt;name&gt;:&lt;tag&gt; .   Build an image from a Dockerfile
-docker exec -it &lt;name&gt; sh   Open a shell inside a running container
-docker run -d -v ~/data:/data --name store ubuntu sleep 1000
-                       Bind mount: share folder ~/data into the
-                       container at /data (a bind mount, not a
-                       Docker-managed named volume — files in it
-                       live on your machine)
-docker compose up -d   Start the containers in docker-compose.yml
-docker compose ps      List containers started by Compose
-docker compose down    Stop and remove Compose containers</code></pre></div>
+<p>Docker runs containers. An <strong>image</strong> is the packed box. A <strong>container</strong> is the image running. A <strong>port</strong> is a numbered door a program listens on — a browser knocks on a door number to reach a program.</p>
+<h3>Command — list running containers</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker ps</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker</code> — the program.</li><li><code>ps</code> — list. Same idea as the Linux <code>ps</code>, but for containers.</li></ul>
+<p>You should see: a table with <code>CONTAINER ID</code>, <code>IMAGE</code>, <code>STATUS</code>, <code>PORTS</code>, and <code>NAMES</code>. The <code>PORTS</code> column is the important one: it shows which door on your machine leads to which door in the container.</p>
+<h3>Command — list all containers, including stopped ones</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker ps -a</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>-a</code> — the flag for &quot;all&quot;. Without it you see only running containers. With it you also see stopped ones, which is how you find a container that died.</li></ul>
+<h3>Command — list downloaded images</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker images</code></pre></div>
+<p>You should see: a table of images on your machine, with <code>REPOSITORY</code> (the image name), <code>TAG</code> (the version label), and <code>SIZE</code>.</p>
+<h3>Command — prove Docker works</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker run hello-world</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>run</code> — start a container from an image.</li><li><code>hello-world</code> — the image name. It is a tiny test image that prints a hello message and stops.</li></ul>
+<p>You should see: a message saying &quot;Hello from Docker!&quot; That means Docker works. If it says the image is not found and starts downloading it, that is normal the first time.</p>
+<h3>Command — run a website in the background on port 8080</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker run -d -p 8080:80 --name web nginx</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>run</code> — start a container.</li><li><code>-d</code> — the flag for &quot;detached&quot;. It means &quot;run in the background and give me my terminal back&quot;. Without it, the container&#x27;s output fills your terminal until you stop it.</li><li><code>-p 8080:80</code> — the flag for &quot;publish a port&quot;. It connects two doors: <code>8080</code> is the door on YOUR machine, <code>80</code> is the door inside the container. Your browser knocks on <code>http://localhost:8080</code> and Docker passes it to door <code>80</code> inside the container. The order is always outside:inside.</li><li><code>--name web</code> — give this container the name <code>web</code>, so you can refer to it by name later instead of by its long ID.</li><li><code>nginx</code> — the image name. <code>nginx</code> is a web server program, and also the name of the image that holds it. The program and the image share one name.</li></ul>
+<p>You should see: one long line of letters and numbers — the container ID. That means it started.</p>
+<p>Then open <code>http://localhost:8080</code> in your browser. &quot;localhost&quot; means &quot;this machine&quot;. You should see the nginx welcome page.</p>
+<h3>Command — read a container&#x27;s output</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker logs &lt;name&gt;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>logs</code> — show what the container printed.</li><li><code>&lt;name&gt;</code> — placeholder. The container&#x27;s name or ID, for example <code>docker logs web</code>.</li></ul>
+<p>You should see: the lines the program inside printed. Errors are usually near the end. Read the first error line — that is the one thing to fix first.</p>
+<h3>Commands — stop, start, and remove a container</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker stop &lt;name&gt;
+docker start &lt;name&gt;
+docker rm &lt;name&gt;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>stop</code> — tell the program inside to finish and halt. The container stays on your machine, stopped.</li><li><code>start</code> — start a stopped container again.</li><li><code>rm</code> — short for &quot;remove&quot;. It deletes a stopped container. You cannot remove a running one — stop it first.</li></ul>
+<p><code>&lt;name&gt;</code> is the container&#x27;s name or ID in all three.</p>
+<p><strong><code>docker rm</code> deletes things.</strong> Use it only on your own practice setup. Stopping is safe; removing deletes the container.</p>
+<p>You should see: the container&#x27;s name printed back. That means it worked.</p>
+<h3>Command — build an image from a Dockerfile</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker build -t &lt;name&gt;:&lt;tag&gt; .</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>build</code> — build an image.</li><li><code>-t</code> — the flag for &quot;tag&quot;. It names the finished image.</li><li><code>&lt;name&gt;:&lt;tag&gt;</code> — placeholder. The name and the version label, joined by a colon, for example <code>my-site:1.0</code>. <code>1.0</code> is your version label. You choose it.</li><li><code>.</code> — the dot means &quot;this folder&quot;. It tells Docker: the recipe file (<code>Dockerfile</code>) and the files it needs are in this folder. This is called the <strong>build context</strong>.</li></ul>
+<p>You should see: lines scrolling past as Docker follows the recipe, ending with something like <code>Successfully built</code> or a line naming your image. If a step fails, the error names the step — fix that step in the Dockerfile.</p>
+<h3>Command — open a shell inside a running container</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec -it &lt;name&gt; sh</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>exec</code> — short for &quot;execute&quot;. It means &quot;run a command inside a container that is already running&quot;.</li><li><code>-i</code> — the flag for &quot;interactive&quot;. It keeps the input channel open so you can type.</li><li><code>-t</code> — the flag for &quot;terminal&quot;. It gives you a proper terminal screen inside the container.</li><li><code>&lt;name&gt;</code> — placeholder. The container&#x27;s name, for example <code>docker exec -it web sh</code>.</li><li><code>sh</code> — the small shell program inside the container. A shell is the program that reads your typed commands.</li></ul>
+<p>You should see: a new prompt inside the container. You are now typing commands that run inside the box, not on your machine. Type <code>exit</code> to leave.</p>
+<h3>Command — share a folder from your machine into a container</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker run -d -v ~/data:/data --name store ubuntu sleep 1000</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>-v ~/data:/data</code> — the flag for &quot;volume&quot;. It shares a folder: <code>~/data</code> is a folder on YOUR machine (<code>~</code> means your home folder), <code>/data</code> is where it appears inside the container. The two are joined by a colon. Files you put in <code>~/data</code> appear inside the container at <code>/data</code>, and the other way round.</li><li><code>--name store</code> — name this container <code>store</code>.</li><li><code>ubuntu</code> — the image name. A plain Linux image.</li><li><code>sleep 1000</code> — the program to run inside: <code>sleep</code> does nothing for 1000 seconds. WHY: a container lives only as long as its main program runs. <code>sleep 1000</code> keeps it alive for 1000 seconds so you have time to look inside it. Without it, the container would exit at once.</li></ul>
+<p>This is a <strong>bind mount</strong>: a folder on your machine shared into the container. Files in it live on your machine, not inside Docker&#x27;s storage. That is different from a <strong>named volume</strong>, which is a folder Docker manages itself.</p>
+<p>You should see: a container ID printed. Then <code>docker exec -it store sh</code> lets you look inside at <code>/data</code>.</p>
+<h3>Commands — start, list, and stop a Compose stack</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose up -d
+docker compose ps
+docker compose down</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>compose</code> — the Docker tool that starts several containers together from one file.</li><li><code>up</code> — start everything the file describes.</li><li><code>-d</code> — run in the background, as above.</li><li><code>ps</code> — list the containers this Compose file started.</li><li><code>down</code> — stop and remove the Compose containers. Your files stay; <code>up</code> starts them again later.</li></ul>
+<p>Why: some projects need three programs at once (for example a website, a database, and a monitor). Typing three long <code>docker run</code> commands is slow and easy to mistype. Compose reads one file and starts them all.</p>
+<p><strong>Which file?</strong> Compose looks for a file called <code>docker-compose.yml</code> (or <code>compose.yml</code>) in the folder you are standing in. If it says &quot;no configuration file provided&quot;, you are in the wrong folder — <code>cd</code> into the folder that holds the file first. In this kit, each Phase 1 lab folder holds its own <code>docker-compose.yml</code> — for example <code>phase1/kafka-lab/docker-compose.yml</code>. Older Docker used <code>docker-compose</code> with a hyphen as a separate program; new Docker uses <code>docker compose</code> with a space. Both do the same job.</p>
+<p><strong><code>docker compose down</code> deletes things.</strong> It stops and removes the Compose containers. Your files stay, but the containers are gone. Use it only on your own practice setup.</p>
+<p>You should see for <code>up -d</code>: one line per service saying <code>Started</code> or <code>Running</code>. For <code>ps</code>: a table with <code>NAME</code>, <code>IMAGE</code>, <code>STATUS</code>. <code>STATUS</code> should say <code>Up</code>. For <code>down</code>: lines saying each container was removed.</p>
 <h2>Kubernetes (kubectl)</h2>
-<p><code>kubectl</code> is the command tool for talking to a Kubernetes cluster.</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl get pods       List pods
-kubectl get nodes      List cluster machines
-kubectl get deployments   List deployments
-kubectl get services   List services
-kubectl port-forward service/&lt;name&gt; 8080:80
-                       Open a service in your browser
-kubectl describe pod &lt;name&gt;   Show details about one pod
-kubectl logs &lt;pod&gt;     Read a pod&#x27;s logs
-kubectl logs &lt;pod&gt; --previous   Read the crashed run&#x27;s logs after
-                       a restart
-kubectl apply -f &lt;file.yaml&gt;   Create things from a file
-kubectl delete -f &lt;file.yaml&gt;  Remove things from a file</code></pre></div>
+<p>Kubernetes is a system that runs containers across several machines and keeps them running. A <strong>cluster</strong> is the group of machines Kubernetes manages. <code>kubectl</code> (say &quot;cube-control&quot;) is the command tool you type to talk to a cluster.</p>
+<p>Before any <code>kubectl</code> command works, a cluster must exist and <code>kubectl</code> must know where it is. In this kit the cluster comes from the <code>kind</code> lab below, or from the Kubernetes lab. If <code>kubectl</code> answers &quot;connection refused&quot;, no cluster is running — start one first.</p>
+<h3>Command — list pods</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl get pods</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>kubectl</code> — the Kubernetes command tool.</li><li><code>get</code> — show things.</li><li><code>pods</code> — the things to show. A <strong>pod</strong> is the smallest thing Kubernetes runs, usually holding one container.</li></ul>
+<p>You should see: a table with <code>NAME</code>, <code>READY</code>, <code>STATUS</code>, and <code>AGE</code>. <code>STATUS</code> should say <code>Running</code> for a healthy pod. <code>READY</code> shows <code>1/1</code> when its one container is ready.</p>
+<h3>Command — list cluster machines</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl get nodes</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>nodes</code> — the machines in the cluster.</li></ul>
+<p>You should see: a table with <code>NAME</code>, <code>STATUS</code>, and <code>AGE</code>. <code>STATUS</code> should say <code>Ready</code>.</p>
+<h3>Command — list deployments</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl get deployments</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>deployments</code> — the things that keep a chosen number of copies of your app running. A <strong>deployment</strong> is a manager: you say &quot;I want 2 copies&quot;, and it starts 2, replaces any that die, and handles updates.</li></ul>
+<p>You should see: a table with <code>NAME</code>, <code>READY</code> (like <code>2/2</code>, meaning 2 of 2 copies are ready), and <code>AGE</code>.</p>
+<h3>Command — list services</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl get services</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>services</code> — the stable addresses inside the cluster for pods that come and go. A <strong>service</strong> is a fixed address that always points at the current healthy copies of your app, even when individual pods die and are replaced.</li></ul>
+<p>You should see: a table with <code>NAME</code>, <code>TYPE</code>, and <code>PORT(S)</code>.</p>
+<h3>Command — open a service in your browser</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl port-forward service/&lt;name&gt; 8080:80</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>port-forward</code> — make a temporary tunnel from your machine into the cluster.</li><li><code>service/&lt;name&gt;</code> — which service to tunnel to. The word <code>service</code> says what kind of thing it is, then a slash, then the service&#x27;s name, for example <code>service/my-site</code>.</li><li><code>8080:80</code> — the doors: <code>8080</code> on your machine, <code>80</code> in the cluster. Same outside:inside order as Docker&#x27;s <code>-p</code>.</li></ul>
+<p>You should see: a line saying <code>Forwarding from 127.0.0.1:8080 -&gt; 80</code>. Then open <code>http://localhost:8080</code>. Keep this command running — press Ctrl+C to stop the tunnel when you are done. This opens the service only on your machine; it does not put it on the internet.</p>
+<h3>Command — show details about one pod</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl describe pod &lt;name&gt;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>describe</code> — show full details.</li><li><code>pod &lt;name&gt;</code> — the pod to describe, for example <code>kubectl describe pod my-site-abc-123</code>.</li></ul>
+<p>You should see: a long block of details. The part that matters most is <code>Events:</code> at the bottom — a short history of what happened to the pod, newest last. If a pod cannot start, the reason is usually in the last few Events lines.</p>
+<h3>Command — read a pod&#x27;s logs</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl logs &lt;pod&gt;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>logs</code> — show what the program inside the pod printed.</li><li><code>&lt;pod&gt;</code> — placeholder. The pod&#x27;s name.</li></ul>
+<p>You should see: the program&#x27;s printed lines. Same rule as Docker: read the first error line.</p>
+<h3>Command — read the crashed run&#x27;s logs after a restart</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl logs &lt;pod&gt; --previous</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>--previous</code> — the flag that means &quot;show the logs of the run BEFORE this one&quot;.</li></ul>
+<p>Why and when: when a pod crashes, Kubernetes starts it again. The new run&#x27;s logs start fresh — the error that killed the first run is gone from the current logs. <code>--previous</code> shows the dead run&#x27;s logs.</p>
+<p>Use it when: <code>kubectl get pods</code> shows a pod with <code>RESTARTS</code> more than 0, and the current logs look clean. That combination means the crash already happened and restarted. Example: the pod shows <code>RESTARTS 3</code>, the normal logs show only startup lines, so you run <code>kubectl logs &lt;pod&gt; --previous</code> and find the real error — for example a wrong image name — in the old run&#x27;s output.</p>
+<h3>Commands — create and remove things from a file</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kubectl apply -f &lt;file.yaml&gt;
+kubectl delete -f &lt;file.yaml&gt;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>apply</code> — create the things the file describes, or update them if they already exist.</li><li><code>delete</code> — remove the things the file describes.</li><li><code>-f</code> — the flag for &quot;file&quot;. It says the next word is a file name.</li><li><code>&lt;file.yaml&gt;</code> — placeholder. The settings file, for example <code>deployment.yaml</code>.</li></ul>
+<p><strong><code>kubectl delete -f</code> deletes things.</strong> It removes what the file describes. Use it only on your own practice setup.</p>
+<p>You should see for <code>apply</code>: one line per thing created, like <code>deployment.apps/my-site created</code>. For <code>delete</code>: <code>deployment.apps/my-site deleted</code>.</p>
 <h2>kind (local Kubernetes)</h2>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kind create cluster --name devops-practice   Start a local cluster
-kind load docker-image my-site:1.0 --name devops-practice
-                       Copy a local image into the cluster
-kind delete cluster --name devops-practice   Remove the cluster</code></pre></div>
+<p><code>kind</code> is a tool that runs a whole Kubernetes cluster inside Docker on your own machine. &quot;kind&quot; stands for &quot;Kubernetes in Docker&quot;. Why: you need a cluster to practise <code>kubectl</code>, and kind gives you one without any cloud account or bill.</p>
+<h3>Command — start a local cluster</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kind create cluster --name devops-practice</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>create cluster</code> — make a new cluster.</li><li><code>--name devops-practice</code> — call it <code>devops-practice</code>. You choose the name; the kit uses this one so every later command matches.</li></ul>
+<p>You should see: lines about creating nodes, ending with something like <code>Cluster creation complete</code>. Then <code>kubectl get nodes</code> should list one node with <code>STATUS Ready</code>.</p>
+<h3>Command — copy a local image into the cluster</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kind load docker-image my-site:1.0 --name devops-practice</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>load docker-image</code> — copy an image from Docker on your machine into the cluster.</li><li><code>my-site:1.0</code> — the image to copy.</li><li><code>--name devops-practice</code> — which cluster to load it into.</li></ul>
+<p>Why: kind runs the cluster inside Docker containers. Your machine&#x27;s Docker images are outside that cluster, so the cluster cannot see them. You have to load the image in first. If you skip this step, the pod fails with <code>ImagePullBackOff</code> — Kubernetes tried to download an image that does not exist anywhere it can reach.</p>
+<p>You should see: a line saying the image was loaded.</p>
+<h3>Command — remove the cluster</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>kind delete cluster --name devops-practice</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>delete cluster</code> — remove the whole cluster.</li><li><code>--name devops-practice</code> — which cluster.</li></ul>
+<p><strong><code>kind delete cluster</code> deletes things.</strong> It removes the whole practice cluster. Use it only on your own practice setup.</p>
+<p>You should see: a line saying the cluster was deleted. This removes everything in that practice cluster. It does not touch your files.</p>
 <h2>Terraform</h2>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>terraform init         Prepare a folder for Terraform
-terraform plan         Show what Terraform would change
-terraform apply        Create or change the infrastructure
-terraform destroy      Remove everything Terraform created</code></pre></div>
-<p>Warning: <code>terraform destroy</code> removes everything the active configuration and state manage. Before you run it: check you are in the right folder, check the workspace and state, and read the destruction plan (<code>terraform plan -destroy</code>) first. Run it only on your own disposable practice setup — never on anything shared or real, and never without that plan check.</p>
+<p>Terraform is a tool that creates infrastructure from files. <strong>Infrastructure</strong> means the things your app runs on: containers, networks, machines. <strong>Infrastructure as code</strong> means writing down what you want in files, and letting a tool create it, instead of clicking around by hand.</p>
+<p>Terraform keeps a file called <strong>state</strong>. State is Terraform&#x27;s notebook: it maps each thing in your files to the real thing it created, so it knows what exists and what to change next. State can hold private values, so it must never go into a public repository.</p>
+<h3>Command — prepare a folder for Terraform</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>terraform init</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>init</code> — short for &quot;initialise&quot;. It downloads the provider your files ask for (a provider is the plug-in that lets Terraform talk to Docker, or to a cloud service) and makes a <code>.terraform/</code> folder and a <code>.terraform.lock.hcl</code> file. The lock file records the exact provider version, so the next run uses the same one.</li></ul>
+<p>You should see: lines about downloading, ending with <code>Terraform has been successfully initialized!</code></p>
+<p>Run <code>init</code> once per folder, and again if you change which provider your files ask for.</p>
+<h3>Command — show what Terraform would change</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>terraform plan</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>plan</code> — work out what would change, and show it, without changing anything.</li></ul>
+<p>You should see: a list of things to add, change, or destroy. If nothing would change, it says <code>No changes. Your infrastructure matches the configuration.</code> That line is the proof that the last apply worked and nothing drifted.</p>
+<p>Why run it: it is the safe preview. You read the plan before you apply, so you never create something by surprise.</p>
+<h3>Command — create or change the infrastructure</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>terraform apply</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>apply</code> — do what the plan says: create or change things for real.</li></ul>
+<p>You should see: the plan printed first, then a question asking you to confirm. Type <code>yes</code> and press Enter. Then lines about creating things, ending with something like <code>Apply complete! Resources: 1 added, 0 changed, 0 destroyed.</code> The three numbers are the proof: how many things were added, changed, and destroyed.</p>
+<h3>Command — remove everything Terraform created (DANGEROUS)</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>terraform destroy</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>destroy</code> — remove everything the active configuration and state manage.</li></ul>
+<p><strong>What it deletes, in plain words:</strong> every container, network, and other thing Terraform created from the files in the folder you are standing in. It deletes only what Terraform&#x27;s state notebook says it created. It does not delete your files.</p>
+<p><strong>Before you run it, do all three checks:</strong></p>
+<ol><li>Check you are in the right folder: run <code>pwd</code>. The folder shown must be your practice folder.</li><li>Check the workspace and state: run <code>terraform plan</code> and read it. A <strong>workspace</strong> is a named separate copy of state in the same folder; the default one is called <code>default</code>. If you ever made another workspace, make sure you are in the right one.</li><li>Read the destruction plan first: run <code>terraform plan -destroy</code>. This shows exactly what would be deleted, without deleting anything. Read every line.</li></ol>
+<p>Only then run <code>terraform destroy</code>, and type <code>yes</code> when it asks.</p>
+<p><strong>Run it only on your own disposable practice setup.</strong> Never on anything shared or real, and never without the plan check above. There is no undo.</p>
+<p>You should see: lines about destroying things, ending with <code>Destroy complete! Resources: 1 destroyed.</code> If it asks for confirmation and you are not sure, type <code>no</code>.</p>
 <h2>Prometheus and Grafana (concepts, not commands)</h2>
-<ul><li>Prometheus collects numbers (metrics) from your apps.</li><li>Grafana turns those numbers into charts.</li><li>The two things to check first: is the app up, and is it slow?</li></ul>
-<h2>Kafka (Phase 1 — run inside the container with docker exec)</h2>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
-                       List topics on cluster a
-docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic orders --partitions 1 --replication-factor 1
-                       Make a topic called orders
-docker exec -it kafka-a /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic orders
-                       Send messages (type lines, Ctrl+C to stop)
-docker exec kafka-a /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --from-beginning
-                       Read messages from the start</code></pre></div>
-<p>Kafka commands run inside the container because Kafka tells clients to come back to the container&#x27;s own name. Do not run them from your own terminal.</p>
-<h2>PostgreSQL (Phase 1 — run inside the container with docker exec)</h2>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec pg-primary psql -U learner -d practice -c &quot;SELECT * FROM orders ORDER BY id;&quot;
-                       Read rows from the primary
-docker exec pg-replica psql -U learner -d practice -c &quot;SELECT pg_is_in_recovery();&quot;
-                       t = standby, f = primary
-docker exec pg-replica psql -U learner -d practice -c &quot;SELECT pg_promote();&quot;
-                       Promote the standby to primary
-docker exec pg-primary psql -U learner -d practice
-                       Open an interactive psql shell (type \q to leave)</code></pre></div>
-<p>A standby refuses writes — that is correct, not a bug.</p>
+<p>There are no commands to type in this section. It is two ideas to learn.</p>
+<ul><li><strong>Prometheus</strong> collects numbers (called <strong>metrics</strong>) from your apps. A metric is a number measured over time, like CPU use or how many requests arrived. Prometheus visits an address every few seconds and writes the numbers down. Each visit is called a <strong>scrape</strong>. Each address it visits is called a <strong>target</strong>.</li><li><strong>Grafana</strong> turns those numbers into charts you can look at.</li></ul>
+<p>The two things to check first when something looks wrong: is the app up, and is it slow? &quot;Up&quot; means it answers. &quot;Slow&quot; means it answers late.</p>
+<p>You will use both for real in Portfolio Project 3, where the portfolio-projects lesson walks through every click.</p>
+<h2>Kafka (Phase 1 — run inside the container)</h2>
+<p>Kafka is a message line. Programs put messages into a named line called a <strong>topic</strong>, and other programs take messages out of the line and do the work. Messages wait safely in the line if the reader is slow.</p>
+<p><strong>Why these commands run inside the container:</strong> Kafka tells other programs to come back to the container&#x27;s own name. From your own terminal, that name does not resolve. So every Kafka command below starts with <code>docker exec kafka-a ...</code>, which means &quot;run this command inside the container named <code>kafka-a</code>&quot;.</p>
+<p>The container names <code>kafka-a</code> and <code>kafka-b</code> come from the Phase 1 Kafka lab, which starts two Kafka clusters on one machine. If you have not done that lab, these containers do not exist yet and the commands will fail with &quot;no such container&quot;.</p>
+<h3>Command — list topics on cluster A</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker exec kafka-a</code> — run the next command inside the container named <code>kafka-a</code>.</li><li><code>/opt/kafka/bin/kafka-topics.sh</code> — the Kafka program that manages topics. It lives at that path inside the container.</li><li><code>--bootstrap-server localhost:9092</code> — the address of the Kafka server to talk to. A <strong>bootstrap server</strong> is the first address a client contacts to find the cluster. <code>localhost:9092</code> means &quot;this machine, door 9092&quot;. Inside the container, &quot;this machine&quot; is the container itself.</li><li><code>--list</code> — the action: list the topics.</li></ul>
+<p>You should see: one topic name per line, for example <code>orders</code>. If nothing prints, no topics exist yet.</p>
+<h3>Command — make a topic called orders</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic orders --partitions 1 --replication-factor 1</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>--create</code> — the action: make a new topic.</li><li><code>--topic orders</code> — name the topic <code>orders</code>.</li><li><code>--partitions 1</code> — split the topic into 1 part. A <strong>partition</strong> is a slice of a topic. One slice is enough for practice.</li><li><code>--replication-factor 1</code> — keep 1 copy of each message. &quot;Replication&quot; means keeping extra copies. One copy is enough for practice.</li></ul>
+<p>You should see: <code>Created topic orders.</code></p>
+<h3>Command — send messages (type lines, Ctrl+C to stop)</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec -it kafka-a /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic orders</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>-it</code> — interactive terminal, as in the Docker section: it lets you type.</li><li><code>kafka-console-producer.sh</code> — the program that sends messages. A <strong>producer</strong> is a program that puts messages into a topic.</li><li><code>--topic orders</code> — send into the topic named <code>orders</code>.</li></ul>
+<p>You should see: a <code>&gt;</code> prompt. Type a line and press Enter — that line is now a message in the topic. Press Ctrl+C to stop. Ctrl+C means &quot;stop the program I am typing into&quot;.</p>
+<h3>Command — read messages from the start</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-a /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --from-beginning</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>kafka-console-consumer.sh</code> — the program that reads messages. A <strong>consumer</strong> is a program that takes messages out of a topic.</li><li><code>--from-beginning</code> — start from the oldest message, not only new ones.</li></ul>
+<p>You should see: every message in the topic, one per line, in order. Press Ctrl+C to stop. If nothing prints, no messages were sent yet, or you are looking at the wrong cluster — check the topic list on the right cluster.</p>
+<h2>PostgreSQL (Phase 1 — run inside the container)</h2>
+<p>PostgreSQL is a database: a program that stores rows in tables and answers questions about them. The Phase 1 lab runs two copies: a <strong>primary</strong> that takes writes (new and changed rows) and a <strong>replica</strong> (also called a standby) that follows the primary by reading its change log and takes reads only. The containers are named <code>pg-primary</code> and <code>pg-replica</code>.</p>
+<p><code>psql</code> is the command tool for talking to PostgreSQL. <code>-U learner</code> means &quot;log in as the user named learner&quot;. <code>-d practice</code> means &quot;use the database named practice&quot;. <code>-c &quot;...&quot;</code> means &quot;run this one question (a SQL query) and print the answer&quot;.</p>
+<h3>Command — read rows from the primary</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec pg-primary psql -U learner -d practice -c &quot;SELECT * FROM orders ORDER BY id;&quot;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker exec pg-primary</code> — run inside the container named <code>pg-primary</code>.</li><li><code>psql -U learner -d practice</code> — open the database tool as user <code>learner</code>, database <code>practice</code>.</li><li><code>-c &quot;SELECT * FROM orders ORDER BY id;&quot;</code> — run this question: &quot;show every column (<code>*</code>) from the table named <code>orders</code>, sorted by <code>id</code>&quot;. SQL is the language databases use for questions. <code>SELECT</code> means &quot;show&quot;. <code>FROM orders</code> means &quot;from the table orders&quot;. <code>ORDER BY id</code> means &quot;sort by the id column&quot;.</li></ul>
+<p>You should see: a table of rows. If the table is empty, you see only the column names. That means no orders were saved yet.</p>
+<h3>Command — check whether this copy is a standby</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec pg-replica psql -U learner -d practice -c &quot;SELECT pg_is_in_recovery();&quot;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>pg_is_in_recovery()</code> — a built-in question that asks &quot;am I a standby following someone else?&quot; The answer is <code>t</code> (true) or <code>f</code> (false).</li></ul>
+<p>You should see: <code>t</code> on the replica (it IS a standby — correct), <code>f</code> on the primary (it is NOT a standby — correct). If the replica shows <code>f</code>, something is wrong: it is no longer following.</p>
+<h3>Command — promote the standby to primary</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec pg-replica psql -U learner -d practice -c &quot;SELECT pg_promote();&quot;</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>pg_promote()</code> — a built-in command that says &quot;stop following and become the primary&quot;.</li></ul>
+<p>Why: when the primary dies, you promote the standby so writes have somewhere to go. After promoting, check <code>pg_is_in_recovery()</code> again — it should now show <code>f</code>. The old primary cannot just rejoin afterwards; it must be rebuilt from the new primary.</p>
+<h3>Command — open an interactive psql shell</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec pg-primary psql -U learner -d practice</code></pre></div>
+<p>Without <code>-c</code>, <code>psql</code> opens a prompt where you type questions one by one. Type <code>\q</code> and press Enter to leave.</p>
+<p><strong>A standby refuses writes — that is correct, not a bug.</strong> If you try to add a row on the replica, PostgreSQL answers &quot;cannot execute INSERT in a read-only transaction&quot;. The replica takes reads only. Write on the primary, or promote the replica first.</p>
 <h2>Patroni (Phase 1)</h2>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8008/cluster
-                       Show the cluster: who is leader, who is replica
-curl http://localhost:8008/leader
-                       Show the leader only</code></pre></div>
-<p>Patroni&#x27;s web page answers on port 8008 (node 1) and 8009 (node 2).</p>
-<h2>Redis (Phase 1 — run inside the container with docker exec)</h2>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli ping
-                       Should answer PONG
-docker exec redis-a redis-cli SET user:101 Asha
-                       Save a value
-docker exec redis-a redis-cli GET user:101
-                       Read it back
-docker exec redis-a redis-cli SETEX login-code:101 60 482913
-                       Save a value that deletes itself after 60 seconds
-docker exec redis-a redis-cli TTL login-code:101
-                       Seconds left before it deletes itself
-docker exec redis-a redis-cli INCR orders:count
-                       Add 1 to a counter
-docker exec redis-b redis-cli INFO replication
-                       Check the copy is following the main store</code></pre></div>
+<p>Patroni is a watcher program. It watches the databases and promotes the standby by itself within seconds when the leader stops, so nobody has to be awake at night to run the command. A <strong>leader</strong> is the database currently taking writes.</p>
+<p>Patroni answers questions on a small web page. Node 1 answers on door 8008, node 2 on door 8009.</p>
+<p><code>curl</code> is a program that asks a web address for its page and prints the answer. <code>curl http://localhost:8008/cluster</code> means &quot;ask the program on this machine, door 8008, for the page called /cluster&quot;.</p>
+<h3>Command — show the cluster: who is leader, who is replica</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8008/cluster</code></pre></div>
+<p>You should see: a block of text naming each member, with one marked <code>leader</code> and the others marked <code>replica</code>. The leader is the one taking writes.</p>
+<h3>Command — show the leader only</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8008/leader</code></pre></div>
+<p>You should see: a short answer naming the leader only.</p>
+<p>If <code>curl</code> answers &quot;connection refused&quot;, Patroni is not running on that door — check the lab is up.</p>
+<h2>Redis (Phase 1 — run inside the container)</h2>
+<p>Redis is a fast memory store. It keeps small answers in memory so reads are very fast: saved values, counters, short-lived codes. It is not the main record book — memory is small, and the real records belong in the database, where they are safe even when the power goes out.</p>
+<p><code>redis-cli</code> is the command tool for talking to Redis. The containers are named <code>redis-a</code> (the main store) and <code>redis-b</code> (the copy).</p>
+<h3>Command — check Redis answers</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli ping</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>ping</code> — the Redis question &quot;are you there?&quot; It is a test, like knocking on a door.</li></ul>
+<p>You should see: <code>PONG</code>. That one word means Redis is up and answering. Anything else means it is not.</p>
+<h3>Command — save a value</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli SET user:101 Asha</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>SET</code> — save a value.</li><li><code>user:101</code> — the key (the name under which the value is stored). Keys often look like <code>type:number</code>.</li><li><code>Asha</code> — the value to save.</li></ul>
+<p>You should see: <code>OK</code>.</p>
+<h3>Command — read it back</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli GET user:101</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>GET</code> — read the value stored under this key.</li></ul>
+<p>You should see: <code>Asha</code>. If you see <code>(nil)</code>, the key does not exist — either it was never saved, or it expired.</p>
+<h3>Command — save a value that deletes itself after 60 seconds</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli SETEX login-code:101 60 482913</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>SETEX</code> — &quot;set with an expiry&quot;. Save a value that deletes itself after a number of seconds.</li><li><code>login-code:101</code> — the key.</li><li><code>60</code> — the number of seconds before it deletes itself.</li><li><code>482913</code> — the value. Here it is a pretend login code. It is fake, for practice only.</li></ul>
+<p>You should see: <code>OK</code>.</p>
+<h3>Command — seconds left before it deletes itself</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli TTL login-code:101</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>TTL</code> — short for &quot;time to live&quot;. It asks &quot;how many seconds are left before this key deletes itself?&quot;</li></ul>
+<p>You should see: a number, for example <code>42</code>. It counts down. When it reaches <code>-2</code>, the key is gone.</p>
+<h3>Command — add 1 to a counter</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-a redis-cli INCR orders:count</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>INCR</code> — short for &quot;increment&quot;. Add 1 to the number stored under this key.</li></ul>
+<p>You should see: the new number, for example <code>1</code> the first time, <code>2</code> the second time. If the key did not exist, Redis starts it at 0 and then adds 1.</p>
+<h3>Command — check the copy is following the main store</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec redis-b redis-cli INFO replication</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>INFO replication</code> — show information about copying. <strong>Replication</strong> means keeping a second copy up to date by copying every change from the main one.</li></ul>
+<p>You should see: a block of lines. The lines that matter say <code>role:slave</code> (this copy follows the main store) and <code>master_link_status:up</code> (the link to the main store is working). If it says <code>down</code>, the copy is not following. <code>role:slave</code> is Redis&#x27;s older word for &quot;the copy that follows&quot;; newer Redis calls it a replica.</p>
+<p>A one-way copy takes reads only. If you try to save on <code>redis-b</code>, Redis answers with a READONLY error. That is correct, not a bug.</p>
 <h2>Moto and aws (Phase 1 — object store)</h2>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 mb s3://incoming
-                       Make a bucket called incoming
-docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 cp /files/receipt-001.txt s3://incoming/
-                       Upload a file
-docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 ls s3://incoming/
-                       List files in the bucket
-docker compose exec awscli aws --endpoint-url http://moto-b:5000 s3 cp s3://incoming/receipt-001.txt -
-                       Print a file&#x27;s contents from the second store</code></pre></div>
+<p>An <strong>object store</strong> keeps whole files by name — pictures, documents, uploads. You ask a store for a file by name. A database keeps rows in tables and answers questions about them. Files go in the store; rows go in the database.</p>
+<p>Moto is a pretend object store that runs on your machine and acts like the real S3 store, so you can practise without an account or a bill. The <code>aws</code> tool is the command tool for talking to object stores. The Phase 1 lab runs two Moto stores (<code>moto-a</code> and <code>moto-b</code>) and a container named <code>awscli</code> that holds the <code>aws</code> tool.</p>
+<p>Every command below has three layers. Read it left to right:</p>
+<ol><li><code>docker compose exec awscli</code> — &quot;run the next command inside the container named <code>awscli</code>, which belongs to this Compose stack&quot;.</li><li><code>aws</code> — the command tool.</li><li><code>--endpoint-url http://moto-a:5000</code> — &quot;talk to the Moto store named <code>moto-a</code> on door 5000, not the real cloud&quot;. <code>moto-a</code> works as an address because Compose lets containers reach each other by service name.</li></ol>
+<h3>Command — make a bucket called incoming</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 mb s3://incoming</code></pre></div>
+<p>Word by word, after the three layers above:</p>
+<ul><li><code>s3</code> — the object-store part of the <code>aws</code> tool.</li><li><code>mb</code> — short for &quot;make bucket&quot;. A <strong>bucket</strong> is a named box inside the store that holds files.</li><li><code>s3://incoming</code> — the bucket&#x27;s address. <code>s3://</code> means &quot;in the object store&quot;, and <code>incoming</code> is the bucket&#x27;s name.</li></ul>
+<p>You should see: <code>make_bucket: incoming</code>.</p>
+<h3>Command — upload a file</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 cp /files/receipt-001.txt s3://incoming/</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>cp</code> — short for &quot;copy&quot;.</li><li><code>/files/receipt-001.txt</code> — the file on your machine to upload. It lives in the <code>files</code> folder that the Phase 1 object-store lab shares into the <code>awscli</code> container. The lab folder holds <code>files/receipt-001.txt</code> and <code>files/receipt-002.txt</code> on your machine; inside the container the shared folder appears at <code>/files</code>. If the file is not there, the lab did not start correctly.</li><li><code>s3://incoming/</code> — the destination: into the bucket named <code>incoming</code>. The <code>/</code> at the end means &quot;into this bucket&quot;.</li></ul>
+<p>You should see: <code>upload: ./receipt-001.txt to s3://incoming/receipt-001.txt</code>.</p>
+<h3>Command — list files in the bucket</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose exec awscli aws --endpoint-url http://moto-a:5000 s3 ls s3://incoming/</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>ls</code> — list.</li></ul>
+<p>You should see: one line per file, with a date, a size, and the file name, for example <code>receipt-001.txt</code>.</p>
+<h3>Command — print a file&#x27;s contents from the second store</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose exec awscli aws --endpoint-url http://moto-b:5000 s3 cp s3://incoming/receipt-001.txt -</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>--endpoint-url http://moto-b:5000</code> — this time talk to the SECOND store, <code>moto-b</code>. That is the point: the file was uploaded to the first store, and the lab&#x27;s mirror copied it to the second store by itself.</li><li><code>s3 cp s3://incoming/receipt-001.txt -</code> — copy the file from the bucket, and print it to the screen. The <code>-</code> at the end means &quot;to the screen, not to a file&quot;.</li></ul>
+<p>You should see: the file&#x27;s words printed. If it says the file does not exist, wait a minute — the mirror copies on a delay — then try again.</p>
 <h2>NGINX load balancer (Phase 1)</h2>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8080/
-                       Ask the load balancer for the page
-                       (repeat it — a different backend answers each time)
-docker compose logs lb
-                       Read what the load balancer saw</code></pre></div>
+<p>A <strong>load balancer</strong> stands in front of copies of your app and sends each visitor to a different copy, so no single copy gets all the work. If a copy dies, the balancer skips it and uses the ones still alive — the site stays up. NGINX is the program doing the balancing here. A <strong>backend</strong> is one copy of your app behind the balancer.</p>
+<h3>Command — ask the load balancer for the page</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>curl http://localhost:8080/</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>curl</code> — ask a web address for its page and print the answer.</li><li><code>http://localhost:8080/</code> — the load balancer&#x27;s address on your machine, door 8080.</li></ul>
+<p>You should see: a small web page. Run it again — a different backend answers each time. That is the proof the balancer is sharing the work: the page says which backend answered, and the name changes between runs.</p>
+<h3>Command — read what the load balancer saw</h3>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose logs lb</code></pre></div>
+<p>Word by word:</p>
+<ul><li><code>docker compose logs</code> — show the printed output of a container in this Compose stack.</li><li><code>lb</code> — the service name of the load balancer in the lab&#x27;s Compose file.</li></ul>
+<p>You should see: one line per request the balancer handled. If the balancer answers the same backend every time, check <code>docker compose ps</code> — a dead backend is skipped by the balancer&#x27;s guard, which is correct behaviour, not a bug.</p>
 <h2>Troubleshooting index — error, then where to look</h2>
-<ul><li>&quot;image not found&quot; / container never starts → <a href="/lessons/p2-break-fix.html">break-and-fix-labs.md</a> Lab 1: read Docker&#x27;s error, check the image name and tag.</li><li>Container starts, then dies at once → <a href="/lessons/p2-break-fix.html">break-and-fix-labs.md</a> Lab 2: the main program exited; run the real foreground app.</li><li>Pipeline fails on a missing test file → <a href="/lessons/p2-break-fix.html">break-and-fix-labs.md</a> Lab 3: write the real test, do not bypass it.</li><li>Git merge conflict → <a href="/lessons/p2-break-fix.html">break-and-fix-labs.md</a> Lab 4: read the markers, pick the right lines, finish the merge.</li><li>Browser shows nothing but the container runs → <a href="/lessons/p2-break-fix.html">break-and-fix-labs.md</a> Lab 5: check the PORTS column in <code>docker ps</code> — the <code>-p</code> mapping is the door, logs alone do not prove it.</li><li>Docker build &quot;file not found&quot; → <a href="/lessons/p2-break-fix.html">break-and-fix-labs.md</a> Lab 6: check the build context and <code>.dockerignore</code>.</li><li>Pod crashes, bad image → <a href="/lessons/p2-kubernetes.html">kubernetes-lab.md</a> Step 5: describe the pod, fix the Deployment, check rollout status.</li><li>Monitoring target DOWN → <a href="/lessons/p2-portfolio.html">portfolio-projects.md</a> Project 3: check <code>docker compose ps</code>, the service logs, then the Prometheus Targets error line, in that order.</li><li>Kafka topic missing or consumer shows nothing → Phase 1 <a href="/lessons/p1-kafka.html">kafka-lab.md</a>: check the topic list on the right cluster, and remember Kafka commands run with <code>docker exec</code> inside the container, not from your own terminal.</li><li>PostgreSQL replica shows 0 rows → Phase 1 <a href="/lessons/p1-postgresql.html">postgresql-lab.md</a>: wait 10 seconds and try again, then check <code>SELECT pg_is_in_recovery();</code> shows <code>t</code> on the replica.</li><li>&quot;cannot execute INSERT in a read-only transaction&quot; on a replica → correct, not a bug: a standby takes reads only. Write on the primary, or promote the replica first.</li><li>Redis READONLY error on the copy → correct, not a bug: a one-way replica takes reads only.</li><li>Moto file missing from the second store → Phase 1 <a href="/lessons/p1-object-store.html">object-store-lab.md</a>: wait a minute, then check <code>docker compose logs mirror</code> for the error line.</li><li>Load balancer answers the same backend every time → Phase 1 <a href="/lessons/p1-load-balancer.html">load-balancer-lab.md</a>: check <code>docker compose ps</code> — a dead backend is skipped by the guard, which is correct behaviour.</li></ul><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> In the terminal, type: <code>df -h</code> — what percentage of the main disk (<code>/</code>) is used?</p><p><a href="/sims/p2-cheat-sheets.html">Open the practice terminal to test this &rarr;</a></p><details class="exercise-answer"><summary>Show answer</summary><p>You should see <code>44%</code> on the <code>/</code> line (<code>/dev/sda1     20G    8.5G   11G    44%  /</code>).</p></details></div><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button><nav class="pager"><a class="prev" href="/lessons/p2-break-fix.html"><span>← Previous lesson</span><span class="pname">Break-and-Fix</span></a><a class="next" href="/lessons/p2-interview.html"><span>Next lesson →</span><span class="pname">Interview Pack</span></a></nav></div></div></main>
+<p>This is the lesson&#x27;s own index, rewritten so each entry says what happened, what it means, and where the fix lives. &quot;Lab&quot; means the break-and-fix labs lesson; &quot;Phase 1&quot; means the single-topic labs.</p>
+<ul><li>&quot;image not found&quot; / container never starts → Lab 1 in the break-and-fix labs. The command that produced it is <code>docker run</code> with a wrong image name. Read Docker&#x27;s error, check the image name and tag. A wrong letter in the name is the usual cause.</li><li>Container starts, then dies at once → Lab 2. The command that produced it is <code>docker run</code> with a main program that finishes instantly. The main program exited. A container lives only as long as its main program runs — run the real foreground program, not a program that finishes instantly.</li><li>Pipeline fails on a missing test file → Lab 3. The command that produced it is the pipeline run after <code>git push</code>. Write the real test. Do not bypass it.</li><li>Git merge conflict → Lab 4. The command that produced it is <code>git merge &lt;branch&gt;</code>. Read the markers, pick the right lines, delete the markers, stage the file, commit to finish the merge.</li><li>Browser shows nothing but the container runs → Lab 5. The command that produced it is <code>docker run</code> without a <code>-p</code> mapping. Check the PORTS column in <code>docker ps</code>. The <code>-p</code> mapping is the door; logs alone do not prove the browser can reach the app.</li><li>Docker build &quot;file not found&quot; → Lab 6. The command that produced it is <code>docker build -t &lt;name&gt;:&lt;tag&gt; .</code>. Check the build context (the folder after <code>docker build</code>) and <code>.dockerignore</code> (the file that tells Docker which files to leave out of the build).</li><li>Pod crashes, bad image → Kubernetes lab, Step 5. The command that produced it is <code>kubectl apply -f &lt;file.yaml&gt;</code> with a wrong image name. Describe the pod, fix the Deployment, check rollout status.</li><li>Monitoring target DOWN → Portfolio Project 3. The command that produced it is the Prometheus Targets check. Check <code>docker compose ps</code>, then the service logs, then the Prometheus Targets error line, in that order.</li><li>Kafka topic missing or consumer shows nothing → Phase 1 Kafka lab. The commands that produced it are the <code>kafka-topics.sh --list</code> and <code>kafka-console-consumer.sh</code> commands above. Check the topic list on the right cluster, and remember Kafka commands run with <code>docker exec</code> inside the container, not from your own terminal.</li><li>PostgreSQL replica shows 0 rows → Phase 1 PostgreSQL lab. The command that produced it is the <code>SELECT * FROM orders ORDER BY id;</code> read on the replica. Wait 10 seconds and try again, then check <code>SELECT pg_is_in_recovery();</code> shows <code>t</code> on the replica.</li><li>&quot;cannot execute INSERT in a read-only transaction&quot; on a replica → correct, not a bug. The command that produced it is an <code>INSERT</code> run on <code>pg-replica</code>. A standby takes reads only. Write on the primary, or promote the replica first.</li><li>Redis READONLY error on the copy → correct, not a bug. The command that produced it is a <code>SET</code> run on <code>redis-b</code>. A one-way copy takes reads only.</li><li>Moto file missing from the second store → Phase 1 object-store lab. The command that produced it is the <code>s3 cp s3://incoming/receipt-001.txt -</code> read from <code>moto-b</code>. Wait a minute, then check <code>docker compose logs mirror</code> for the error line.</li><li>Load balancer answers the same backend every time → Phase 1 load-balancer lab. The command that produced it is <code>curl http://localhost:8080/</code> run several times. Check <code>docker compose ps</code> — a dead backend is skipped by the balancer&#x27;s guard, which is correct behaviour.</li></ul>
+<h2>Which commands are safe to practise, and which are not</h2>
+<p>Most commands in this lesson only read things: <code>ps</code>, <code>logs</code>, <code>get</code>, <code>status</code>, <code>plan</code>, <code>ls</code>, <code>cat</code>. Reading is safe.</p>
+<p>These commands change or delete things. Use them only on your own practice setup, never on anything shared or real:</p>
+<ul><li><code>docker rm</code> — deletes a container.</li><li><code>docker compose down</code> — stops and removes Compose containers (your files stay).</li><li><code>kubectl delete -f</code> — removes what the file describes.</li><li><code>kind delete cluster</code> — removes a whole practice cluster.</li><li><code>terraform destroy</code> — removes everything Terraform created. Read the destruction plan first. There is no undo.</li></ul><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> In the terminal, type: <code>df -h</code> — what percentage of the main disk (<code>/</code>) is used?</p><p><a href="/sims/p2-cheat-sheets.html">Open the practice terminal to test this &rarr;</a></p><details class="exercise-answer"><summary>Show answer</summary><p>You should see <code>44%</code> on the <code>/</code> line (<code>/dev/sda1     20G    8.5G   11G    44%  /</code>).</p></details></div><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button><nav class="pager"><a class="prev" href="/lessons/p2-break-fix.html"><span>← Previous lesson</span><span class="pname">Break-and-Fix</span></a><a class="next" href="/lessons/p2-interview.html"><span>Next lesson →</span><span class="pname">Interview Pack</span></a></nav></div></div></main>
 <div class="auth-modal" id="auth-modal" hidden>
   <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
     <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>

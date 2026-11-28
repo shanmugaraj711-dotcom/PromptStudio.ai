@@ -798,6 +798,7 @@
     function resolvePath(p) {
       if (!p) return cwd;
       if (p === '~') return '/home/learner';
+      if (p.indexOf('~/') === 0) return '/home/learner' + p.slice(1);
       if (p[0] === '/') return p;
       var base = cwd;
       if (p === '.') return base;
@@ -1529,7 +1530,7 @@
         var m = /s3:\/\/([^\/]+)\/?/.exec(target);
         var bk = m ? m[1] : null;
         flag(w, 'ls:' + store + ':' + bk);
-        if (!bk || !st.buckets[bk]) return errOut(['An error occurred (NoSuchBucket) when calling the ListObjects operation: The specified bucket does not exist']);
+        if (!bk || !st.buckets[bk]) return errOut(['An error occurred (NoSuchBucket) when calling the ListObjectsV2 operation: The specified bucket does not exist']);
         var files = Object.keys(st.buckets[bk]);
         if (!files.length) return okOut(['(empty)']);
         var dateStr = new Date(now(w)).toISOString().slice(0, 10) + ' 00:00:00';

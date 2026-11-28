@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kafka Lab — Messages in a Line — DevOps Kit</title>
-<meta name="description" content="Kafka is a tool that holds messages in an ordered line so different applications can pass data to each other reliably.">
+<meta name="description" content="Kafka is a line of messages waiting to be read.">
 <meta name="theme-color" content="#14161b">
 <link rel="canonical" href="https://promptstudioai.in/lessons/p1-kafka.html">
 <link rel="icon" href="/favicon.ico">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="DevOps Kit by PromptStudio">
 <meta property="og:title" content="Kafka Lab — Messages in a Line — DevOps Kit">
-<meta property="og:description" content="Kafka is a tool that holds messages in an ordered line so different applications can pass data to each other reliably.">
+<meta property="og:description" content="Kafka is a line of messages waiting to be read.">
 <meta property="og:url" content="https://promptstudioai.in/lessons/p1-kafka.html">
 <meta name="twitter:card" content="summary">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -33,97 +33,250 @@
 </header>
 <main class="lesson-wrap">
 <nav class="lesson-sidebar" id="lesson-sidebar" aria-label="All lessons"><div class="sb-head"><b>DevOps Kit</b><span>All 18 lessons</span></div><div class="sb-group"><span class="sb-group-title">Start here</span><a class="sb-link" href="/lessons/lesson-0.html">Lesson 0</a></div><div class="sb-group"><span class="sb-group-title">Phase 1 · The Data Tier</span><a class="sb-link" href="/lessons/p1-start.html">Start Here</a><a class="sb-link current" aria-current="page" href="/lessons/p1-kafka.html">Kafka</a><a class="sb-link" href="/lessons/p1-postgresql.html">PostgreSQL</a><a class="sb-link" href="/lessons/p1-redis.html">Redis</a><a class="sb-link" href="/lessons/p1-object-store.html">Object Store</a><a class="sb-link" href="/lessons/p1-load-balancer.html">Load Balancer</a><a class="sb-link" href="/lessons/p1-end-to-end.html">End-to-End</a></div><div class="sb-group"><span class="sb-group-title">Phase 2 · The Rest of DevOps</span><a class="sb-link" href="/lessons/p2-start.html">Start Here</a><a class="sb-link" href="/lessons/p2-zero-cost.html">Zero-Cost Lab</a><a class="sb-link" href="/lessons/p2-kubernetes.html">Kubernetes</a><a class="sb-link" href="/lessons/p2-break-fix.html">Break-and-Fix</a><a class="sb-link" href="/lessons/p2-cheat-sheets.html">Cheat Sheets</a><a class="sb-link" href="/lessons/p2-interview.html">Interview Pack</a><a class="sb-link" href="/lessons/p2-portfolio.html">Portfolio</a><a class="sb-link" href="/lessons/p2-resume.html">Resume Bullets</a><a class="sb-link" href="/lessons/p2-best-sites.html">Best Sites</a></div><div class="sb-group"><span class="sb-group-title">Free skills</span><a class="sb-link" href="/lessons/linux-basics.html">Linux Command Line</a><a class="sb-link" href="/lessons/git-basics.html">Git Basics</a></div><div class="sb-group"><span class="sb-group-title">Reference</span><a class="sb-link" href="/lessons/error-decoder.html">Error Decoder</a></div></nav><div class="lesson-main"><div class="lock-screen" id="lock-screen" hidden><p class="lock-loading" hidden>Checking your sign-in…</p><span class="lock-icon">🔒</span><h2>This lesson is in Phase 1 — ₹399, one-time</h2><p>Pay once with UPI, card or netbanking. Keep it forever. Your progress saves, so you can stop and come back.</p><button class="btn lock-signin" type="button">Sign in to buy</button><button class="btn amber pay-btn" data-phase="phase1" type="button" hidden>Buy Phase 1 — ₹399</button><a class="lock-back" href="/">← Back to all lessons</a></div><div class="lesson-content" id="lesson-content"><span id="main" tabindex="-1"></span><h1>Kafka Lab — Messages in a Line</h1><span class="phasebadge">Phase 1 · The Data Tier</span><h2>What this is and why it matters</h2>
-<p><strong>Kafka</strong> is a tool that holds messages in an ordered line so different applications can pass data to each other reliably.</p>
-<p>In real systems, it prevents data loss by storing incoming events safely when receivers are slow or down.</p>
-<p>One program writes messages into the line and another reads them out, while MirrorMaker 2 copies the line to a second cluster.</p>
+<p>Kafka is a line of messages waiting to be read.</p>
+<p>Think of a kitchen rail with order slips on it.</p>
+<ul><li>A cook writes an order slip and hangs it on the rail.</li><li>The rail holds the slips in order, first slip first.</li><li>Another cook takes the slips off the rail, one by one, in order.</li><li>The slips stay on the rail even after they are read, until the kitchen clears them.</li></ul>
+<p>Kafka is that rail, for computer programs.</p>
+<ul><li>One program writes messages into a line. That program is called a producer. A producer is a writer.</li><li>Another program reads messages out of the line. That program is called a consumer. A consumer is a reader.</li><li>The line itself is called a topic. A topic is one named line.</li><li>The machine that holds the line is called a broker. A broker is one Kafka server.</li><li>One or more brokers together are called a cluster. A cluster is a group of brokers working as one.</li></ul>
+<p>Why does this matter?</p>
+<ul><li>If the reader is slow, the messages wait safely on the rail. Nothing is lost.</li><li>If the reader stops, the messages are still there when it comes back.</li><li>Many readers can read the same line.</li></ul>
+<p>In this lab you run TWO small clusters on your own machine.</p>
+<ul><li>Cluster a is the main one. You send 3 fake orders into it.</li><li>Cluster b is the copy. A tool called MirrorMaker 2 copies the orders from cluster a to cluster b.</li><li>If cluster a dies, cluster b still has the copy. That is the whole point.</li></ul>
+<p>All data in this lab is fake. Order numbers and item names you make up. Nothing real is bought or sold.</p>
 <div class="ladder"><div class="ladder-title">Your level in Kafka</div><div class="ladder-steps"><span class="step-unit"><span class="step done">&#10003; Step 1 &middot; Beginner</span><span class="ladder-arrow">&rarr;</span></span><span class="step-unit"><span class="step done">&#10003; Step 2 &middot; Intermediate</span><span class="ladder-arrow">&rarr;</span></span><span class="step-unit"><span class="step done">&#10003; Step 3 &middot; Advanced <span class="here">&#8592; You are here</span></span></span></div><div class="ladder-note">After this lesson you can: <b>Fix a broken Kafka mirror and prove the orders caught up.</b></div><div class="ladder-note">You have finished this topic&rsquo;s ladder.</div><div class="ladder-note">Advanced challenge: <b>Mirror stopped copying — find the bad port, fix it, watch the missing order appear on the second cluster.</b> — try it in <a href="/lessons/p1-kafka.html">Kafka</a>.</div></div><h2>Test status</h2>
-<p>Syntax-checked only (20 November 2026). The compose file and the properties files were checked for correct syntax. This lab was not run end-to-end on this machine, because this machine has no Docker. Follow it on your own machine with Docker, and if a step fails, read the error first — that is the real skill.</p>
-<h2>What this lab is</h2>
-<p>You will run two small Kafka clusters on your own machine, send messages into the first one, read them back, then watch MirrorMaker 2 copy them to the second one. All data is fake: order numbers and item names you make up.</p>
-<h2>What you need first</h2>
-<ul><li>Docker running (Phase 2, <a href="/lessons/p2-zero-cost.html">zero-cost-lab.md</a>).</li><li>The files in this folder: <code>docker-compose.yml</code>, <code>connect-standalone.properties</code>, <code>mm2.properties</code>.</li></ul>
+<p>Syntax-checked only (20 November 2026). The compose file and the properties files were checked for correct syntax. This lab was NOT run end-to-end on a real machine here. Follow it on your own machine with Docker, and if a step fails, read the error first — that is the real skill.</p>
 <h2>Words you need here</h2>
-<ul><li><strong>Topic</strong> — a named line of messages. This lab uses one topic called <code>orders</code>.</li><li><strong>Producer</strong> — a program that puts messages into a topic.</li><li><strong>Consumer</strong> — a program that takes messages out of a topic.</li><li><strong>Broker</strong> — one Kafka server. A cluster is one or more brokers.</li><li><strong>MirrorMaker 2 (MM2)</strong> — a tool that copies topics from one cluster to another.</li><li><strong>Client</strong> — a program that connects to a server. Here, the producer and consumer programs are Kafka&#x27;s clients.</li><li><strong>Partition</strong> — a topic is split into parts. This lab uses 1 part.</li><li><strong>Replication factor</strong> — how many copies of each message Kafka keeps. This lab keeps 1 copy.</li></ul>
+<p>Learn these first. The lesson uses them before it explains some of them — this list explains them before you meet them.</p>
+<ul><li><strong>Terminal</strong> — a window where you type what you want the computer to do.</li><li><strong>Docker</strong> — a free program that runs sealed boxes on your machine. Each box runs one program. The boxes are called containers.</li><li><strong>Container</strong> — a sealed box that runs one program. Here each Kafka cluster lives in its own box.</li><li><strong>Image</strong> — the recipe file Docker downloads once, then uses to build a box. The first start downloads the Kafka image, so it takes a few minutes.</li><li><strong>Compose file</strong> — a recipe file named <code>docker-compose.yml</code>. It lists the boxes to start and how they connect. Docker Compose reads it and starts everything in one go.</li><li><strong>Topic</strong> — one named line of messages. This lab uses one topic called <code>orders</code>.</li><li><strong>Producer</strong> — a program that puts messages into a topic. A writer.</li><li><strong>Consumer</strong> — a program that takes messages out of a topic. A reader.</li><li><strong>Broker</strong> — one Kafka server. A cluster is one or more brokers. In this lab each cluster has exactly ONE broker. So &quot;two clusters&quot; here means two single boxes: one called kafka-a, one called kafka-b.</li><li><strong>MirrorMaker 2 (MM2)</strong> — a tool that copies topics from one cluster to another. It lives in its own box, called mm2.</li><li><strong>Partition</strong> — a topic is split into parts. This lab uses 1 part.</li><li><strong>Replication factor</strong> — how many copies of each message Kafka keeps. This lab keeps 1 copy.</li><li><strong>localhost</strong> — a name that means &quot;this machine, the one I am sitting at&quot;.</li><li><strong>Port</strong> — a door number on a machine. Kafka&#x27;s door is 9092. When you see <code>localhost:9092</code>, read it as &quot;this machine, door 9092&quot;.</li><li><strong>Log</strong> — a written record of what a program did. When something breaks, you read the log. It is the program telling you what went wrong.</li><li><strong>Ctrl+C</strong> — hold the Ctrl key and press C. It stops the program that is running in your terminal right now, and gives you your terminal back.</li></ul>
+<h2>Before you start — do these first</h2>
+<h3>1. Docker must be running</h3>
+<p>WHAT it is: Docker is the free program that runs the boxes for this lab. Without it, nothing starts.</p>
+<p>WHY you need it: every part of this lab — both Kafka clusters and MirrorMaker 2 — runs inside Docker boxes. No Docker, no lab.</p>
+<p>HOW: do Lesson 0 first (it checks Docker is installed and running), and read the Zero-Cost Lab in Phase 2 if Docker is not installed yet. The file on your machine is <code>phase2/zero-cost-lab.md</code>. Yes, it lives in Phase 2 even though this is a Phase 1 lab — Docker setup is taught there, so read it first if you have never installed Docker.</p>
+<h3>2. Open a terminal</h3>
+<p>WHAT it is: a window where you type commands.</p>
+<p>WHY: every step in this lab is a typed command. There is nothing to click.</p>
+<p>HOW: open the terminal app on your machine (Terminal on Mac, Windows Terminal or Git Bash on Windows, any terminal on Linux).</p>
+<h3>3. Go into the lab folder</h3>
+<p>WHAT it is: the folder that holds this lab&#x27;s files.</p>
+<p>WHY: the commands in this lab only work when you run them from inside this folder. The recipe file <code>docker-compose.yml</code> lives here, and Docker Compose reads the recipe from the folder you are standing in.</p>
+<p>HOW: type this command. <code>cd</code> means &quot;change directory&quot; — move into a folder.</p>
+<div class="tryit"><a class="btn amber" href="/sims/kafka.html">Try it Yourself &raquo;</a><span>Open the practice terminal and run it yourself — nothing installs. Included with Phase 1. Simulation — practice version. Run the real lab with Docker to do it for real.</span></div><div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cd phase1/kafka-lab</code></pre></div>
+<p>The full folder is <code>phase1/kafka-lab</code> inside the kit folder you downloaded.</p>
+<p>Check you are in the right place. Type:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>ls</code></pre></div>
+<p><code>ls</code> means &quot;list&quot; — show me the files here. You should see exactly these three files:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>connect-standalone.properties
+docker-compose.yml
+mm2.properties</code></pre></div>
+<p>If you see them, you are in the right folder. If not, you are in the wrong folder — go back and <code>cd</code> again.</p>
+<h3>4. The three files, and what each one is for</h3>
+<ul><li><strong><code>docker-compose.yml</code></strong> — the recipe. It tells Docker Compose to start three boxes: kafka-a (cluster a), kafka-b (cluster b), and mm2 (MirrorMaker 2). It also says cluster a answers on door 9092 and cluster b answers on door 9094 on your machine.</li><li><strong><code>mm2.properties</code></strong> — the settings for MirrorMaker 2. It says: the two clusters are named a and b; cluster a lives at <code>kafka-a:9092</code>; cluster b lives at <code>kafka-b:9092</code>; copy from a to b, one way only; copy only the topic named <code>orders</code>. The three <code>replication.factor=1</code> lines matter because each cluster has only one node — the small topics MirrorMaker 2 makes for itself must also use 1 copy, not 3. Without those lines, MirrorMaker 2 fails to start.</li><li><strong><code>connect-standalone.properties</code></strong> — the settings for the MirrorMaker 2 worker itself. It says where the worker keeps its own small notes (which messages it has already copied). You never type into this file and never change it in this lab. It just needs to be there.</li></ul>
 <h2>One important thing first</h2>
-<p>Kafka tells every client the address to come back to. In this lab that address is the container&#x27;s own name (<code>kafka-a</code>), so Kafka commands must run <strong>inside</strong> the container with <code>docker exec</code>. Do not run them from your own terminal — your machine does not know the name <code>kafka-a</code>. This is normal. The lab shows every command with <code>docker exec</code> already in it.</p>
+<p>Kafka tells every client the address to come back to. In this lab that address is the box&#x27;s own name (<code>kafka-a</code>), so Kafka commands must run INSIDE the box. Your own machine does not know the name <code>kafka-a</code>. That is why every Kafka command starts with <code>docker exec kafka-a</code> — it means &quot;go inside the kafka-a box and run this there&quot;. This is normal. It is not a mistake.</p>
+<p><code>docker exec</code> means &quot;execute&quot; — run a command inside a box. <code>exec</code> is short for &quot;execute&quot;, which means &quot;run&quot;.</p>
 <h2>Step 1 — Start both clusters</h2>
-<p>From inside this folder:</p>
-<div class="tryit"><a class="btn amber" href="/sims/kafka.html">Try it Yourself &raquo;</a><span>Open the practice terminal and run it yourself — nothing installs. Included with Phase 1. Simulation — practice version. Run the real lab with Docker to do it for real.</span></div><div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose up -d</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>[+] Running 3/3
+<p>WHAT this step is: starting all three boxes at once — cluster a, cluster b, and MirrorMaker 2.</p>
+<p>WHY we do it: nothing else in this lab works until the clusters are running. The topics, the messages and the copy all need live clusters.</p>
+<p>The command, broken down word by word:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose up -d</code></pre></div>
+<ul><li><code>docker</code> — the tool that runs boxes.</li><li><code>compose</code> — read the recipe file (<code>docker-compose.yml</code>) in this folder.</li><li><code>up</code> — start everything the recipe lists.</li><li><code>-d</code> — run in the background. The <code>-d</code> means &quot;detached&quot;. It gives you your terminal back at once, so you can type the next command while the boxes keep running behind you. Without <code>-d</code>, the terminal would fill with logs and you could not type.</li></ul>
+<p>Run it from inside <code>phase1/kafka-lab</code>:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose up -d</code></pre></div>
+<p>What you should see, line by line:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>[+] Running 3/3
  ✔ Container kafka-a  Started
  ✔ Container kafka-b  Started
- ✔ Container mm2  Started</code></pre></div></div>
-<p>Check:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose ps</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>NAME       STATUS
+ ✔ Container mm2  Started</code></pre></div>
+<ul><li><code>[+] Running 3/3</code> — all 3 boxes in the recipe started. 3 out of 3.</li><li><code>✔ Container kafka-a  Started</code> — the box for cluster a started.</li><li><code>✔ Container kafka-b  Started</code> — the box for cluster b started.</li><li><code>✔ Container mm2  Started</code> — the box for MirrorMaker 2 started.</li></ul>
+<p>How to tell it worked: all three lines say <code>Started</code>, and the count says <code>3/3</code>. If you see <code>3/3</code>, you are good.</p>
+<p>First time only: the first start downloads the Kafka image, so it takes a few minutes. You will see download lines scrolling past — that is the image coming down. Wait until the scrolling stops and the <code>Started</code> lines appear. Do not press anything while it downloads.</p>
+<p>Now check that all three boxes are still up. WHAT this check is: asking Docker Compose to list the boxes and their state. WHY: a box can start and then stop again at once if something is wrong — the <code>Started</code> lines do not prove it stayed up.</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose ps</code></pre></div>
+<ul><li><code>docker compose</code> — the tool, reading the recipe in this folder.</li><li><code>ps</code> — &quot;process status&quot;. List the boxes and say whether each one is up or stopped.</li></ul>
+<p>What you should see:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>NAME       STATUS
 kafka-a    Up
 kafka-b    Up
-mm2        Up</code></pre></div></div>
-<p>(The real table has more columns. What matters is all three names, each with STATUS &quot;Up&quot;.)</p>
-<p>If a container shows &quot;Exited&quot;, run <code>docker compose logs mm2</code> and read the last lines before moving on.</p>
-<p>If it breaks: <code>docker compose down</code> then <code>docker compose up -d</code> again. The first start downloads the Kafka image, so it takes a few minutes the first time.</p>
+mm2        Up</code></pre></div>
+<p>(The real table has more columns. What matters is all three names, each with STATUS <code>Up</code>.)</p>
+<p>How to tell it worked: all three names are there, and each one says <code>Up</code>. <code>Up</code> means running. <code>mm2</code> may take a minute — it waits for both clusters before it is ready, so if it says <code>Up</code> a little later than the others, that is normal.</p>
+<p>If it breaks:</p>
+<ul><li>If a box says <code>Exited</code> instead of <code>Up</code>: <code>Exited</code> means the box started and then stopped, like a program that crashed on launch. Read its log:</li></ul>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose logs mm2</code></pre></div>
+<ul><li><code>logs</code> — show me the written record of what this box did. Read the last lines. Look for the word <code>ERROR</code> — that line says what went wrong.</li><li>If it still breaks: stop everything and start again:</li></ul>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose down</code></pre></div>
+<p><code>down</code> means stop the boxes and remove them. Then run <code>docker compose up -d</code> again.</p>
 <h2>Step 2 — Make the topic</h2>
-<p>A topic is the line messages wait in. Make one called <code>orders</code> on cluster a:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic orders --partitions 1 --replication-factor 1</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>Created topic orders.</code></pre></div></div>
-<p>If it breaks: &quot;Topic &#x27;orders&#x27; already exists&quot; means you already made it — skip this step. &quot;Connection refused&quot; means kafka-a is not up yet — wait a minute and run <code>docker compose ps</code> again.</p>
+<p>WHAT this step is: creating the line the messages will wait in. The line is called <code>orders</code>.</p>
+<p>WHY we do it: a producer cannot send messages into a line that does not exist yet. Make the line first, then send.</p>
+<p>The command, broken down word by word:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic orders --partitions 1 --replication-factor 1</code></pre></div>
+<ul><li><code>docker exec</code> — run a command INSIDE a box. <code>exec</code> means &quot;execute&quot;.</li><li><code>kafka-a</code> — the box to go inside: cluster a.</li><li><code>/opt/kafka/bin/kafka-topics.sh</code> — the program to run, by its full address inside the box. <code>/opt</code> is a folder where installed programs live. <code>kafka-topics.sh</code> is the tool that makes and lists topics. <code>.sh</code> means it is a script — a small program made of typed commands.</li><li><code>--bootstrap-server localhost:9092</code> — &quot;the Kafka server to talk to is this machine, door 9092&quot;. <code>bootstrap-server</code> means the first server to connect to. <code>localhost</code> means this machine. <code>9092</code> is Kafka&#x27;s door number.</li><li><code>--create</code> — make something new (do not just list).</li><li><code>--topic orders</code> — the line to make is named <code>orders</code>.</li><li><code>--partitions 1</code> — split the line into 1 part. One part is enough here.</li><li><code>--replication-factor 1</code> — keep 1 copy of each message. One copy is enough here because each cluster has only one broker.</li></ul>
+<p>Run it:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic orders --partitions 1 --replication-factor 1</code></pre></div>
+<p>What you should see:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>Created topic orders.</code></pre></div>
+<p>One line. How to tell it worked: the line says <code>Created topic orders.</code> That is the whole proof.</p>
+<p>If it breaks:</p>
+<ul><li><code>Topic &#x27;orders&#x27; already exists</code> — you already made it. Skip this step. Nothing is wrong.</li><li><code>Connection refused</code> — kafka-a is not up yet. <code>Connection refused</code> means the door was closed: nobody answered. Wait a minute and run <code>docker compose ps</code> again until kafka-a says <code>Up</code>.</li></ul>
 <h2>Step 3 — Send three fake messages</h2>
-<p>The producer reads lines you type and sends each line as one message. Run it, type three lines, then press Ctrl+C to stop it:</p>
+<p>WHAT this step is: starting the producer — the writer — and typing three fake orders into it.</p>
+<p>WHY we do it: a line with no messages proves nothing. We put messages in so we can read them back and watch them get copied.</p>
+<p>The command, broken down word by word:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec -it kafka-a /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic orders</code></pre></div>
-<p>Type these three lines (fake orders — made up for this lab):</p>
+<ul><li><code>docker exec</code> — run a command INSIDE a box.</li><li><code>-it</code> — two flags joined together. <code>i</code> means interactive: let me type into this program. <code>t</code> means terminal: give me a proper typing screen. Together they mean &quot;I want to type into this program, live&quot;. Without <code>-it</code>, the producer could not read what you type.</li><li><code>kafka-a</code> — the box to go inside: cluster a.</li><li><code>/opt/kafka/bin/kafka-console-producer.sh</code> — the producer program. It reads lines you type and sends each line as one message.</li><li><code>--bootstrap-server localhost:9092</code> — the Kafka server to talk to: this machine, door 9092.</li><li><code>--topic orders</code> — send the messages into the line named <code>orders</code>.</li></ul>
+<p>Run it. The screen will go quiet and wait. That is the producer waiting for your lines. Now type these three lines, pressing Enter after each one (fake orders — made up for this lab):</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>order-101, notebook, 250
 order-102, pen, 40
 order-103, mug, 350</code></pre></div>
-<p>Then press Ctrl+C. Each line you typed is now one message in the topic, in order.</p>
-<p>You should see: nothing while you type — the producer prints nothing and waits for your lines. That is normal.</p>
-<p>If it breaks: if the producer exits at once with an error about the topic, go back to Step 2 and check the topic exists with:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>orders</code></pre></div></div>
+<p>Then stop the producer. Hold Ctrl and press C:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>Ctrl+C</code></pre></div>
+<p><code>Ctrl+C</code> stops the program running in your terminal and gives you your terminal back. Each line you typed is now one message in the topic, in order.</p>
+<p>What you should see: nothing while you type. The producer prints nothing and waits for your lines. That is normal. Silence here means it is working.</p>
+<p>How to tell it worked: after <code>Ctrl+C</code> your normal terminal prompt comes back, with no error above it. The messages are in the topic — Step 4 proves it.</p>
+<p>If it breaks: if the producer exits at once with an error about the topic, go back to Step 2 and check the topic exists:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-a /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list</code></pre></div>
+<ul><li><code>--list</code> — list the lines that exist, instead of making one.</li></ul>
+<p>You should see <code>orders</code> in the list:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>orders</code></pre></div>
+<p>If <code>orders</code> is there, run Step 3 again.</p>
 <h2>Step 4 — Read the messages back</h2>
-<p>A consumer reads from the start of the topic and prints every message:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-a /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --from-beginning</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>order-101, notebook, 250
+<p>WHAT this step is: starting the consumer — the reader — and asking it to read from the very start of the topic.</p>
+<p>WHY we do it: to prove the messages are STORED in Kafka, not just sent and lost. If the consumer prints your three lines, Kafka kept them.</p>
+<p>The command, broken down word by word:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-a /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --from-beginning</code></pre></div>
+<ul><li><code>docker exec</code> — run a command INSIDE a box.</li><li><code>kafka-a</code> — the box to go inside: cluster a.</li><li><code>/opt/kafka/bin/kafka-console-consumer.sh</code> — the consumer program. It reads messages out of a topic and prints them.</li><li><code>--bootstrap-server localhost:9092</code> — the Kafka server to talk to: this machine, door 9092.</li><li><code>--topic orders</code> — read from the line named <code>orders</code>.</li><li><code>--from-beginning</code> — start from the very first message, not just new ones. Without this, the consumer would only show messages that arrive AFTER it starts — and your three messages arrived before, so you would see nothing.</li></ul>
+<p>Run it. You should see your three lines, in order:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>order-101, notebook, 250
 order-102, pen, 40
-order-103, mug, 350</code></pre></div></div>
-<p>Press Ctrl+C to stop it. This proves the messages are stored in Kafka, not just sent and lost.</p>
-<p>If it breaks: if you see nothing, check you typed the messages into the same topic (<code>orders</code>) and the same cluster (<code>kafka-a</code>). Kafka keeps messages even after you read them once, so reading again with <code>--from-beginning</code> shows them again.</p>
+order-103, mug, 350</code></pre></div>
+<p>Then press <code>Ctrl+C</code> to stop it. (If you do not stop it, it keeps waiting for new messages forever.)</p>
+<p>How to tell it worked: the three lines you typed in Step 3 appear here, in the same order. Same lines, same order — Kafka stored them.</p>
+<p>If it breaks: if you see nothing, check you typed the messages into the same topic (<code>orders</code>) on the same cluster (<code>kafka-a</code>). Kafka keeps messages even after you read them once, so reading again with <code>--from-beginning</code> shows them again — you can re-run this step as many times as you like.</p>
 <h2>Step 5 — Watch MirrorMaker 2 copy them</h2>
-<p>MirrorMaker 2 is already running in the <code>mm2</code> container. It copies the <code>orders</code> topic from cluster a to cluster b. The copy appears on cluster b with the source name in front: <code>a.orders</code>.</p>
-<p>List the topics on cluster b:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-b /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>a.orders</code></pre></div></div>
+<p>WHAT this step is: checking that the copy tool already did its job — the messages now live on cluster b too.</p>
+<p>WHY we do it: this is the point of the whole lab. One cluster holds the messages; a second cluster holds the copy. If cluster a dies, cluster b still has them.</p>
+<p>MirrorMaker 2 is already running in the <code>mm2</code> box. It copies the <code>orders</code> topic from cluster a to cluster b. The copy appears on cluster b with the source name in front: <code>a.orders</code>. The <code>a.</code> in front means &quot;this came from cluster a&quot;. That is normal MirrorMaker 2 behaviour — the name tells you where the messages came from.</p>
+<p>First, list the topics on cluster b:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-b /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list</code></pre></div>
+<p>This is the same list command as Step 3&#x27;s check, but inside <code>kafka-b</code> instead of <code>kafka-a</code>. You should see <code>a.orders</code> in the list (plus small topics MirrorMaker 2 makes for itself — those start with <code>mm2-</code> or <code>heartbeats</code>, ignore them):</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>a.orders</code></pre></div>
+<p>How to tell it worked: <code>a.orders</code> is in the list. That means the copy exists on cluster b.</p>
 <p>Now read the copied messages from cluster b:</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-b /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic a.orders --from-beginning</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>order-101, notebook, 250
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-b /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic a.orders --from-beginning</code></pre></div>
+<p>Same consumer as Step 4, but inside <code>kafka-b</code>, and reading the topic <code>a.orders</code> instead of <code>orders</code>. You should see the same three lines:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>order-101, notebook, 250
 order-102, pen, 40
-order-103, mug, 350</code></pre></div></div>
-<p>Press Ctrl+C to stop it. The same messages now live on two clusters. If cluster a dies, cluster b still has the copy.</p>
-<p>If it breaks: if <code>a.orders</code> is missing, wait one minute (MM2 copies every few seconds, not instantly) and list the topics again. If it is still missing, check the MM2 logs:</p>
+order-103, mug, 350</code></pre></div>
+<p>Press <code>Ctrl+C</code> to stop it.</p>
+<p>How to tell it worked: the same three lines appear on cluster b. The same messages now live on two clusters. If cluster a dies, cluster b still has the copy.</p>
+<p>If it breaks: if <code>a.orders</code> is missing, wait one minute and list the topics again. MirrorMaker 2 copies every few seconds, not instantly — the copy takes a little time to appear. If it is still missing, check the MirrorMaker 2 log:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose logs mm2</code></pre></div>
-<p>You should see the last lines of the MM2 log. Look for the word &quot;ERROR&quot; in the last lines. The most common cause is that MM2 started before kafka-b was ready — restart it with <code>docker compose restart mm2</code> and wait a minute.</p>
+<p>Read the last lines. Look for the word <code>ERROR</code>. The most common cause is that MirrorMaker 2 started before kafka-b was ready — restart it:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose restart mm2</code></pre></div>
+<ul><li><code>restart</code> — stop this box and start it again, so it reads its settings fresh. Then wait a minute and list the topics again.</li></ul>
 <h2>Step 6 — Send one more message and watch it follow</h2>
-<p>Send a fourth message to cluster a (same producer command as Step 3):</p>
+<p>WHAT this step is: sending a fourth order to cluster a, then checking that the copy on cluster b picked it up by itself.</p>
+<p>WHY we do it: to prove the copy is LIVE, not a one-time snapshot. A good copy follows new messages on its own. If the fourth order appears on cluster b without you doing anything else, the mirror is working continuously.</p>
+<p>Send the fourth message. This is the same producer command as Step 3:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec -it kafka-a /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic orders</code></pre></div>
-<p>Type:</p>
+<p>Type one line:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>order-104, mouse pad, 150</code></pre></div>
-<p>Press Ctrl+C.</p>
-<p>You should see: nothing while you type — the producer prints nothing, same as Step 3. That is normal.</p>
-<p>Wait 30 seconds, then read cluster b again:</p>
+<p>Press <code>Ctrl+C</code>.</p>
+<p>What you should see: nothing while you type — the producer prints nothing, same as Step 3. That is normal.</p>
+<p>Wait 30 seconds. The copy takes a few seconds to travel. Then read cluster b again:</p>
 <div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-b /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic a.orders --from-beginning</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>order-101, notebook, 250
 order-102, pen, 40
 order-103, mug, 350
 order-104, mouse pad, 150</code></pre></div></div>
-<p>The copy follows new messages by itself. Press Ctrl+C.</p>
-<p>If it breaks: if <code>order-104</code> is missing, wait one more minute and read again — the copy takes a few seconds, not instantly. If it is still missing, check the MM2 log with <code>docker compose logs mm2</code> and look for &quot;ERROR&quot;.</p>
+<p>Press <code>Ctrl+C</code>.</p>
+<p>How to tell it worked: <code>order-104</code> is there on cluster b. The copy follows new messages by itself — you did nothing to cluster b, and the new message still arrived there.</p>
+<p>If it breaks: if <code>order-104</code> is missing, wait one more minute and read again — the copy takes a few seconds, not instantly. If it is still missing, check the MirrorMaker 2 log with <code>docker compose logs mm2</code> and look for <code>ERROR</code>.</p>
+<h2>Extra practice — break the mirror on purpose, then fix it</h2>
+<p>Do this after Step 6, while the clusters are still running. It teaches the skill the whole kit is built on: something breaks, you read the message, you fix the one thing that is wrong.</p>
+<h3>Break it</h3>
+<p>WHAT this step is: changing one line in MirrorMaker 2&#x27;s settings so it points at the WRONG door — like a typo in the settings.</p>
+<p>WHY we do it: to see what a broken mirror looks like, and to learn to read the log that says exactly what is wrong. Breaking it on purpose, where nothing real is at stake, is how you learn to fix it for real.</p>
+<p>The command, broken down word by word:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>sed -i &#x27;s/b.bootstrap.servers=kafka-b:9092/b.bootstrap.servers=kafka-b:9093/&#x27; mm2.properties</code></pre></div>
+<ul><li><code>sed</code> — a small tool that edits text in a file. Its name comes from &quot;stream editor&quot;.</li><li><code>-i</code> — edit the file itself, in place. Without <code>-i</code>, sed would only print the changed text and the file would stay the same.</li><li><code>&#x27;s/old/new/&#x27;</code> — substitute: find <code>old</code>, replace it with <code>new</code>.</li><li><code>b.bootstrap.servers=kafka-b:9092</code> — the old text: cluster b lives at door</li><li>This is the correct door.</li><li><code>b.bootstrap.servers=kafka-b:9093</code> — the new text: cluster b lives at door</li><li>Door 9093 is WRONG — nothing listens there. That is the break.</li><li><code>mm2.properties</code> — the file to change.</li></ul>
+<p>Run it from inside <code>phase1/kafka-lab</code>. What you should see: nothing. <code>sed</code> works quietly — no output means it worked. That silence is normal.</p>
+<p>Now send a fifth order to cluster a, the same way as Step 3:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec -it kafka-a /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic orders</code></pre></div>
+<p>Type:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>order-105, scissors, 90</code></pre></div>
+<p>Press <code>Ctrl+C</code>.</p>
+<p>This order lands in cluster a — and nowhere else, because the mirror is broken. Read cluster b to prove it: you will still see only four orders. <code>order-105</code> is missing from cluster b.</p>
+<h3>Read the log</h3>
+<p>WHAT this step is: reading the last lines of MirrorMaker 2&#x27;s written record.</p>
+<p>WHY we do it: the log says plainly what went wrong. You do not have to guess.</p>
+<p>MirrorMaker 2 runs inside the <code>mm2</code> box, and its log is the box&#x27;s own output. Read it with the same <code>docker compose logs</code> command from Step 1:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose logs mm2</code></pre></div>
+<ul><li><code>logs</code> — show me the written record of what this box did. Read the last lines. Look for the word <code>ERROR</code> — that line says what went wrong.</li></ul>
+<p>What you should see: a line like this (the exact time will differ):</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>ERROR Failed to connect to cluster b: connection refused (kafka-b:9093)</code></pre></div>
+<p>Line by line:</p>
+<ul><li><code>ERROR</code> — something failed. This is the word to look for in any log.</li><li><code>Failed to connect to cluster b</code> — MirrorMaker 2 could not reach cluster b.</li><li><code>connection refused (kafka-b:9093)</code> — the door was closed. It tried door</li><li>That is the bad door you just typed.</li></ul>
+<p>Now confirm the bad door is in the settings file itself:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cat mm2.properties</code></pre></div>
+<ul><li><code>cat</code> — show me the whole file. (Its name comes from &quot;concatenate&quot;.)</li></ul>
+<p>You will see this line in the output:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>b.bootstrap.servers=kafka-b:9093</code></pre></div>
+<p>There it is — the settings file itself points at 9093. The fix is one line.</p>
+<h3>Fix it</h3>
+<p>WHAT this step is: putting the right door back, then restarting MirrorMaker 2 so it reads the fixed settings.</p>
+<p>WHY: the settings file is only read when the program starts. Changing the file is not enough — you must restart the program for it to notice.</p>
+<p>Put the right door back. This is the same <code>sed</code> command as before, with the old and new text swapped:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>sed -i &#x27;s/b.bootstrap.servers=kafka-b:9093/b.bootstrap.servers=kafka-b:9092/&#x27; mm2.properties</code></pre></div>
+<p>No output — that is normal. Then restart the mirror:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose restart mm2</code></pre></div>
+<ul><li><code>restart</code> — stop this box and start it again. It reads the fixed settings and copies the order that arrived while it was broken.</li></ul>
+<p>Wait a minute. Then read cluster b again:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-b /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic a.orders --from-beginning</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>order-101, notebook, 250
+order-102, pen, 40
+order-103, mug, 350
+order-104, mouse pad, 150
+order-105, scissors, 90</code></pre></div></div>
+<p>Press <code>Ctrl+C</code>.</p>
+<p>How to tell it worked: <code>order-105</code> is on cluster b at last. The mirror caught up on its own after the fix. You broke it, read the log, fixed one line, and it healed itself. That is the job.</p>
+<h2>Save your proof</h2>
+<p>Do this BEFORE the clean up below, while the clusters are still running. The proof for this lab is the mirrored messages on cluster b.</p>
+<p>WHAT this step is: saving the four mirrored messages into a file, so you have proof the copy works.</p>
+<p>WHY: a file you can show is worth more than a screen you saw once. This file is the proof you attach to your portfolio.</p>
+<p>First make the proof folder. Run this from inside <code>phase1/kafka-lab</code>:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir -p ../portfolio/proof</code></pre></div>
+<ul><li><code>mkdir</code> — make a directory (a folder).</li><li><code>-p</code> — make the parent folders too if they are missing, and do not complain if the folder already exists.</li><li><code>../portfolio/proof</code> — the folder to make. <code>..</code> means &quot;one folder up&quot;. From <code>phase1/kafka-lab</code>, one folder up is <code>phase1</code>, so this makes <code>phase1/portfolio/proof/</code>. That is where all the kit&#x27;s proof files live.</li></ul>
+<p>Then save the messages:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker exec kafka-b /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic a.orders --from-beginning --timeout-ms 5000 &gt; ../portfolio/proof/kafka-mirror.txt</code></pre></div>
+<p>Broken down word by word:</p>
+<ul><li><code>docker exec kafka-b ...</code> — run a command inside the kafka-b box, as before.</li><li><code>/opt/kafka/bin/kafka-console-consumer.sh</code> — the consumer program.</li><li><code>--bootstrap-server localhost:9092</code> — the Kafka server: this machine, door 9092.</li><li><code>--topic a.orders</code> — read the copied line on cluster b.</li><li><code>--from-beginning</code> — start from the very first message.</li><li><code>--timeout-ms 5000</code> — stop by itself after 5000 milliseconds. 5000 milliseconds is 5 seconds. <code>timeout</code> means &quot;give up after this long&quot;. Without it, the consumer would wait forever and you would have to press <code>Ctrl+C</code>. With it, it stops by itself after 5 seconds. That is WHY it stops after 5 seconds: the timeout tells it to.</li><li><code>&gt;</code> — send the output into a file instead of the screen. The <code>&gt;</code> sign is called a redirect. Everything the consumer prints goes into the file, and nothing appears on your screen.</li><li><code>../portfolio/proof/kafka-mirror.txt</code> — the file to write into. One folder up from here, then <code>portfolio/proof/</code>, file named <code>kafka-mirror.txt</code>.</li></ul>
+<p>What you should see: nothing in the terminal when you run the save command. The messages went into the file, not the screen. Silence here means it worked.</p>
+<p>Now open the file and check it holds all four messages, including <code>order-104, mouse pad, 150</code>:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>cat ../portfolio/proof/kafka-mirror.txt</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>order-101, notebook, 250
+order-102, pen, 40
+order-103, mug, 350
+order-104, mouse pad, 150</code></pre></div></div>
+<p>How to tell it worked: all four lines are in the file. That file is your proof. (If you did the extra break-and-fix practice, run the save command after the fix and the file will hold all five messages — even better proof.)</p>
+<p>If it breaks: if the file is empty, the consumer timed out before MirrorMaker 2 copied the messages — wait a minute, then run the save command again.</p>
 <h2>Clean up</h2>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose down</code></pre><div class="codeblock-out"><span class="out-label">Expected output</span><pre><code>✔ Container kafka-a  Removed
+<p>WHAT this step is: stopping all three boxes and removing them.</p>
+<p>WHY we do it: the lab is done. The boxes use your machine&#x27;s memory while they run. Stopping them frees it. The messages are gone — that is fine, they were fake. You can start again any time with <code>docker compose up -d</code>.</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>docker compose down</code></pre></div>
+<ul><li><code>down</code> — stop the boxes and remove them. (<code>up</code> starts them; <code>down</code> takes them down. They are opposites.)</li></ul>
+<p>What you should see:</p>
+<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>✔ Container kafka-a  Removed
 ✔ Container kafka-b  Removed
-✔ Container mm2  Removed</code></pre></div></div>
-<p>This stops and removes the three containers. The messages are gone — that is fine, they were fake. Run <code>docker compose up -d</code> any time to start again.</p>
+✔ Container mm2  Removed</code></pre></div>
+<p>How to tell it worked: all three lines say <code>Removed</code>. The downloaded Kafka image stays on your machine — <code>down</code> removes the boxes, not the image — so the next start is fast and does not download again.</p>
 <h2>What you can now say, truthfully</h2>
 <p>&quot;I ran two Kafka clusters on my own machine, made a topic, sent messages with a producer, read them with a consumer, and copied the topic to a second cluster with MirrorMaker 2.&quot;</p>
+<p>And if you did the extra practice: &quot;I broke the mirror on purpose, read the log, fixed the one wrong line, and watched it catch up by itself.&quot;</p>
 <h2>What this lab does NOT cover</h2>
-<ul><li>Real clusters run three or more brokers, not one. The ideas are the same; the setup is bigger.</li><li>MirrorMaker 2 can also copy in the other direction. This lab copies one way only, on purpose.</li><li>Kafka keeps messages for a set time, then deletes them. This lab does not change that setting.</li></ul>
-<h2>Save your proof</h2>
-<p>The proof for this lab is the mirrored messages on cluster b. Save them to a file with this command, run from inside this folder (the consumer stops by itself after 5 seconds):</p>
-<div class="codeblock"><div class="codeblock-head"><span class="cb-label">Command</span><button class="cb-copy" type="button">Copy</button></div><pre><code>mkdir -p ../portfolio/proof
-docker exec kafka-b /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic a.orders --from-beginning --timeout-ms 5000 &gt; ../portfolio/proof/kafka-mirror.txt</code></pre></div>
-<p>Open the file and check it holds all four messages, including <code>order-104, mouse pad, 150</code>. That file is your proof.</p>
-<p>You should see: nothing in the terminal when you run the save command — the messages went into the file, not the screen.</p>
-<p>If it breaks: if the file is empty, the consumer timed out before MM2 copied the messages — wait a minute, then run the save command again.</p><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> In the terminal, type: <code>docker compose ps</code> — which three containers (small boxes holding programs) show as <code>Up</code>?</p><p><a href="/sims/kafka.html">Open the practice terminal to test this &rarr;</a></p><details class="exercise-answer"><summary>Show answer</summary><p>You should see <code>kafka-a  Up</code>, <code>kafka-b  Up</code>, and <code>mm2  Up</code>.</p></details></div><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button><nav class="pager"><a class="prev" href="/lessons/p1-start.html"><span>← Previous lesson</span><span class="pname">Start Here</span></a><a class="next" href="/lessons/p1-postgresql.html"><span>Next lesson →</span><span class="pname">PostgreSQL</span></a></nav></div></div></main>
+<ul><li>Real clusters run three or more brokers, not one. The ideas are the same; the setup is bigger. Here each cluster has exactly one broker, on purpose, so you can learn the ideas on one machine.</li><li>MirrorMaker 2 can also copy in the other direction. This lab copies one way only, on purpose.</li><li>Kafka keeps messages for a set time, then deletes them. This lab does not change that setting.</li></ul>
+<h2>Sources</h2>
+<ul><li>Apache Kafka docs — https://kafka.apache.org/documentation</li><li>MirrorMaker 2, in the same docs — https://kafka.apache.org/documentation/#georeplication</li><li>The kit&#x27;s own Best Sites lesson (<code>phase2/best-sites.md</code>) lists the Kafka docs first for Kafka: &quot;free, written by the people who make Kafka&quot;.</li></ul>
+<p>Nothing was copied from these sources. Every explanation above is written in our own plain words, in the owner&#x27;s teaching pattern: what it is, why we run it, then the command.</p><div class="exercise"><h2>Quick check — try it yourself</h2><p><b>Question:</b> In the terminal, type: <code>docker compose ps</code> — which three containers (small boxes holding programs) show as <code>Up</code>?</p><p><a href="/sims/kafka.html">Open the practice terminal to test this &rarr;</a></p><details class="exercise-answer"><summary>Show answer</summary><p>You should see <code>kafka-a  Up</code>, <code>kafka-b  Up</code>, and <code>mm2  Up</code>.</p></details></div><button class="btn mark-done" id="btn-mark-done" type="button" hidden>Mark this lesson as done</button><nav class="pager"><a class="prev" href="/lessons/p1-start.html"><span>← Previous lesson</span><span class="pname">Start Here</span></a><a class="next" href="/lessons/p1-postgresql.html"><span>Next lesson →</span><span class="pname">PostgreSQL</span></a></nav></div></div></main>
 <div class="auth-modal" id="auth-modal" hidden>
   <div class="auth-box" role="dialog" aria-modal="true" aria-label="Sign in">
     <button class="auth-x" id="auth-close" type="button" aria-label="Close">&times;</button>
